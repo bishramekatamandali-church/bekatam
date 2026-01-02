@@ -1,0 +1,1085 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model aboutsection {
+  id                String   @id
+  title             String
+  content           String   @db.Text
+  imageUrl          String?  @db.Text
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  isCoreSection     Boolean
+  displayOrder      Int
+  createdAt         DateTime @default(now())
+}
+
+model adminactionlog {
+  id        String   @id
+  timestamp DateTime @default(now())
+  adminId   String
+  adminName String
+  action    String
+  targetId  String?
+  details   String?  @db.Text
+  user      user     @relation(fields: [adminId], references: [id], onDelete: Cascade, map: "AdminActionLog_adminId_fkey")
+
+  @@index([adminId], map: "AdminActionLog_adminId_fkey")
+}
+
+model advertisement {
+  id                String               @id
+  name              String
+  adType            advertisement_adType
+  imageUrl          String?              @db.Text
+  videoUrl          String?              @db.Text
+  linkUrl           String?              @db.Text
+  altText           String?
+  placements        Json
+  startDate         DateTime?
+  endDate           DateTime?
+  isActive          Boolean
+  displayOrder      Int?
+  adSizeKey         String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+}
+
+model blogpost {
+  id                String             @id
+  title             String
+  description       String             @db.Text
+  imageUrl          String?            @db.Text
+  linkPath          String
+  category          blogpost_category?
+  date              DateTime?
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime
+  likes             Int                @default(0)
+  audioUrl          String?            @db.Text
+  mediaUrls         Json?
+  location          String?
+  taggedFriends     String?
+  feelingActivity   String?
+  backgroundTheme   String?
+  videoUrl          String?            @db.Text
+  comment           comment[]
+}
+
+model branchchurch {
+  id                String    @id
+  name              String
+  address           String
+  pastorName        String?
+  phone             String?
+  email             String?
+  serviceTimes      String
+  mapEmbedUrl       String?   @db.Text
+  imageUrl          String?   @db.Text
+  description       String?   @db.Text
+  establishedDate   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+}
+
+model churchmember {
+  id                String    @id
+  userId            String?   @unique(map: "ChurchMember_userId_key")
+  fullName          String
+  username          String?
+  contactPhone      String?
+  contactEmail      String?
+  address           String?
+  memberSince       DateTime
+  dateOfBirth       DateTime?
+  baptismDate       DateTime?
+  familyMembers     String?   @db.Text
+  notes             String?   @db.Text
+  isActiveMember    Boolean
+  profileImageUrl   String?   @db.Text
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+  user              user?     @relation(fields: [userId], references: [id], map: "ChurchMember_userId_fkey")
+}
+
+model collectionrecord {
+  id                   String                   @id
+  collectorName        String
+  collectionDate       DateTime
+  amount               Decimal                  @db.Decimal(12, 2)
+  purpose              collectionrecord_purpose
+  source               String?
+  notes                String?                  @db.Text
+  recordedAt           DateTime                 @default(now())
+  recordedByOwnerId    String?
+  recordedByOwnerName  String?
+  updatedAt            DateTime
+  postedByOwnerId      String?
+  postedByOwnerName    String?
+  createdAt            DateTime                 @default(now())
+  countedBy            String?
+  isDeposited          Boolean                  @default(false)
+  depositDate          DateTime?
+  bankDepositReference String?
+  donordetail          donordetail[]
+}
+
+model comment {
+  id                  String          @id
+  userId              String
+  userName            String
+  userProfileImageUrl String?         @db.Text
+  text                String          @db.Text
+  timestamp           DateTime        @default(now())
+  editedAt            DateTime?
+  sermonId            String?
+  eventId             String?
+  blogPostId          String?
+  newsItemId          String?
+  historyChapterId    String?
+  prayerRequestId     String?
+  blogpost            blogpost?       @relation(fields: [blogPostId], references: [id], onDelete: Cascade, map: "Comment_blogPostId_fkey")
+  eventitem           eventitem?      @relation(fields: [eventId], references: [id], onDelete: Cascade, map: "Comment_eventId_fkey")
+  historychapter      historychapter? @relation(fields: [historyChapterId], references: [id], onDelete: Cascade, map: "Comment_historyChapterId_fkey")
+  newsitem            newsitem?       @relation(fields: [newsItemId], references: [id], onDelete: Cascade, map: "Comment_newsItemId_fkey")
+  prayerrequest       prayerrequest?  @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Comment_prayerRequestId_fkey")
+  sermon              sermon?         @relation(fields: [sermonId], references: [id], onDelete: Cascade, map: "Comment_sermonId_fkey")
+  user                user            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Comment_userId_fkey")
+
+  @@index([blogPostId], map: "Comment_blogPostId_fkey")
+  @@index([eventId], map: "Comment_eventId_fkey")
+  @@index([historyChapterId], map: "Comment_historyChapterId_fkey")
+  @@index([newsItemId], map: "Comment_newsItemId_fkey")
+  @@index([prayerRequestId], map: "Comment_prayerRequestId_fkey")
+  @@index([sermonId], map: "Comment_sermonId_fkey")
+  @@index([userId], map: "Comment_userId_fkey")
+}
+
+model contactmessage {
+  id          String                @id
+  name        String
+  email       String
+  subject     String
+  message     String                @db.Text
+  submittedAt DateTime              @default(now())
+  status      contactmessage_status @default(pending)
+  repliedAt   DateTime?
+  replyNote   String?               @db.Text
+}
+
+model decisionlog {
+  id                String              @id
+  decisionDate      DateTime
+  title             String
+  description       String              @db.Text
+  madeBy            String
+  status            decisionlog_status?
+  followUpActions   String?             @db.Text
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+}
+
+model directmediaitem {
+  id                String                    @id
+  title             String
+  description       String?                   @db.Text
+  url               String                    @db.Text
+  mediaType         directmediaitem_mediaType
+  category          String?
+  tags              Json?
+  uploadDate        DateTime                  @default(now())
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  updatedAt         DateTime
+}
+
+model donatepagecontent {
+  id                                 String   @id @default("singleton")
+  headerTitle                        String
+  headerSubtitle                     String   @db.Text
+  headerImageUrl                     String   @db.Text
+  localDonationsTitle                String
+  bankName                           String
+  accountName                        String
+  accountNumber                      String
+  branch                             String
+  bankQrImageUrl                     String?  @db.Text
+  eSewaId                            String
+  eSewaQrImageUrl                    String?  @db.Text
+  localDonationsNote                 String   @db.Text
+  internationalDonationsTitle        String
+  internationalDonationsContent      String   @db.Text
+  internationalDonationsContactEmail String
+  internationalQrImageUrl            String?  @db.Text
+  receiptVerses                      String?  @db.Text
+  updatedAt                          DateTime
+  postedByOwnerId                    String?
+  postedByOwnerName                  String?
+}
+
+model donationrecord {
+  id                   String                        @id
+  donorName            String
+  donorEmail           String
+  donorPhone           String?
+  amount               Decimal                       @db.Decimal(10, 2)
+  purpose              donationrecord_purpose
+  donationDate         DateTime
+  transactionTimestamp DateTime                      @default(now())
+  postedByOwnerId      String?
+  postedByOwnerName    String?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime
+  paymentMethod        donationrecord_paymentMethod?
+  transactionReference String?
+  notes                String?                       @db.Text
+  isReceiptSent        Boolean
+}
+
+model donordetail {
+  id                 String           @id
+  donorName          String
+  amount             Decimal          @db.Decimal(10, 2)
+  address            String?
+  contact            String?
+  collectionRecordId String
+  collectionrecord   collectionrecord @relation(fields: [collectionRecordId], references: [id], onDelete: Cascade, map: "DonorDetail_collectionRecordId_fkey")
+
+  @@index([collectionRecordId], map: "DonorDetail_collectionRecordId_fkey")
+}
+
+model eventitem {
+  id                String              @id
+  title             String
+  description       String              @db.Text
+  imageUrl          String?             @db.Text
+  linkPath          String
+  category          eventitem_category?
+  date              DateTime?
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  location          String?
+  time              String?
+  expectations      String?             @db.Text
+  guests            String?
+  contactPerson     String?
+  contactEmail      String?
+  contactPhone      String?
+  registrationLink  String?             @db.Text
+  capacity          Int?
+  isFeeRequired     Boolean             @default(false)
+  feeAmount         String?
+  videoUrl          String?             @db.Text
+  audioUrl          String?             @db.Text
+  likes             Int                 @default(0)
+  comment           comment[]
+}
+
+model expenserecord {
+  id                   String                       @id
+  expenseDate          DateTime
+  category             expenserecord_category
+  description          String                       @db.Text
+  amount               Decimal                      @db.Decimal(12, 2)
+  payee                String?
+  paymentMethod        expenserecord_paymentMethod?
+  transactionReference String?
+  receiptUrl           String?                      @db.Text
+  approvedBy           String?
+  notes                String?                      @db.Text
+  source               String?
+  location             String?
+  status               expenserecord_status?
+  postedByOwnerId      String?
+  postedByOwnerName    String?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime
+}
+
+model fellowshiprosteritem {
+  id                              String                          @id
+  rosterType                      fellowshiprosteritem_rosterType
+  groupNameOrEventTitle           String
+  assignedDate                    DateTime
+  timeSlot                        String
+  location                        String?
+  contactNumber                   String?
+  additionalNotesOrProgramDetails String?                         @db.Text
+  isTemplate                      Boolean                         @default(false)
+  postedByOwnerId                 String?
+  postedByOwnerName               String?
+  createdAt                       DateTime                        @default(now())
+  updatedAt                       DateTime
+  generatedscheduleitem           generatedscheduleitem[]
+  responsibility                  responsibility[]
+}
+
+model friendship {
+  id                                String            @id
+  requesterId                       String
+  addresseeId                       String
+  status                            friendship_status
+  requestedAt                       DateTime          @default(now())
+  updatedAt                         DateTime
+  user_friendship_addresseeIdTouser user              @relation("friendship_addresseeIdTouser", fields: [addresseeId], references: [id], onDelete: Cascade, map: "Friendship_addresseeId_fkey")
+  user_friendship_requesterIdTouser user              @relation("friendship_requesterIdTouser", fields: [requesterId], references: [id], onDelete: Cascade, map: "Friendship_requesterId_fkey")
+
+  @@unique([requesterId, addresseeId], map: "Friendship_requesterId_addresseeId_key")
+  @@index([addresseeId], map: "Friendship_addresseeId_fkey")
+}
+
+model frontendactivitylog {
+  id          String   @id
+  timestamp   DateTime @default(now())
+  userId      String?
+  description String   @db.Text
+  type        String
+  itemId      String?
+  itemType    String?
+  user        user?    @relation(fields: [userId], references: [id], map: "FrontendActivityLog_userId_fkey")
+
+  @@index([userId], map: "FrontendActivityLog_userId_fkey")
+}
+
+model generatedscheduleitem {
+  id                              String                           @id
+  basedOnRosterItemId             String?
+  rosterType                      generatedscheduleitem_rosterType
+  groupNameOrEventTitle           String
+  scheduledDate                   DateTime
+  timeSlot                        String
+  location                        String?
+  contactNumber                   String?
+  additionalNotesOrProgramDetails String?                          @db.Text
+  generatedAt                     DateTime                         @default(now())
+  isPublishedAsEvent              Boolean                          @default(false)
+  publishedEventId                String?
+  adminNotes                      String?                          @db.Text
+  postedByOwnerId                 String?
+  postedByOwnerName               String?
+  createdAt                       DateTime                         @default(now())
+  updatedAt                       DateTime
+  fellowshiprosteritem            fellowshiprosteritem?            @relation(fields: [basedOnRosterItemId], references: [id], map: "GeneratedScheduleItem_basedOnRosterItemId_fkey")
+  responsibility                  responsibility[]
+
+  @@index([basedOnRosterItemId], map: "GeneratedScheduleItem_basedOnRosterItemId_fkey")
+}
+
+model group {
+  id             String               @id
+  name           String
+  creatorId      String
+  groupImageUrl  String?              @db.Text
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime
+  editSettings   group_editSettings   @default(admins_only)
+  sendMessage    group_sendMessage    @default(all_members)
+  addMembers     group_addMembers     @default(admins_only)
+  approveMembers group_approveMembers @default(admins_only)
+  groupmember    groupmember[]
+  groupmessage   groupmessage[]
+}
+
+model groupmember {
+  id      String           @id
+  groupId String
+  userId  String
+  role    groupmember_role
+  addedAt DateTime         @default(now())
+  group   group            @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMember_groupId_fkey")
+  user    user             @relation(fields: [userId], references: [id], onDelete: Cascade, map: "GroupMember_userId_fkey")
+
+  @@unique([groupId, userId], map: "GroupMember_groupId_userId_key")
+  @@index([userId], map: "GroupMember_userId_fkey")
+}
+
+model groupmessage {
+  id                    String                  @id
+  groupId               String
+  senderId              String
+  senderName            String
+  senderProfileImageUrl String?                 @db.Text
+  text                  String?                 @db.Text
+  mediaUrl              String?                 @db.Text
+  mediaType             groupmessage_mediaType?
+  timestamp             DateTime                @default(now())
+  group                 group                   @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMessage_groupId_fkey")
+  user                  user                    @relation(fields: [senderId], references: [id], onDelete: Cascade, map: "GroupMessage_senderId_fkey")
+
+  @@index([groupId], map: "GroupMessage_groupId_fkey")
+  @@index([senderId], map: "GroupMessage_senderId_fkey")
+}
+
+model historychapter {
+  id                String                @id
+  chapterNumber     Int
+  title             String
+  content           String                @db.Text
+  status            historychapter_status
+  imageUrl          String?               @db.Text
+  summary           String?               @db.Text
+  authorId          String?
+  authorName        String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime
+  lastPublishedAt   DateTime?
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  likes             Int                   @default(0)
+  comment           comment[]
+}
+
+model historymilestone {
+  id                String   @id
+  year              String
+  title             String
+  description       String   @db.Text
+  imageUrl          String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+}
+
+model homeslide {
+  id                String   @id
+  title             String
+  description       String   @db.Text
+  imageUrl          String   @db.Text
+  ctaText           String
+  linkPath          String
+  order             Int
+  isActive          Boolean
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+}
+
+model keyperson {
+  id                String   @id
+  name              String
+  role              String
+  imageUrl          String?  @db.Text
+  bio               String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+}
+
+model meetingdecisionpoint {
+  id             String                      @id
+  description    String                      @db.Text
+  proposedBy     String?
+  status         meetingdecisionpoint_status
+  followUpNotes  String?                     @db.Text
+  resolutionDate DateTime?
+  meetingLogId   String
+  meetinglog     meetinglog                  @relation(fields: [meetingLogId], references: [id], onDelete: Cascade, map: "MeetingDecisionPoint_meetingLogId_fkey")
+
+  @@index([meetingLogId], map: "MeetingDecisionPoint_meetingLogId_fkey")
+}
+
+model meetinglog {
+  id                   String                  @id
+  meetingDate          DateTime
+  title                String
+  meetingType          meetinglog_meetingType?
+  attendees            String                  @db.Text
+  agenda               String                  @db.Text
+  minutes              String                  @db.Text
+  actionItems          String?                 @db.Text
+  status               meetinglog_status?
+  imageUrl             String?                 @db.Text
+  postedByOwnerId      String?
+  postedByOwnerName    String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime
+  meetingdecisionpoint meetingdecisionpoint[]
+}
+
+model ministry {
+  id                  String                @id
+  title               String
+  description         String                @db.Text
+  imageUrl            String?               @db.Text
+  linkPath            String
+  category            ministry_category?
+  postedByOwnerId     String?
+  postedByOwnerName   String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  leader              String?
+  meetingTime         String?
+  ministryjoinrequest ministryjoinrequest[]
+}
+
+model ministryjoinrequest {
+  id                 String                     @id
+  userId             String
+  userName           String
+  userEmail          String
+  ministryId         String
+  ministryName       String
+  ministryGuidelines String                     @db.Text
+  requestDate        DateTime                   @default(now())
+  message            String                     @db.Text
+  status             ministryjoinrequest_status @default(pending)
+  processedDate      DateTime?
+  adminNotes         String?                    @db.Text
+  ministry           ministry                   @relation(fields: [ministryId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_ministryId_fkey")
+  user               user                       @relation(fields: [userId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_userId_fkey")
+
+  @@index([ministryId], map: "MinistryJoinRequest_ministryId_fkey")
+  @@index([userId], map: "MinistryJoinRequest_userId_fkey")
+}
+
+model monthlythemeimage {
+  id                String   @id
+  year              Int
+  month             Int
+  imageUrls         Json
+  quoteOrCaption    String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  postedByOwnerId   String?
+  postedByOwnerName String?
+
+  @@unique([year, month], map: "MonthlyThemeImage_year_month_key")
+}
+
+model newsitem {
+  id                String             @id
+  title             String
+  description       String             @db.Text
+  imageUrl          String?            @db.Text
+  linkPath          String
+  category          newsitem_category?
+  date              DateTime?
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime
+  videoUrl          String?            @db.Text
+  audioUrl          String?            @db.Text
+  likes             Int                @default(0)
+  comment           comment[]
+}
+
+model notification {
+  id           String            @id
+  targetUserId String
+  message      String            @db.Text
+  link         String?           @db.Text
+  timestamp    DateTime          @default(now())
+  read         Boolean           @default(false)
+  type         notification_type
+  user         user              @relation(fields: [targetUserId], references: [id], onDelete: Cascade, map: "Notification_targetUserId_fkey")
+
+  @@index([targetUserId], map: "Notification_targetUserId_fkey")
+}
+
+model prayer {
+  id              String        @id
+  userId          String
+  userName        String
+  timestamp       DateTime      @default(now())
+  prayerRequestId String
+  prayerrequest   prayerrequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Prayer_prayerRequestId_fkey")
+  user            user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Prayer_userId_fkey")
+
+  @@unique([userId, prayerRequestId], map: "Prayer_userId_prayerRequestId_key")
+  @@index([prayerRequestId], map: "Prayer_prayerRequestId_fkey")
+}
+
+model prayerrequest {
+  id                  String                   @id
+  userId              String?
+  userName            String?
+  userProfileImageUrl String?                  @db.Text
+  title               String
+  requestText         String                   @db.Text
+  visibility          prayerrequest_visibility
+  category            prayerrequest_category?
+  status              prayerrequest_status     @default(active)
+  submittedAt         DateTime                 @default(now())
+  lastPrayedAt        DateTime?
+  adminNotes          String?                  @db.Text
+  postedByOwnerId     String?
+  postedByOwnerName   String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime
+  mediaUrls           Json?
+  location            String?
+  taggedFriends       String?
+  feelingActivity     String?
+  backgroundTheme     String?
+  comment             comment[]
+  prayer              prayer[]
+  user                user?                    @relation(fields: [userId], references: [id], map: "PrayerRequest_userId_fkey")
+
+  @@index([userId], map: "PrayerRequest_userId_fkey")
+}
+
+model responsibility {
+  id                    String                 @id
+  role                  String
+  assignedTo            String
+  rosterItemId          String?
+  generatedScheduleId   String?
+  generatedscheduleitem generatedscheduleitem? @relation(fields: [generatedScheduleId], references: [id], onDelete: Cascade, map: "Responsibility_generatedScheduleId_fkey")
+  fellowshiprosteritem  fellowshiprosteritem?  @relation(fields: [rosterItemId], references: [id], onDelete: Cascade, map: "Responsibility_rosterItemId_fkey")
+
+  @@index([generatedScheduleId], map: "Responsibility_generatedScheduleId_fkey")
+  @@index([rosterItemId], map: "Responsibility_rosterItemId_fkey")
+}
+
+model sermon {
+  id                String           @id
+  title             String
+  description       String           @db.Text
+  imageUrl          String?          @db.Text
+  linkPath          String
+  category          sermon_category?
+  date              DateTime?
+  postedByOwnerId   String?
+  postedByOwnerName String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime
+  speaker           String?
+  scripture         String?
+  videoUrl          String?          @db.Text
+  audioUrl          String?          @db.Text
+  fullContent       String?          @db.Text
+  likes             Int              @default(0)
+  comment           comment[]
+}
+
+model testimonial {
+  id                  String                 @id
+  userId              String
+  userName            String
+  userProfileImageUrl String?                @db.Text
+  title               String
+  contentText         String                 @db.Text
+  visibility          testimonial_visibility
+  submittedAt         DateTime               @default(now())
+  postedByOwnerId     String?
+  postedByOwnerName   String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime
+  mediaUrls           Json?
+  location            String?
+  taggedFriends       String?
+  feelingActivity     String?
+  backgroundTheme     String?
+  user                user                   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Testimonial_userId_fkey")
+
+  @@index([userId], map: "Testimonial_userId_fkey")
+}
+
+model user {
+  password                                String
+  passwordHash                            String?
+  id                                      String                    @id
+  username                                String                    @unique(map: "User_username_key")
+  fullName                                String
+  email                                   String                    @unique(map: "User_email_key")
+  countryCode                             String?
+  phone                                   String?
+  role                                    user_role                 @default(user)
+  profileImageUrl                         String?                   @db.Text
+  coverPhotoUrl                           String?                   @db.Text
+  bio                                     String?                   @db.Text
+  hometown                                String?
+  currentCity                             String?
+  work                                    String?
+  education                               String?
+  relationshipStatus                      user_relationshipStatus?
+  interests                               String?                   @db.Text
+  favoriteScripture                       String?
+  receiveContentUpdateNotifications       Boolean                   @default(true)
+  receivePrayerRequestNotifications       Boolean                   @default(true)
+  receiveTestimonialNotifications         Boolean                   @default(true)
+  receiveFriendActivityNotifications      Boolean                   @default(true)
+  friendsListPrivacy                      user_friendsListPrivacy   @default(public)
+  profileInSearchPrivacy                  Boolean                   @default(true)
+  friendRequestPrivacy                    user_friendRequestPrivacy @default(everyone)
+  groupInvitePrivacy                      user_groupInvitePrivacy   @default(everyone)
+  createdAt                               DateTime                  @default(now())
+  updatedAt                               DateTime @updatedAt
+  adminactionlog                          adminactionlog[]
+  churchmember                            churchmember?
+  comment                                 comment[]
+  friendship_friendship_addresseeIdTouser friendship[]              @relation("friendship_addresseeIdTouser")
+  friendship_friendship_requesterIdTouser friendship[]              @relation("friendship_requesterIdTouser")
+  frontendactivitylog                     frontendactivitylog[]
+  groupmember                             groupmember[]
+  groupmessage                            groupmessage[]
+  ministryjoinrequest                     ministryjoinrequest[]
+  notification                            notification[]
+  prayer                                  prayer[]
+  prayerrequest                           prayerrequest[]
+  testimonial                             testimonial[]
+}
+
+enum fellowshiprosteritem_rosterType {
+  Saturday_Main_Fellowship
+  Saturday_Children_Fellowship
+  Saturday_Youth_Fellowship
+  Wednesday_Home_Fellowship
+  Friday_Evening_Program
+  Special_Meeting
+  Outreach_Program
+  Other_Regular_Program
+  Prayer_Team_Visit
+  Night_Prayer
+  Saturday_Prayer
+}
+
+enum advertisement_adType {
+  image_banner
+  video_banner
+}
+
+enum expenserecord_category {
+  Ministry_Supplies
+  Utilities
+  Outreach_Events
+  Benevolence
+  Salaries_Stipends
+  Building_Maintenance
+  Office_Supplies
+  Travel
+  Bank_Charges
+  IT_Subscriptions
+  Other
+}
+
+enum generatedscheduleitem_rosterType {
+  Saturday_Main_Fellowship
+  Saturday_Children_Fellowship
+  Saturday_Youth_Fellowship
+  Wednesday_Home_Fellowship
+  Friday_Evening_Program
+  Special_Meeting
+  Outreach_Program
+  Other_Regular_Program
+  Prayer_Team_Visit
+  Night_Prayer
+  Saturday_Prayer
+}
+
+enum friendship_status {
+  pending
+  accepted
+  blocked
+  declined
+}
+
+enum groupmember_role {
+  admin
+  member
+}
+
+enum meetingdecisionpoint_status {
+  Proposed
+  Approved
+  Implemented
+  Rejected
+  Follow_up_Required
+  Postponed
+  Cancelled
+}
+
+enum meetinglog_meetingType {
+  General_Leaders_Meeting
+  Elders_Meeting
+  Deacons_Meeting
+  General_Choir_Meeting
+  Worship_Team_Practice
+  Programme_Arrange_Meeting
+  Event_Planning_Meeting
+  Helping_Ministry_Meeting
+  Benevolence_Committee
+  Outreach_Planning_Meeting
+  Missions_Update_Meeting
+  Sunday_School_Teachers_Meeting
+  Youth_Leaders_Meeting
+  Men_s_Fellowship_Planning
+  Women_s_Fellowship_Planning
+  Prayer_Meeting
+  Bible_Study_Group
+  Financial_Committee_Meeting
+  Administrative_Meeting
+  Special_General_Meeting
+  Other_Specific_Meeting
+}
+
+enum collectionrecord_purpose {
+  Tithe
+  General_Offering
+  Saturday_Fellowship_Offering
+  Wednesday_Fellowship_Offering
+  Friday_Program_Offering
+  Building_Fund
+  Mission_Support
+  Youth_Ministry_Support
+  Children_Ministry_Support
+  Women_Ministry_Support
+  Men_Ministry_Support
+  Thanksgiving_Offering
+  Special_Event_Collection
+  Other_Collections
+}
+
+enum directmediaitem_mediaType {
+  image
+  video
+}
+
+enum historychapter_status {
+  draft
+  published
+}
+
+enum blogpost_category {
+  Church_Life
+  Biblical_Study
+  Devotionals
+  Community_News
+  Testimonies
+}
+
+enum decisionlog_status {
+  Proposed
+  Approved
+  Implemented
+  Rejected
+  Follow_up_Required
+  Postponed
+  Cancelled
+}
+
+enum donationrecord_purpose {
+  General_Fund
+  Tithe
+  Worship_Ministry
+  Sunday_School
+  Outreach_Missions
+  Prayer_Ministry
+  Building_Fund_Maintenance
+  Leadership_Support_Pastor
+  Leadership_Support_Elders_Ministry_Leaders
+  Benevolence_Fund
+}
+
+enum eventitem_category {
+  Community_Outreach
+  Conference
+  Workshop
+  Holiday_Service
+  Youth_Event
+  Worship_Night
+  Fellowship
+  Special_Meeting
+}
+
+enum ministry_category {
+  Youth_Young_Adults
+  Children_Family
+  Men_s_Ministry
+  Women_s_Ministry
+  Worship_Team
+  Outreach_Missions
+  Pastoral_Care
+}
+
+enum newsitem_category {
+  Church_Announcements
+  Community_Updates
+  Special_Reports
+  Mission_News
+  Youth_Activities
+  Pastoral_Messages
+}
+
+enum sermon_category {
+  Sermon_Series
+  Guest_Speaker
+  Topical_Sermon
+  Special_Event_Sermon
+  Bible_Study
+}
+
+enum contactmessage_status {
+  pending
+  replied
+}
+
+enum expenserecord_paymentMethod {
+  Cash
+  Cheque
+  Bank_Transfer
+  eSewa
+  Other
+}
+
+enum group_editSettings {
+  admins_only
+  all_members
+}
+
+enum notification_type {
+  comment
+  ministry_request_update
+  admin_action
+  event_reminder
+  generic
+  new_content_published
+  schedule_update
+  feature_update
+  prayer_request_submitted_admin
+  prayer_request_status_user
+  prayer_request_prayed_for
+  friend_request_received
+  friend_request_accepted
+  new_prayer_request_friend
+  new_testimonial_friend
+  ad_expiring_soon
+}
+
+enum prayerrequest_visibility {
+  public
+  friends_only
+  private
+  anonymous
+}
+
+enum testimonial_visibility {
+  public
+  friends_only
+}
+
+enum user_role {
+  user
+  admin
+  owner
+}
+
+enum group_sendMessage {
+  admins_only
+  all_members
+}
+
+enum groupmessage_mediaType {
+  image
+  video
+  file
+  location
+}
+
+enum prayerrequest_category {
+  Healing
+  Guidance
+  Family
+  Thanksgiving
+  Community
+  Personal
+  Other
+}
+
+enum group_addMembers {
+  admins_only
+  all_members
+}
+
+enum meetinglog_status {
+  Pending_Discussion
+  Agenda_Set
+  In_Progress
+  Completed
+  Decisions_Approved
+  Follow_up_Required
+  Postponed
+  Cancelled
+}
+
+enum prayerrequest_status {
+  active
+  prayed_for
+  answered
+  archived
+}
+
+enum group_approveMembers {
+  admins_only
+  all_members
+}
+
+enum ministryjoinrequest_status {
+  pending
+  approved
+  rejected
+}
+
+enum donationrecord_paymentMethod {
+  Cash
+  Cheque
+  Bank_Transfer
+  eSewa
+  Other
+}
+
+enum expenserecord_status {
+  paid
+  pending
+  overdue
+  cancelled
+}
+
+enum user_relationshipStatus {
+  Single
+  In_a_relationship
+  Engaged
+  Married
+  Its_complicated
+  Separated
+  Divorced
+  Widowed
+}
+
+enum user_friendsListPrivacy {
+  public
+  friends
+  private
+}
+
+enum user_friendRequestPrivacy {
+  everyone
+  friends_of_friends
+}
+
+enum user_groupInvitePrivacy {
+  everyone
+  friends
+}
