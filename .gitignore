@@ -1,7 +1,5 @@
 # NEVER COMMIT ENV FILES
-backend/.env
-frontend/.env
 backend/node_modules/
 frontend/node_modules/
 node_modules/
-*.env
+
