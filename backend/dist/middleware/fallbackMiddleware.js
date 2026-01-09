@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fallbackMiddleware = void 0;
-const db_1 = require("../db");
 // Minimal placeholder payloads for content lists used on the public site.
 const fallbackPayloads = {
     sermons: [],
@@ -9,7 +8,6 @@ const fallbackPayloads = {
     ministries: [],
     blogposts: [],
     newsitems: [],
-    homeslides: [],
     aboutsections: [],
     keypersons: [],
     historymilestones: [],
@@ -27,8 +25,6 @@ const fallbackPayloads = {
  * site usable (albeit without dynamic data) when MySQL is down.
  */
 const fallbackMiddleware = (req, res, next) => {
-    if (db_1.isDatabaseHealthy)
-        return next();
     if (req.method !== "GET") {
         return res.status(503).json({
             error: "Database unavailable. Write operations are temporarily disabled.",

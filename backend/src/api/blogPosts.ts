@@ -1,7 +1,10 @@
 
+import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma, blogpost } from '@prisma/client';
+import { Prisma, blogpost, blogpost_category } from '@prisma/client';
+import { publishContentUpdate } from '../services/contentUpdates';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -48,9 +51,11 @@ router.post('/', async (req, res) => {
     const id = crypto.randomUUID();              // ✅ generate missing id
     const linkPath = `/blog/${id}`;              // ✅ generate missing linkPath
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
+    const normalizedCategory = normalizeEnumValue(category, blogpost_category);
 
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid blog category.' });
+    }
 
     try {
         const newPost = await prisma.blogpost.create({
@@ -61,7 +66,7 @@ router.post('/', async (req, res) => {
                 linkPath,                          // ✅ required by Prisma
                 updatedAt: new Date(),
                 date: postDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
@@ -70,11 +75,10 @@ router.post('/', async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
-            },
+                },
         });
 
+    publishContentUpdate({ type: 'blogPost', action: 'created', id: newPost.id, timestamp: new Date().toISOString() });  
         res.status(201).json(shapeBlogPostForFrontend(newPost));
     } catch (error) {
         console.error(error);
@@ -87,7 +91,12 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
-    
+    const normalizedCategory = normalizeEnumValue(category, blogpost_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid blog category.' });
+    }
+
     try {
         const updatedPost = await prisma.blogpost.update({
             where: { id },
@@ -95,7 +104,7 @@ router.put('/:id', async (req, res) => {
                 title,
                 description,
                 date: postDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
@@ -107,6 +116,7 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+    publishContentUpdate({ type: 'blogPost', action: 'updated', id: updatedPost.id, timestamp: new Date().toISOString() });
         res.json(shapeBlogPostForFrontend(updatedPost));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -121,6 +131,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.blogpost.delete({ where: { id } });
+    publishContentUpdate({ type: 'blogPost', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send();
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

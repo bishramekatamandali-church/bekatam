@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { EventItem, BSSimulatedDate } from '../../types';
-import { adToBsSimulated, bsToAdSimulated, getDaysInBsMonthSimulated, AD_BS_YEAR_DIFF } from '../../dateConverter';
+import { BSDate } from '../../types';
+import { adToBs, bsToAd, getDaysInBsMonth, BS_YEAR_RANGE } from '../../dateConverter';
 import Button from '../ui/Button';
+import Modal from '../ui/Modal';
 
 const ChevronLeftIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
@@ -11,35 +12,66 @@ const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
 );
 
+export type CalendarEntryType = 'event' | 'news' | 'sermon' | 'blog';
+
+export interface CalendarEntry {
+  id: string;
+  title: string;
+  date: string;
+  type: CalendarEntryType;
+  link?: string;
+}
+
 const BS_MONTH_NAMES_EN = [
   "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
   "Ashwin", "Kartik", "Mangsir", "Poush", "Magh",
   "Falgun", "Chaitra"
 ];
-
-const AD_MONTH_NAMES_EN = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+const BS_MONTH_NAMES_SHORT = [
+  "Bai", "Jes", "Ash", "Shr", "Bha", "Ashw", "Kar", "Man", "Pou", "Mag", "Fal", "Chai"
 ];
 
-const DAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const AD_MONTH_NAMES_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
+
+const DAY_LABELS = [
+  { en: "Sun", np: "आइत" },
+  { en: "Mon", np: "सोम" },
+  { en: "Tue", np: "मंगल" },
+  { en: "Wed", np: "बुध" },
+  { en: "Thu", np: "बिही" },
+  { en: "Fri", np: "शुक्र" },
+  { en: "Sat", np: "शनि" },
+];
+
+const TYPE_COLORS: Record<CalendarEntryType, string> = {
+  event: 'bg-teal-500',
+  news: 'bg-amber-500',
+  sermon: 'bg-purple-500',
+  blog: 'bg-blue-500',
+};
 
 
 interface InteractiveCalendarProps {
-  events: EventItem[];
+  items: CalendarEntry[];
   onMonthChange?: (bsMonth: number, bsYear: number) => void;
   initialBsMonth?: number;
   initialBsYear?: number;
 }
 
-const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMonthChange, initialBsMonth, initialBsYear }) => {
+const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMonthChange, initialBsMonth, initialBsYear }) => {
   const defaultInitialAdDate = useMemo(() => new Date(), []);
-  const defaultInitialBsDate = useMemo(() => adToBsSimulated(defaultInitialAdDate), [defaultInitialAdDate]);
+  const defaultInitialBsDate = useMemo(() => adToBs(defaultInitialAdDate), [defaultInitialAdDate]);
 
   const [currentBsMonth, setCurrentBsMonth] = useState<number>(initialBsMonth || defaultInitialBsDate.month);
   const [currentBsYear, setCurrentBsYear] = useState<number>(initialBsYear || defaultInitialBsDate.year);
   
-  const [selectedBsDate, setSelectedBsDate] = useState<BSSimulatedDate | null>(null);
+  const [selectedBsDate, setSelectedBsDate] = useState<BSDate | null>(null);
+  const [selectedEntries, setSelectedEntries] = useState<CalendarEntry[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalDateLabel, setModalDateLabel] = useState('');
 
   useEffect(() => {
     if (initialBsMonth !== undefined && initialBsMonth !== currentBsMonth) {
@@ -57,17 +89,27 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
   }, [currentBsMonth, currentBsYear, onMonthChange]);
 
   const handlePrevMonth = () => {
+    if (currentBsMonth === 1 && currentBsYear === BS_YEAR_RANGE.start) return;
+
     let newMonth = currentBsMonth - 1;
     let newYear = currentBsYear;
+
     if (newMonth < 1) { newMonth = 12; newYear--; }
+    if (newYear < BS_YEAR_RANGE.start) { newYear = BS_YEAR_RANGE.start; newMonth = 1; }
+
     setCurrentBsMonth(newMonth);
     setCurrentBsYear(newYear);
   };
 
   const handleNextMonth = () => {
+    if (currentBsMonth === 12 && currentBsYear === BS_YEAR_RANGE.end) return;
+
     let newMonth = currentBsMonth + 1;
     let newYear = currentBsYear;
+
     if (newMonth > 12) { newMonth = 1; newYear++; }
+    if (newYear > BS_YEAR_RANGE.end) { newYear = BS_YEAR_RANGE.end; newMonth = 12; }
+
     setCurrentBsMonth(newMonth);
     setCurrentBsYear(newYear);
   };
@@ -78,39 +120,34 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
 
   const goToToday = () => {
     const todayAd = new Date();
-    const todayBs = adToBsSimulated(todayAd);
+    const todayBs = adToBs(todayAd);
     setCurrentBsMonth(todayBs.month);
     setCurrentBsYear(todayBs.year);
-    setSelectedBsDate(todayBs); 
+    setSelectedBsDate(todayBs);
+    setIsModalOpen(false);
   };
   
   const yearOptions = useMemo(() => {
-    const years = [];
-    const referenceYear = defaultInitialBsDate.year;
-    for (let i = -10; i <= 10; i++) { years.push(referenceYear + i); }
-    return years;
-  }, [defaultInitialBsDate.year]);
-
-  const adHeaderDisplay = useMemo(() => {
-    const firstAdDateOfBsMonth = bsToAdSimulated(1, currentBsMonth, currentBsYear);
-    const numDaysInCurrentBsMonth = getDaysInBsMonthSimulated(currentBsMonth, currentBsYear);
-    const lastAdDateOfBsMonth = bsToAdSimulated(numDaysInCurrentBsMonth, currentBsMonth, currentBsYear);
-
-    const startAdMonthName = AD_MONTH_NAMES_EN[firstAdDateOfBsMonth.getMonth()];
-    const endAdMonthName = AD_MONTH_NAMES_EN[lastAdDateOfBsMonth.getMonth()];
-
-    const startAdYear = firstAdDateOfBsMonth.getFullYear();
-    const endAdYear = lastAdDateOfBsMonth.getFullYear();
-
-    if (startAdYear === endAdYear) {
-      return startAdMonthName === endAdMonthName ? `${startAdMonthName} ${startAdYear} AD` : `${startAdMonthName} / ${endAdMonthName} ${startAdYear} AD`;
+    const years: number[] = [];
+    for (let year = BS_YEAR_RANGE.start; year <= BS_YEAR_RANGE.end; year++) {
+      years.push(year);
     }
-    return `${startAdMonthName} ${startAdYear} / ${endAdMonthName} ${endAdYear} AD`;
-  }, [currentBsMonth, currentBsYear]);
+    return years;
+  }, []);
 
+  const formatBsYearLabel = useCallback((bsYear: number) => {
+    const startAdYear = bsToAd(1, 1, bsYear).getFullYear();
+    const lastDayInYear = getDaysInBsMonth(12, bsYear);
+    const endAdYear = bsToAd(lastDayInYear, 12, bsYear).getFullYear();
+    return startAdYear === endAdYear ? `${startAdYear} AD` : `${startAdYear}-${endAdYear} AD`;
+  }, []);
+
+  const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
+
+  
   const calendarGrid = useMemo(() => {
-    const numDaysInMonth = getDaysInBsMonthSimulated(currentBsMonth, currentBsYear);
-    const firstAdDateOfMonth = bsToAdSimulated(1, currentBsMonth, currentBsYear);
+    const numDaysInMonth = getDaysInBsMonth(currentBsMonth, currentBsYear);
+    const firstAdDateOfMonth = bsToAd(1, currentBsMonth, currentBsYear);
     const firstDayOfWeek = firstAdDateOfMonth.getDay();
 
     // FIX: Changed JSX.Element[] to React.ReactElement[] to resolve "Cannot find namespace 'JSX'" error.
@@ -125,16 +162,16 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
 
     // Actual days
     for (let day = 1; day <= numDaysInMonth; day++) {
-      const adDateForBsDay = bsToAdSimulated(day, currentBsMonth, currentBsYear);
+      const adDateForBsDay = bsToAd(day, currentBsMonth, currentBsYear);
       const isToday = adDateForBsDay.toDateString() === defaultInitialAdDate.toDateString();
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsMonth && selectedBsDate?.year === currentBsYear;
 
-      const eventsOnDay = events.filter(event => {
-        if (!event.date) return false;
-        const eventAdDate = new Date(event.date);
-        return eventAdDate.getFullYear() === adDateForBsDay.getFullYear() &&
-               eventAdDate.getMonth() === adDateForBsDay.getMonth() &&
-               eventAdDate.getDate() === adDateForBsDay.getDate();
+      const entriesOnDay = items.filter(item => {
+        if (!item.date) return false;
+        const itemAdDate = new Date(item.date);
+        return itemAdDate.getFullYear() === adDateForBsDay.getFullYear() &&
+               itemAdDate.getMonth() === adDateForBsDay.getMonth() &&
+               itemAdDate.getDate() === adDateForBsDay.getDate();
       });
 
       const isSaturday = adDateForBsDay.getDay() === 6;
@@ -145,7 +182,19 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
           className={`relative border-r border-b border-blue-200 p-1.5 cursor-pointer hover:bg-blue-50 transition-colors duration-150 flex flex-col justify-between aspect-square
             ${isSaturday ? 'bg-green-50' : 'bg-white'} 
             ${isSelectedDay ? 'bg-purple-200 ring-2 ring-purple-500' : isToday ? 'ring-2 ring-amber-500' : ''}`}
-          onClick={() => setSelectedBsDate({ day, month: currentBsMonth, year: currentBsYear, monthName: BS_MONTH_NAMES_EN[currentBsMonth-1] })}
+          onClick={() => {
+            const bsDate = { day, month: currentBsMonth, year: currentBsYear, monthName: BS_MONTH_NAMES_EN[currentBsMonth-1] };
+            setSelectedBsDate(bsDate);
+            if (entriesOnDay.length > 0) {
+              const adLabel = `${AD_MONTH_NAMES_SHORT[adDateForBsDay.getMonth()]} ${adDateForBsDay.getDate()}, ${adDateForBsDay.getFullYear()} AD`;
+              setModalDateLabel(`${bsDate.monthName} ${bsDate.day}, ${bsDate.year} BS • ${adLabel}`);
+              setSelectedEntries(entriesOnDay);
+              setIsModalOpen(true);
+            } else {
+              setIsModalOpen(false);
+              setSelectedEntries([]);
+            }
+          }}
           role="button" tabIndex={0}
           aria-label={`View events for BS ${day}, ${BS_MONTH_NAMES_EN[currentBsMonth-1]} ${currentBsYear}`}
         >
@@ -162,13 +211,13 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
           </div>
 
           {/* Events */}
-          {eventsOnDay.length > 0 && (
+          {entriesOnDay.length > 0 && (
             <div className="flex justify-center items-end space-x-1 h-4">
-              {eventsOnDay.slice(0, 4).map(event => ( 
-                <div key={event.id} className="relative group">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+              {entriesOnDay.slice(0, 4).map(entry => (
+                <div key={entry.id} className="relative group">
+                  <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
                   <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 w-max max-w-[200px] px-2 py-1 bg-slate-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" role="tooltip">
-                    {event.title}
+                    {entry.title}
                   </div>
                 </div>
               ))}
@@ -186,52 +235,54 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
     }
 
     return days;
-  }, [currentBsMonth, currentBsYear, events, defaultInitialAdDate, selectedBsDate]);
+  }, [currentBsMonth, currentBsYear, items, defaultInitialAdDate, selectedBsDate]);
   
-  const currentMonthName = BS_MONTH_NAMES_EN[currentBsMonth - 1];
+  const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsMonth - 1];
 
   return (
     <div className="bg-white rounded-t-lg">
-      <header className="bg-blue-600 text-white p-4 flex flex-row justify-between items-center rounded-t-lg">
-        <div className="flex items-center space-x-2">
+      <header className="bg-blue-600 text-white p-3 flex flex-col gap-3 rounded-t-lg sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <Button onClick={handlePrevMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Previous Month">
-            <ChevronLeftIcon className="w-6 h-6" />
+            <ChevronLeftIcon className="w-5 h-5" />
           </Button>
-          <Button onClick={goToToday} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500 text-sm">
+          <Button onClick={goToToday} variant="ghost" size="sm" className="!px-2.5 !py-0.5 text-xs font-semibold !text-white hover:!bg-blue-500 border border-white/50 rounded-full" aria-label="Jump to today">
             Today
           </Button>
           <Button onClick={handleNextMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Next Month">
-            <ChevronRightIcon className="w-6 h-6" />
+            <ChevronRightIcon className="w-5 h-5" />
           </Button>
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-semibold text-left">
-              {currentMonthName} {currentBsYear} BS
-            </h2>
-            <select 
-              value={currentBsYear} 
-              onChange={handleYearChange} 
-              className="bg-blue-500 border-blue-400 text-white text-sm rounded-md p-2 focus:ring-amber-500 focus:border-amber-500"
+          <div className="flex items-center gap-2 bg-blue-500/40 px-2.5 py-1 rounded-md">
+            <label htmlFor="calendar-year" className="text-xs uppercase tracking-wide text-blue-100">Year</label>
+            <select
+              id="calendar-year"
+              value={currentBsYear}
+              onChange={handleYearChange}
+              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500"
               aria-label="Select Year"
             >
-              {yearOptions.map(year => <option key={year} value={year}>{year} BS</option>)}
+              {yearOptions.map(year => <option key={year} value={year}>{formatBsYearLabel(year)}</option>)}
             </select>
           </div>
-          <p className="text-sm text-blue-100 mt-1 text-right">{adHeaderDisplay}</p>
+        </div>
+        <div className="flex-1 text-center space-y-1">
+          <h2 className="text-lg sm:text-xl font-semibold tracking-wide">
+            {currentMonthNameShort} {currentBsYear} BS
+          </h2>
+          <p className="text-xs text-blue-100">{currentBsYearAdLabel}</p>
+          
         </div>
       </header>
       <div className="overflow-x-auto">
         {/* Weekday labels */}
         <div className="grid grid-cols-7 w-full max-w-full border-t border-blue-500">
-          {DAY_LABELS_EN.map((label, index) => (
+          {DAY_LABELS.map((label, index) => (
             <div
               key={index}
-              className="flex items-center justify-center aspect-square 
-                         text-[10px] sm:text-xs md:text-sm font-medium 
-                         text-blue-800 bg-blue-100 border-r border-b border-blue-200 last:border-r-0"
+              className="flex flex-col items-center justify-center aspect-square text-[10px] sm:text-xs md:text-sm font-semibold text-blue-900 bg-blue-100 border-r border-b border-blue-200 last:border-r-0"
             >
-              {label}
+              <span>{label.en}</span>
+              <span className="text-[10px] sm:text-[11px] font-normal text-blue-700 leading-tight">{label.np}</span>
             </div>
           ))}
         </div>
@@ -241,6 +292,23 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ events, onMon
           {calendarGrid}
         </div>
       </div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalDateLabel}>
+        <div className="space-y-3">
+          {selectedEntries.map(entry => (
+            <div key={entry.id} className="flex items-start justify-between gap-3 border border-slate-200 rounded-lg p-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 capitalize">{entry.type}</p>
+                <p className="text-sm font-semibold text-slate-800">{entry.title}</p>
+              </div>
+              {entry.link && (
+                <Button asLink to={entry.link} variant="outline" size="xs" className="!px-2 !py-1">
+                  View
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 };

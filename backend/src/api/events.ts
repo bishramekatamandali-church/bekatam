@@ -1,7 +1,10 @@
 
+import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma, eventitem } from '@prisma/client';
+import { Prisma, eventitem, eventitem_category } from '@prisma/client';
+import { publishContentUpdate } from '../services/contentUpdates';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -53,28 +56,65 @@ router.get('/:id', async (req, res) => {
 // POST a new event
 router.post('/', async (req, res) => {
     // Note: In a real app, validate req.body against a schema
-    const { date, videoUrl, audioUrl, ...restOfData } = req.body;
+    const {
+        title,
+        description,
+        imageUrl,
+        linkPath: requestLinkPath,
+        category,
+        date,
+        location,
+        time,
+        expectations,
+        guests,
+        contactPerson,
+        contactEmail,
+        contactPhone,
+        registrationLink,
+        capacity,
+        isFeeRequired,
+        feeAmount,
+        videoUrl,
+        audioUrl,
+    } = req.body;
     
-    // TODO: Get user from auth token for postedByOwnerId/Name
-    const postedByOwnerId = '0'; // Placeholder
-    const postedByOwnerName = 'Admin System'; // Placeholder
-
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
+    const id = crypto.randomUUID();
+    const linkPath = requestLinkPath || `/events/${id}`;
+    const normalizedCategory = normalizeEnumValue(category, eventitem_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid event category.' });
+    }
 
     try {
         const newEvent = await prisma.eventitem.create({
             data: {
-                ...restOfData,
+                id,
+                title,
+                description,
+                imageUrl,
+                linkPath,
+                category: normalizedCategory,
                 date: eventDate,
+                location,
+                time,
+                expectations,
+                guests,
+                contactPerson,
+                contactEmail,
+                contactPhone,
+                registrationLink,
+                isFeeRequired,
+                feeAmount,
                 videoUrl,
                 audioUrl,
-                postedByOwnerId,
-                postedByOwnerName,
+                updatedAt: new Date(),
                 // Ensure optional numeric fields are handled
-                capacity: restOfData.capacity ? parseInt(restOfData.capacity, 10) : undefined,
-                likes: restOfData.likes || 0,
-            }
+                capacity: capacity ? parseInt(capacity, 10) : undefined,       
+               }
         });
+     publishContentUpdate({ type: 'event', action: 'created', id: newEvent.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeEventForFrontend(newEvent));
     } catch (error) {
         console.error("Error creating event:", error);
@@ -88,23 +128,63 @@ router.post('/', async (req, res) => {
 // PUT (update) an event
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { date, videoUrl, audioUrl, ...restOfData } = req.body;
+    const {
+        title,
+        description,
+        imageUrl,
+        linkPath,
+        category,
+        date,
+        location,
+        time,
+        expectations,
+        guests,
+        contactPerson,
+        contactEmail,
+        contactPhone,
+        registrationLink,
+        capacity,
+        isFeeRequired,
+        feeAmount,
+        videoUrl,
+        audioUrl,
+    } = req.body;
 
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
-    
+    const normalizedCategory = normalizeEnumValue(category, eventitem_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid event category.' });
+    }
+
     try {
         const updatedEvent = await prisma.eventitem.update({
             where: { id: id },
             data: {
-                ...restOfData,
+                title,
+                description,
+                imageUrl,
+                linkPath,
+                category: normalizedCategory,
                 date: eventDate,
+                location,
+                time,
+                expectations,
+                guests,
+                contactPerson,
+                contactEmail,
+                contactPhone,
+                registrationLink,
+                isFeeRequired,
+                feeAmount,
                 videoUrl,
                 audioUrl,
                 // Ensure optional numeric fields are handled
-                capacity: restOfData.capacity ? parseInt(restOfData.capacity, 10) : undefined,
+                capacity: capacity ? parseInt(capacity, 10) : undefined,
                 updatedAt: new Date(),
             }
         });
+    publishContentUpdate({ type: 'event', action: 'updated', id: updatedEvent.id, timestamp: new Date().toISOString() });
         res.json(shapeEventForFrontend(updatedEvent));
     } catch (error) {
         console.error(`Error updating event with id "${id}":`, error);
@@ -125,6 +205,7 @@ router.delete('/:id', async (req, res) => {
         await prisma.eventitem.delete({
             where: { id: id },
         });
+    publishContentUpdate({ type: 'event', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send(); // No Content
     } catch (error) {
         console.error(`Error deleting event with id "${id}":`, error);

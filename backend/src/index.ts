@@ -32,7 +32,6 @@ import chatbotRoutes from "./api/chatbot";
 import ministryRoutes from "./api/ministries";
 import blogPostRoutes from "./api/blogPosts";
 import newsItemRoutes from "./api/newsItems";
-import homeSlideRoutes from "./api/homeSlides";
 import aboutSectionRoutes from "./api/aboutSections";
 import keyPersonRoutes from "./api/keyPersons";
 import historyMilestoneRoutes from "./api/historyMilestones";
@@ -61,6 +60,7 @@ import donatePageRoutes from "./api/donatePage";
 import financialSummaryRoutes from "./api/financialSummary";
 import fellowshipScheduleRoutes from "./api/fellowshipSchedules";
 import activityLogRoutes from "./api/activityLogs";
+import contentUpdateRoutes from "./api/contentUpdates";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -93,7 +93,6 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/ministries", ministryRoutes);
 app.use("/api/blogposts", blogPostRoutes);
 app.use("/api/newsitems", newsItemRoutes);
-app.use("/api/homeslides", homeSlideRoutes);
 app.use("/api/aboutsections", aboutSectionRoutes);
 app.use("/api/keypersons", keyPersonRoutes);
 app.use("/api/historymilestones", historyMilestoneRoutes);
@@ -122,6 +121,7 @@ app.use("/api/donate-page", donatePageRoutes);
 app.use("/api/financial-summary", financialSummaryRoutes);
 app.use("/api/fellowship-schedules", fellowshipScheduleRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/content-updates", contentUpdateRoutes);
 
 // --- START SERVER ---
 app.listen(port, () => {

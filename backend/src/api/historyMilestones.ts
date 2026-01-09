@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, historymilestone } from '@prisma/client';
 
@@ -26,13 +27,13 @@ router.get('/', async (req, res) => {
 // POST a new milestone
 router.post('/', async (req, res) => {
     const { year, title, description, imageUrl } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
 
     try {
         const newMilestone = await prisma.historymilestone.create({
             data: { id: crypto.randomUUID(), 
-                updatedAt: new Date(), year, title, description, imageUrl, postedByOwnerId, postedByOwnerName }
+                updatedAt: new Date(), year, title, description, imageUrl, postedByAdminId, postedByAdminName }
         });
         res.status(201).json(shapeMilestoneForFrontend(newMilestone));
     } catch (error) {

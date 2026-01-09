@@ -1,0 +1,102 @@
+te'>) => addContent('contactMessage', data as any).then(res => res.newItem as ContactMessage || null);
+  const updateContactMessageStatus = async (id: string, status: 'replied' | 'pending', replyNote?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contact-messages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ status, replyNote }),
+      });
+      if (!response.ok) throw new Error('Failed to update contact message');
+      const updated = await response.json();
+      setContactMessages(prev => prev.map(msg => msg.id === id ? updated : msg));
+      logContentActivity(`contactMessage updated`, 'content_update', 'contactMessage', id);
+      return true;
+    } catch (error) {
+      console.error('Error updating contact message status:', error);
+      return false;
+    }
+  };
+  const addMinistryJoinRequest = (data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>, ministry: Ministry) => addContent('ministryJoinRequest', { ministryId: ministry.id, ministryName: ministry.title, ...data } as any).then(res => res.newItem as MinistryJoinRequest || null);
+  const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ministry-join-requests/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ status, adminNotes }),
+      });
+      if (!response.ok) throw new Error('Failed to update ministry join request');
+      const updated = await response.json();
+      setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
+      logContentActivity(`ministryJoinRequest updated`, 'content_update', 'ministryJoinRequest', id);
+      return true;
+    } catch (error) {
+      console.error('Error updating ministry join request status:', error);
+      return false;
+    }
+  };
+  const getMinistryJoinRequestsForUser = (userId: string) => ministryJoinRequests.filter(req => req.userId === userId);
+  const addPrayerRequest = (data: PrayerRequestFormData) => addContent('prayerRequest', data).then(res => res.newItem as PrayerRequest || null);
+  const addTestimonial = (data: TestimonialFormData) => addContent('testimonial', data).then(res => res.newItem as Testimonial || null);
+  const toggleLikeOnItem = async (itemType: ContentType, itemId: string, isLiked: boolean): Promise<ContentItem | null> => {
+      try {
+          const action = isLiked ? 'unlike' : 'like';
+          const response = await fetch(`${API_BASE_URL}/interactions/toggle-like/${itemType}/${itemId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+          if (!response.ok) throw new Error('Failed to toggle like');
+          const updatedItem = await response.json();
+          const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters };
+          const setter = setterMap[itemType];
+          if (setter) setter((prev: any[]) => prev.map(item => item.id === itemId ? { ...item, likes: updatedItem.likes } : item));
+          return updatedItem;
+      } catch (error) { return null; }
+  };
+  const togglePrayerOnRequest = async (requestId: string): Promise<boolean> => {
+      if (!currentUser) return false;
+      try {
+          const response = await fetch(`${API_BASE_URL}/prayer-requests/${requestId}/toggle-prayer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, userName: currentUser.fullName }), });
+          if (!response.ok) throw new Error('Failed to toggle prayer');
+          const updatedRequest: PrayerRequest = await response.json();
+          setPrayerRequests(prev => prev.map(p => p.id === requestId ? updatedRequest : p));
+          return true;
+      } catch (error) { return false; }
+  };
+  const updatePrayerRequestStatusByAdmin = async (id: string, status: PrayerRequestStatus, adminNotes?: string): Promise<boolean> => {
+      try {
+          const response = await fetch(`${API_BASE_URL}/prayer-requests/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ status, adminNotes }) });
+          if (!response.ok) throw new Error('Failed to update status');
+          const updatedRequest = await response.json();
+          setPrayerRequests(prev => prev.map(pr => pr.id === id ? updatedRequest : pr));
+          return true;
+      } catch (error) { return false; }
+  };
+  const updatePrayerRequestStatusByUser = async (id: string, status: PrayerRequestStatus): Promise<boolean> => {
+      if(status !== 'answered' && status !== 'active') return false;
+      return updatePrayerRequestStatusByAdmin(id, status);
+  };
+   return (
+    <ContentContext.Provider
+      value={{
+        sermons, events, ministries, blogPosts, newsItems, homeSlides, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, monthlyThemeImages, advertisements, prayerRequests, testimonials, groups, donatePageContent,
+        churchMembers, meetingLogs, decisionLogs, expenseRecords, fellowshipRosters, generatedSchedules,
+        allDerivedMediaItems: [],
+        loadingContent,
+        addContent, updateContent, deleteContent, getContentById,
+        contentActivityLogs, logContentActivity,
+        addDonationRecord, addCollectionRecord, addContactMessage, updateContactMessageStatus,
+        addMinistryJoinRequest, updateMinistryJoinRequestStatus, getMinistryJoinRequestsForUser,
+        addPrayerRequest, updatePrayerRequestStatusByAdmin, updatePrayerRequestStatusByUser, togglePrayerOnRequest,
+        addTestimonial, addCommentToItem, updateComment, deleteComment,
+        generateNextSchedules: async () => [], updateGeneratedSchedule: async () => false,
+        deleteGeneratedSchedule: async () => false, publishGeneratedScheduleToEvent: async () => null,
+        toggleLikeOnItem,
+      }}
+    >
+      {children}
+    </ContentContext.Provider>
+  );
+};
+
+export const useContent = (): ContentContextType => {
+  const context = useContext(ContentContext);
+  if (context === undefined) throw new Error('useContent must be used within a ContentProvider');
+  return context;
+};

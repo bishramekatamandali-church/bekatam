@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useContent } from '../contexts/ContentContext';
-import InteractiveCalendar from '../components/calendar/InteractiveCalendar';
-import MonthImageDisplay from '../components/calendar/MonthImageDisplay';
+import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
 import { generateYearlyCalendarPDF } from '../components/calendar/PrintableCalendarPDF';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
-import { adToBsSimulated, formatDateADBS } from '../dateConverter'; 
-import { EventItem, MonthlyThemeImage } from '../types';
+import { adToBs, formatDateADBS } from '../dateConverter';
 import { Link } from "react-router-dom";
+import DateConverterPanel from '../components/calendar/DateConverterPanel';
 
 
 const DownloadIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -32,10 +31,10 @@ const BS_MONTH_NAMES_EN_CAL = [
 
 
 const EventCalendarPage: React.FC = () => {
-  const { events, monthlyThemeImages, loadingContent } = useContent();
+  const { events, loadingContent, newsItems, sermons, blogPosts } = useContent();
   
   const currentADDate = new Date();
-  const initialBsDate = useMemo(() => adToBsSimulated(currentADDate), [currentADDate]); 
+  const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
 
   const [selectedPdfBsYear, setSelectedPdfBsYear] = useState<number>(initialBsDate.year);
   const [selectedPaperSize, setSelectedPaperSize] = useState<PaperSizeType>('a4');
@@ -54,7 +53,7 @@ const EventCalendarPage: React.FC = () => {
     return events.filter(event => {
         if (!event.date) return false;
         const eventAdDate = new Date(event.date);
-        const eventBsDate = adToBsSimulated(eventAdDate);
+        const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
     }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
   }, [events, currentCalendarBsMonth, currentCalendarBsYear]);
@@ -74,7 +73,7 @@ const EventCalendarPage: React.FC = () => {
     try {
       const churchName = "BEM Church"; 
       const churchWebsite = window.location.origin;
-      await generateYearlyCalendarPDF(selectedPdfBsYear, events, churchName, churchWebsite, monthlyThemeImages, selectedPaperSize);
+      await generateYearlyCalendarPDF(selectedPdfBsYear, events, churchName, churchWebsite, selectedPaperSize);
       setPdfStatusMessage("PDF Generated!");
       setTimeout(() => setPdfStatusMessage(''), 3000);
     } catch (error) {
@@ -84,10 +83,30 @@ const EventCalendarPage: React.FC = () => {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [selectedPdfBsYear, events, monthlyThemeImages, selectedPaperSize]);
+  }, [selectedPdfBsYear, events, selectedPaperSize]);
 
   const availableBsYears = useMemo(() => Array.from({ length: 10 }, (_, i) => initialBsDate.year - 5 + i), [initialBsDate.year]);
   
+const calendarItems: CalendarEntry[] = useMemo(() => {
+    const mappedEvents: CalendarEntry[] = events
+      .filter(event => !!event.date)
+      .map(event => ({ id: event.id, title: event.title, date: event.date!, type: 'event', link: `/events/${event.id}` }));
+
+    const mappedNews: CalendarEntry[] = newsItems
+      .filter(item => !!item.date)
+      .map(item => ({ id: item.id, title: item.title, date: item.date!, type: 'news', link: `/news/${item.id}` }));
+
+    const mappedSermons: CalendarEntry[] = sermons
+      .filter(sermon => !!sermon.date)
+      .map(sermon => ({ id: sermon.id, title: sermon.title, date: sermon.date!, type: 'sermon', link: `/sermons/${sermon.id}` }));
+
+    const mappedBlogs: CalendarEntry[] = blogPosts
+      .filter(post => !!post.date)
+      .map(post => ({ id: post.id, title: post.title, date: post.date!, type: 'blog', link: `/blog/${post.id}` }));
+
+    return [...mappedEvents, ...mappedNews, ...mappedSermons, ...mappedBlogs];
+  }, [blogPosts, events, newsItems, sermons]);
+
   const currentDisplayedBsMonthName = BS_MONTH_NAMES_EN_CAL[currentCalendarBsMonth - 1];
 
 
@@ -102,14 +121,7 @@ const EventCalendarPage: React.FC = () => {
         </header>
         
         <div className="max-w-4xl mx-auto">
-            <MonthImageDisplay
-                currentBsMonth={currentCalendarBsMonth}
-                currentBsYear={currentCalendarBsYear}
-                monthlyThemeImages={monthlyThemeImages}
-                loading={loadingContent}
-            />
-
-            <Card className="mt-6 shadow-xl">
+            <Card className="shadow-xl">
                 {loadingContent && !events.length ? (
                     <div className="p-4 sm:p-6 h-full flex items-center justify-center min-h-[400px]">
                         <p className="text-center text-slate-500 py-10">Loading calendar...</p>
@@ -117,7 +129,7 @@ const EventCalendarPage: React.FC = () => {
                 ) : (
                     <>
                     <InteractiveCalendar
-                      events={events}
+                      items={calendarItems}
                       onMonthChange={handleCalendarMonthChange}
                       initialBsMonth={currentCalendarBsMonth}
                       initialBsYear={currentCalendarBsYear}
@@ -136,7 +148,7 @@ const EventCalendarPage: React.FC = () => {
                             ) : (
                                 <ul className="space-y-3">
                                     {eventsForSelectedMonth.map(event => {
-                                        const eventBsDate = adToBsSimulated(new Date(event.date!));
+                                        const eventBsDate = adToBs(new Date(event.date!));
                                         const adDatePart = formatDateADBS(event.date!).split(' (')[1]?.replace(')', '');
                                         return (
                                             <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
@@ -158,6 +170,10 @@ const EventCalendarPage: React.FC = () => {
                     </>
                 )}
             </Card>
+        </div>
+	
+        <div className="max-w-4xl mx-auto">
+          <DateConverterPanel />
         </div>
 
         <div className="max-w-4xl mx-auto">

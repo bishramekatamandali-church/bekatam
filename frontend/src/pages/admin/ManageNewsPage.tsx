@@ -23,6 +23,10 @@ const ManageNewsPage: React.FC = () => {
   const { newsItems, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNewsItem, setEditingNewsItem] = useState<NewsItem | null>(null);
+ 
+  const sortedNews = React.useMemo(() =>
+    [...newsItems].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
+  [newsItems]);
 
   const handleOpenModal = (item?: NewsItem) => {
     setEditingNewsItem(item || null);
@@ -64,7 +68,7 @@ const ManageNewsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {newsItems.map((item) => (
+        {sortedNews.map((item) => (
           <Card key={item.id} className="flex flex-col dark:bg-slate-800">
             {item.imageUrl && <img src={item.imageUrl} alt={item.title} className="w-full h-40 object-cover"/>}
             <CardHeader className="flex-grow dark:border-slate-700">

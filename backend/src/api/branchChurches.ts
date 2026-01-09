@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, branchchurch } from '@prisma/client';
 
@@ -29,8 +30,8 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, address, pastorName, phone, email, serviceTimes, mapEmbedUrl, imageUrl, description, establishedDate } = req.body;
     const estDate = establishedDate && !isNaN(new Date(establishedDate).getTime()) ? new Date(establishedDate) : null;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
 
     try {
         const newBranch = await prisma.branchchurch.create({
@@ -39,8 +40,8 @@ router.post('/', async (req, res) => {
     updatedAt: new Date(),   // REQUIRED
                 name, address, pastorName, phone, email, serviceTimes, mapEmbedUrl, imageUrl, description, 
                 establishedDate: estDate,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeBranchForFrontend(newBranch));

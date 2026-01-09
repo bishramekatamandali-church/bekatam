@@ -23,6 +23,10 @@ const ManageBlogPostsPage: React.FC = () => {
   const { blogPosts, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+ 
+ const sortedPosts = React.useMemo(() =>
+    [...blogPosts].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
+  [blogPosts]);
 
   const handleOpenModal = (post?: BlogPost) => {
     setEditingPost(post || null);
@@ -64,7 +68,7 @@ const ManageBlogPostsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {blogPosts.map((post) => (
+        {sortedPosts.map((post) => (
           <Card key={post.id} className="flex flex-col">
             {post.imageUrl && <img src={post.imageUrl} alt={post.title} className="w-full h-40 object-cover"/>}
             <CardHeader className="flex-grow">

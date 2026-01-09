@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const router = express_1.default.Router();
 const shapeAboutSectionForFrontend = (section) => ({
@@ -26,20 +27,20 @@ router.get('/', async (req, res) => {
 // POST a new about section (custom only)
 router.post('/', async (req, res) => {
     const { title, content, imageUrl, displayOrder } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     try {
         const newSection = await db_1.prisma.aboutsection.create({
             data: {
-                id: crypto.randomUUID(),
+                id: crypto_1.default.randomUUID(),
                 updatedAt: new Date(),
                 title,
                 content,
                 imageUrl,
                 displayOrder: Number(displayOrder) || 0,
                 isCoreSection: false, // Can only add custom sections via API
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeAboutSectionForFrontend(newSection));

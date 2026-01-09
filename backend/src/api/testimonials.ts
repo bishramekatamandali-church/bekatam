@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, testimonial, testimonial_visibility } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
@@ -8,7 +9,7 @@ const router = express.Router();
 
 const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
     const user = (req as any).user;
-    if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+    if (!user || user.role !== 'admin') {
         res.status(403).json({ error: 'Only administrators can perform this action.' });
         return false;
     }
@@ -39,7 +40,7 @@ router.get('/', async (req, res) => {
 // POST a new testimonial (admin only)
 router.post('/', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
-    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByOwnerId, postedByOwnerName, userId, userName, userProfileImageUrl } = req.body;
+    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
 
     try {
         const newTestimonial = await prisma.testimonial.create({
@@ -54,8 +55,8 @@ router.post('/', authMiddleware, async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
                 userId,
                 userName,
                 userProfileImageUrl,

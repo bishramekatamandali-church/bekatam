@@ -2,7 +2,9 @@
 import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma, sermon } from '@prisma/client';
+import { Prisma, sermon, sermon_category } from '@prisma/client';
+import { publishContentUpdate } from '../services/contentUpdates';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -13,7 +15,6 @@ const shapeSermonForFrontend = (sermon: sermon): any => {
         comments: [], // Comments are handled separately on the frontend
     };
 };
-
 
 // GET all sermons
 router.get('/', async (req, res) => {
@@ -52,14 +53,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl } = req.body;
     
-    // TODO: Add validation and get user from auth token
-    const postedByOwnerId = '0'; // Placeholder
-    const postedByOwnerName = 'Admin System'; // Placeholder
-
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto.randomUUID();
-    
+    const normalizedCategory = normalizeEnumValue(category, sermon_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid sermon category.' });
+    }
+
     try {
         const newSermon = await prisma.sermon.create({
             data: {
@@ -68,7 +70,7 @@ router.post('/', async (req, res) => {
                 title,
                 description,
                 date: sermonDate, // Use the validated date or null
-                category,
+                category: normalizedCategory,
                 speaker,
                 scripture,
                 videoUrl,
@@ -76,10 +78,9 @@ router.post('/', async (req, res) => {
                 fullContent,
                 imageUrl,
                 linkPath: `/sermons/${id}`,
-                postedByOwnerId,
-                postedByOwnerName,
-            }
+                }
         });
+    publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeSermonForFrontend(newSermon));
     } catch (error) {
         console.error("Error creating sermon:", error);
@@ -97,6 +98,11 @@ router.put('/:id', async (req, res) => {
 
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
+    const normalizedCategory = normalizeEnumValue(category, sermon_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid sermon category.' });
+    }
 
     try {
         const updatedSermon = await prisma.sermon.update({
@@ -105,7 +111,7 @@ router.put('/:id', async (req, res) => {
                 title,
                 description,
                 date: sermonDate, // Use the validated date or null
-                category,
+                category: normalizedCategory,
                 speaker,
                 scripture,
                 videoUrl,
@@ -115,6 +121,7 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+    publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
         res.json(shapeSermonForFrontend(updatedSermon));
     } catch (error) {
         console.error(`Error updating sermon with id "${id}":`, error);
@@ -135,6 +142,7 @@ router.delete('/:id', async (req, res) => {
         await prisma.sermon.delete({
             where: { id: id },
         });
+    publishContentUpdate({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send(); // No Content
     } catch (error) {
         console.error(`Error deleting sermon with id "${id}":`, error);

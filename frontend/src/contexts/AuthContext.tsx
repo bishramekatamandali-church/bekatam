@@ -60,8 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const isAuthenticated = !!currentUser;
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "owner";
-  const isOwner = currentUser?.role === "owner";
+  const isAdmin = currentUser?.role === "admin";
 
   /* --------------------------- LOGGING HELPERS --------------------------- */
 
@@ -177,8 +176,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setCurrentUser(data.user);
 
       logUserActivity("User logged in", "user_login");
-      if (data.user.role === "admin" || data.user.role === "owner") {
-        logAdminAction("Admin/Owner Logged In", data.user.id);
+      if (data.user.role === "admin") {
+        logAdminAction("Admin Logged In", data.user.id);
       }
 
       setLoadingAuthState(false);
@@ -278,7 +277,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         currentUser,
         isAuthenticated,
         isAdmin,
-        isOwner,
         loadingAuthState,
         login,
         register,

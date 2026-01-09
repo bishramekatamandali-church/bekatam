@@ -24,6 +24,10 @@ const ManageSermonsPage: React.FC = () => {
   const { sermons, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
+ 
+  const sortedSermons = React.useMemo(() =>
+    [...sermons].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
+  [sermons]);
 
   const handleOpenModal = (sermon?: Sermon) => {
     setEditingSermon(sermon || null);
@@ -70,7 +74,7 @@ const ManageSermonsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {sermons.map((sermon) => (
+        {sortedSermons.map((sermon) => (
           <Card key={sermon.id} className="flex flex-col">
             {sermon.imageUrl && <img src={sermon.imageUrl} alt={sermon.title} className="w-full h-40 object-cover"/>}
             <CardHeader className="flex-grow">

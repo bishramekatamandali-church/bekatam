@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { NavLink, Outlet } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from '../../contexts/AuthContext';
 import { NavItem } from '../../types';
 import { NewspaperIcon as HeroNewspaperIcon, SpeakerWaveIcon as HeroSpeakerWaveIcon, CalendarIcon as HeroCalendarIcon, UsersIcon as HeroUsersIcon } from '@heroicons/react/24/outline'; // Adjusted to use Outline for consistency where solid wasn't used
@@ -88,9 +87,17 @@ const CreditCardIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 const WrenchScrewdriverIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${className}`}>
-    <path fillRule="evenodd" d="M12 6.75a5.25 5.25 0 015.25 5.25c0 2.446-1.652 4.512-3.977 5.083a.75.75 0 01-.628-.284Path.75.75 0 01-.284-.628A3.752 3.752 0 0012 15.75a3.752 3.752 0 00-3.362 2.173.75.75 0 01-.284.628.75.75 0 01-.628.284A5.251 5.251 0 016.75 12a5.25 5.25 0 015.25-5.25z" clipRule="evenodd" />
-    <path d="M6.222 18.252a.75.75 0 01-.397-.694c-.003-.245.07-.486.203-.69l4.03-6.512a5.234 5.234 0 012.283-1.517.75.75 0 01.476.153l3.105 3.106a.75.75 0 01.153.476c.133.76.433 1.507.886 2.167L18 17.207a.75.75 0 01-.222.658l-6.061 4.668a.75.75 0 01-.877 0l-5.556-4.278z" />
-    <path d="M2.25 12.013A5.25 5.25 0 0012 21.75l.035-.004a5.25 5.25 0 00-.027-10.496L2.25 12.013z" />
+    <path
+      fillRule="evenodd"
+      d="M12 6.75a5.25 5.25 0 0 1 6.775-5.025.75.75 0 0 1 .313 1.248l-3.32 3.319c.063.475.276.934.641 1.299.365.365.824.578 1.3.64l3.318-3.319a.75.75 0 0 1 1.248.313 5.25 5.25 0 0 1-5.472 6.756c-1.018-.086-1.87.1-2.309.634L7.344 21.3A3.298 3.298 0 1 1 2.7 16.657l8.684-7.151c.533-.44.72-1.291.634-2.309A5.342 5.342 0 0 1 12 6.75ZM4.117 19.125a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75h-.008a.75.75 0 0 1-.75-.75v-.008Z"
+      clipRule="evenodd"
+    />
+    <path d="m10.076 8.64-2.201-2.2V4.874a.75.75 0 0 0-.364-.643l-3.75-2.25a.75.75 0 0 0-.916.113l-.75.75a.75.75 0 0 0-.113.916l2.25 3.75a.75.75 0 0 0 .643.364h1.564l2.062 2.062 1.575-1.297Z" />
+    <path
+      fillRule="evenodd"
+      d="m12.556 17.329 4.183 4.182a3.375 3.375 0 0 0 4.773-4.773l-3.306-3.305a6.803 6.803 0 0 1-1.53.043c-.394-.034-.682-.006-.867.042a.589.589 0 0 0-.167.063l-3.086 3.748Zm3.414-1.36a.75.75 0 0 1 1.06 0l1.875 1.876a.75.75 0 1 1-1.06 1.06L15.97 17.03a.75.75 0 0 1 0-1.06Z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
@@ -110,11 +117,13 @@ const ReceiptPercentIcon: React.FC<{ className?: string }> = ({ className }) => 
 
 
 const AdminDashboardPage: React.FC = () => {
-  const { currentUser, isOwner } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const adminTabs: AdminTab[] = [
     { label: 'Dashboard', path: '/admin', subpath: '', icon: ChartBarIcon, group: "General" },
-    { label: 'Home Slides', path: '/admin/manage-home-slides', subpath: 'manage-home-slides', icon: PresentationChartLineIcon, group: "Content Management" },
     { label: 'Sermons', path: '/admin/manage-sermons', subpath: 'manage-sermons', icon: DocumentTextIcon, group: "Content Management" },
     { label: 'Events', path: '/admin/manage-events', subpath: 'manage-events', icon: CalendarDaysIcon, group: "Content Management" },
     { label: 'Ministries', path: '/admin/manage-ministries', subpath: 'manage-ministries', icon: BuildingLibraryIcon, group: "Content Management" },
@@ -122,8 +131,7 @@ const AdminDashboardPage: React.FC = () => {
     { label: 'News', path: '/admin/manage-news', subpath: 'manage-news', icon: HeroNewspaperIcon, group: "Content Management" }, 
     
     { label: 'Direct Media Uploads', path: '/admin/manage-direct-media', subpath: 'manage-direct-media', icon: PhotoIcon, group: "Media Management"},
-    { label: 'PDF Theme Images', path: '/admin/manage-theme-images', subpath: 'manage-theme-images', icon: PhotoIcon, group: "Media Management"}, 
-    
+        
     { label: 'About Sections', path: '/admin/manage-about-sections', subpath: 'manage-about-sections', icon: InformationCircleIcon, group: "About Page Settings" },
     { label: 'Key Persons', path: '/admin/manage-key-persons', subpath: 'manage-key-persons', icon: UserIcon, group: "About Page Settings" },
     { label: 'History Milestones', path: '/admin/manage-history', subpath: 'manage-history', icon: ClockIcon, group: "About Page Settings" },
@@ -133,27 +141,31 @@ const AdminDashboardPage: React.FC = () => {
     { label: 'Advertisements', path: '/admin/manage-advertisements', subpath: 'manage-advertisements', icon: HeroSpeakerWaveIcon, group: "Site Utilities" }, // Using HeroSpeakerWaveIcon for consistency
   ];
 
-  const ownerTabs: AdminTab[] = [];
-  if (isOwner) {
-    ownerTabs.push(
-      { label: 'Church Members', path: '/admin/manage-members', subpath: 'manage-members', icon: UsersIconAdmin, group: "Membership & Admin" },
-      { label: 'Meeting Logs', path: '/admin/manage-meetings', subpath: 'manage-meetings', icon: BriefcaseIcon, group: "Membership & Admin" },
-      { label: 'Decision Logs', path: '/admin/manage-decisions', subpath: 'manage-decisions', icon: ClipboardDocumentCheckIcon, group: "Membership & Admin" },
-      { label: 'Expense Records', path: '/admin/manage-expenses', subpath: 'manage-expenses', icon: CreditCardIcon, group: "Finance" },
-      { label: 'Collection Records', path: '/admin/manage-collection-records', subpath: 'manage-collection-records', icon: BanknotesIcon, group: "Finance" },
-      { label: 'Donation Records', path: '/admin/donation-records', subpath: 'donation-records', icon: CurrencyDollarIcon, group: "Finance" },
-      { label: 'Manage Donate Page', path: '/admin/manage-donate-page', subpath: 'manage-donate-page', icon: CurrencyDollarIcon, group: "Finance" },
-      { label: 'Financial Summary', path: '/admin/financial-summary', subpath: 'financial-summary', icon: ReceiptPercentIcon, group: "Finance" },
-      { label: 'Prayer Requests', path: '/admin/manage-prayer-requests', subpath: 'manage-prayer-requests', icon: PrayerHandsIcon, group: "Community Engagement" },
-      { label: 'Testimonials', path: '/admin/manage-testimonials', subpath: 'manage-testimonials', icon: TestimonyIcon, group: "Community Engagement" },
-      { label: 'Ministry Join Requests', path: '/admin/ministry-join-requests', subpath: 'ministry-join-requests', icon: UserPlusIcon, group: "Community Engagement" }, 
-      { label: 'Contact Messages', path: '/admin/contact-messages', subpath: 'contact-messages', icon: ChatBubbleLeftRightIcon, group: "Community Engagement" }, 
-      { label: 'Users', path: '/admin/users', subpath: 'users', icon: UsersGroupIcon, group: "Site Administration" },
-      { label: 'SEO Tools', path: '/admin/seo-tools', subpath: 'seo-tools', icon: WrenchScrewdriverIcon, group: "Site Administration" },
-      { label: 'Activity Log', path: '/admin/activity-log', subpath: 'activity-log', icon: ArchiveBoxIcon, group: "Site Administration" }
-    );
-  }
-  const allTabs = [...adminTabs, ...ownerTabs];
+  const privilegedTabs: AdminTab[] = [
+    { label: 'Church Members', path: '/admin/manage-members', subpath: 'manage-members', icon: UsersIconAdmin, group: "Membership & Admin" },
+    { label: 'Meeting Logs', path: '/admin/manage-meetings', subpath: 'manage-meetings', icon: BriefcaseIcon, group: "Membership & Admin" },
+    { label: 'Decision Logs', path: '/admin/manage-decisions', subpath: 'manage-decisions', icon: ClipboardDocumentCheckIcon, group: "Membership & Admin" },
+    { label: 'Expense Records', path: '/admin/manage-expenses', subpath: 'manage-expenses', icon: CreditCardIcon, group: "Finance" },
+    { label: 'Collection Records', path: '/admin/manage-collection-records', subpath: 'manage-collection-records', icon: BanknotesIcon, group: "Finance" },
+    { label: 'Donation Records', path: '/admin/donation-records', subpath: 'donation-records', icon: CurrencyDollarIcon, group: "Finance" },
+    { label: 'Manage Donate Page', path: '/admin/manage-donate-page', subpath: 'manage-donate-page', icon: CurrencyDollarIcon, group: "Finance" },
+    { label: 'Financial Summary', path: '/admin/financial-summary', subpath: 'financial-summary', icon: ReceiptPercentIcon, group: "Finance" },
+    { label: 'Prayer Requests', path: '/admin/manage-prayer-requests', subpath: 'manage-prayer-requests', icon: PrayerHandsIcon, group: "Community Engagement" },
+    { label: 'Testimonials', path: '/admin/manage-testimonials', subpath: 'manage-testimonials', icon: TestimonyIcon, group: "Community Engagement" },
+    { label: 'Ministry Join Requests', path: '/admin/ministry-join-requests', subpath: 'ministry-join-requests', icon: UserPlusIcon, group: "Community Engagement" },
+    { label: 'Contact Messages', path: '/admin/contact-messages', subpath: 'contact-messages', icon: ChatBubbleLeftRightIcon, group: "Community Engagement" },
+    { label: 'Users', path: '/admin/users', subpath: 'users', icon: UsersGroupIcon, group: "Site Administration" },
+    { label: 'SEO Tools', path: '/admin/seo-tools', subpath: 'seo-tools', icon: WrenchScrewdriverIcon, group: "Site Administration" },
+    { label: 'Activity Log', path: '/admin/activity-log', subpath: 'activity-log', icon: ArchiveBoxIcon, group: "Site Administration" }
+  ];
+  const allTabs = isAdmin ? [...adminTabs, ...privilegedTabs] : adminTabs;
+
+  const isOverviewRoute = location.pathname === '/admin';
+  const activeTab = useMemo(() => allTabs.find(tab => tab.subpath && location.pathname.includes(tab.subpath)), [allTabs, location.pathname]);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
 
 
   const groupedTabs = allTabs.reduce((acc, tab) => {
@@ -178,47 +190,112 @@ const AdminDashboardPage: React.FC = () => {
 
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors duration-150
-    ${isActive 
-      ? 'bg-purple-600 text-white shadow-md' 
-      : 'text-slate-600 hover:bg-slate-100'
+    `flex items-center px-3 py-2 text-sm font-semibold rounded-lg border transition-all duration-150 shadow-sm ${isActive
+      ? 'bg-purple-600 text-white border-purple-600 shadow-lg'
+      : 'bg-white/80 text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50'
     }`;
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Admin Panel</h1>
-        <p className="text-md text-slate-600">Welcome, {currentUser?.fullName || 'Admin'}. Select a section to manage.</p>
-      </header>
+    <div className="relative pb-8">
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
 
-      <div className="flex flex-col md:flex-row md:space-x-6 lg:space-x-8">
-        <aside className="md:w-1/4 lg:w-1/5 mb-6 md:mb-0 flex-shrink-0">
-          <nav className="space-y-1 p-3 rounded-xl sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto"> 
-            {sortedGroupEntries.map(([groupName, tabsInGroup]) => (
-              <div key={groupName} className="mb-2 last:mb-0">
-                {groupName !== 'Other' && ( 
-                    <h3 className="px-3 pt-3 pb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-3 first:mt-0">{groupName}</h3>
-                )}
+      <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500 rounded-3xl p-5 sm:p-8 shadow-xl text-white mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <p className="uppercase text-[11px] tracking-[0.25em] text-white/80">Admin overview</p>
+            <h1 className="text-3xl sm:text-4xl font-bold">Control Center</h1>
+            <p className="text-sm text-white/90 max-w-xl">Keep the overview in focus, then open the compact tool menu whenever you need to manage something.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="px-3 py-2 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 backdrop-blur"
+              onClick={() => navigate('/admin')}
+            >
+              Overview spotlight
+            </button>
+            <button
+              className="px-3 py-2 text-sm font-semibold bg-white text-purple-700 rounded-lg shadow-lg hover:shadow-xl"
+              onClick={() => setIsMenuOpen(true)}
+            >
+              Admin tools menu
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`${!isOverviewRoute ? 'fixed inset-0 z-30 p-3 sm:p-6 overflow-y-auto' : 'px-1 sm:px-0'}`}>
+        <div className={`bg-white/95 dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl backdrop-blur ${!isOverviewRoute ? 'min-h-[80vh]' : ''}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white/95 dark:bg-slate-900/90 rounded-t-2xl">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Workspace</p>
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">{isOverviewRoute ? 'Dashboard Overview' : activeTab?.label || 'Admin Function'}</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!isOverviewRoute && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200"
+                >
+                  Back to overview
+                </button>
+              )}
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 shadow-md"
+              >
+                Switch admin tool
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6 bg-gradient-to-b from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 rounded-b-2xl">
+            <Outlet />
+          </div>
+        </div>
+      </div>
+
+      <aside className={`fixed top-0 right-0 bottom-0 w-full sm:w-96 bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-200 ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Admin menu</p>
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Choose a function</h3>
+          </div>
+          <button
+            onClick={() => setIsMenuOpen(false)}
+            className="text-slate-500 hover:text-purple-600 text-xl leading-none"
+            aria-label="Close admin menu"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 space-y-4 overflow-y-auto h-full pb-24">
+          {sortedGroupEntries.map(([groupName, tabsInGroup]) => (
+            <div key={groupName} className="space-y-2">
+              {groupName !== 'Other' && (
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{groupName}</h3>
+              )}
+              <div className="grid grid-cols-1 gap-2">
                 {tabsInGroup.map((tab) => (
                   <NavLink
                     key={tab.subpath}
                     to={tab.path}
                     end={tab.subpath === ''} 
-                    className={navLinkClasses}
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     {tab.icon && React.createElement(tab.icon as React.ComponentType<{ className?: string }>, { className: 'mr-3 h-5 w-5 flex-shrink-0' })}
                     <span className="truncate">{tab.label}</span>
                   </NavLink>
                 ))}
               </div>
-            ))}
-          </nav>
-        </aside>
-
-        <main className="flex-1 p-4 sm:p-6 rounded-xl min-h-[calc(100vh-10rem)] bg-white shadow-md"> 
-          <Outlet />
-        </main>
-      </div>
+            </div>
+          ))}
+        </div>
+      </aside>
     </div>
   );
 };

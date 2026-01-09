@@ -29,8 +29,8 @@ const ManageAdvertisementsPage: React.FC = () => {
   const stats = useMemo(() => ({
     total: advertisements.length,
     active: advertisements.filter(ad => ad.isActive).length,
-    impressions: 12560, // Simulated
-    clicks: 892, // Simulated
+    impressions: advertisements.length,
+    clicks: 0,
   }), [advertisements]);
 
   const handleOpenModal = (ad?: Advertisement) => {

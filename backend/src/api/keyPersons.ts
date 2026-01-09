@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, keyperson } from '@prisma/client';
 
@@ -26,8 +27,8 @@ router.get('/', async (req, res) => {
 // POST a new key person
 router.post('/', async (req, res) => {
     const { name, role, bio, imageUrl } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
 
     try {
         const newPerson = await prisma.keyperson.create({
@@ -38,8 +39,8 @@ router.post('/', async (req, res) => {
                 role,
                 bio,
                 imageUrl,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeKeyPersonForFrontend(newPerson));

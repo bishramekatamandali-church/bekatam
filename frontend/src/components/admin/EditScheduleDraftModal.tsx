@@ -4,7 +4,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { GeneratedScheduleItem, Responsibility } from '../../types';
 import BSCalendarPicker from './BSCalendarPicker';
-import { formatDateADBS, adToBsSimulated, BS_MONTH_NAMES_EN, bsToAdSimulated } from '../../dateConverter';
+import { formatDateADBS, adToBs, BS_MONTH_NAMES_EN, bsToAd } from '../../dateConverter';
 import { PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface EditScheduleDraftModalProps {
@@ -57,7 +57,7 @@ export const EditScheduleDraftModal: React.FC<EditScheduleDraftModalProps> = ({
         adminNotes: initialData.adminNotes || '',
       });
       if (initialData.scheduledDate) {
-        const bs = adToBsSimulated(new Date(initialData.scheduledDate));
+        const bs = adToBs(new Date(initialData.scheduledDate));
         const monthName = BS_MONTH_NAMES_EN[bs.month - 1] || 'Unknown';
         setBsDateDisplay(`${monthName} ${bs.day}, ${bs.year} BS`);
       }
@@ -86,7 +86,7 @@ export const EditScheduleDraftModal: React.FC<EditScheduleDraftModalProps> = ({
   };
 
   const handleBsDateSelect = (bsDay: number, bsMonth: number, bsYear: number) => {
-    const adDate = bsToAdSimulated(bsDay, bsMonth, bsYear);
+    const adDate = bsToAd(bsDay, bsMonth, bsYear);
     const adDateString = adDate.toLocaleDateString('en-CA');
     setFormData(prev => ({ ...prev, scheduledDate: adDateString }));
     const monthName = BS_MONTH_NAMES_EN[bsMonth - 1] || 'Unknown';

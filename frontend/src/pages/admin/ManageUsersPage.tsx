@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { User, UserRole } from '../../types';
 
 const ManageUsersPage: React.FC = () => {
-  const { currentUser, getAllUsers, updateUserRole, isOwner, loadingAuthState } = useAuth();
+  const { currentUser, getAllUsers, updateUserRole, isAdmin, loadingAuthState } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -21,15 +21,12 @@ const ManageUsersPage: React.FC = () => {
   }, [getAllUsers, loadingAuthState, currentUser]); // Add currentUser to re-evaluate users if it changes (e.g. role change)
 
   const openRoleModal = (user: User) => {
-    setFeedback(null); 
-    
-    if (user.id === currentUser?.id && user.role === 'owner') {
-        const ownersCount = users.filter(u => u.role === 'owner').length;
-        if (ownersCount <= 1) {
-            setFeedback({ type: 'error', message: "As the last owner, you cannot change your own role." });
-            setTimeout(() => setFeedback(null), 7000);
-            return;
-        }
+    setFeedback(null);
+
+    if (user.id === currentUser?.id) {
+      setFeedback({ type: 'error', message: "You cannot change your own role." });
+      setTimeout(() => setFeedback(null), 5000);
+      return;
     }
     
     setSelectedUser(user);
@@ -38,11 +35,11 @@ const ManageUsersPage: React.FC = () => {
   };
 
   const handleRoleChange = async () => {
-    if (!selectedUser || !isOwner) {
-        setFeedback({ type: 'error', message: "Access Denied: Only owners can perform this action." });
-        setTimeout(() => setFeedback(null), 7000);
-        setIsRoleModalOpen(false);
-        return;
+    if (!selectedUser || !isAdmin) {
+      setFeedback({ type: 'error', message: "Access Denied: Only admins can perform this action." });
+      setTimeout(() => setFeedback(null), 7000);
+      setIsRoleModalOpen(false);
+      return;
     }
     setFeedback(null); 
 
@@ -65,7 +62,7 @@ const ManageUsersPage: React.FC = () => {
     return <p className="text-gray-500">Loading user data...</p>;
   }
 
-  if (!isOwner) {
+  if (!isAdmin) {
     return (
       <Card>
         <CardContent>
@@ -75,13 +72,13 @@ const ManageUsersPage: React.FC = () => {
     );
   }
   
-  const availableRoles: UserRole[] = ['user', 'admin', 'owner'];
+  const availableRoles: UserRole[] = ['user', 'admin'];
 
   return (
     <div className="w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Manage Users</h1>
-        <p className="text-sm text-gray-500">View and manage user accounts and roles. Only 'owner' can change roles. Max 3 owners allowed.</p>
+        <p className="text-sm text-gray-500">View and manage user accounts and roles. Only 'admin' can change roles. Max 3 admins allowed.</p>
       </div>
 
       {feedback && (
@@ -111,23 +108,12 @@ const ManageUsersPage: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {users.map(user => {
                     const isCurrentUserTheTarget = user.id === currentUser?.id;
-                    const isTargetLastOwner = user.role === 'owner' && users.filter(u => u.role === 'owner').length <= 1;
-                    
-                    let disableButton = !isOwner; 
-                    let titleMessage = "Only owners can change roles.";
-
-                    if (isOwner) { // Only if current user is an owner, check further specific disables
-                        if (isCurrentUserTheTarget && user.role !== 'owner') { // Admin/User trying to change their own role
-                             disableButton = true;
-                             titleMessage = "Admins/Users cannot change their own role. Contact an owner.";
-                        } else if (isCurrentUserTheTarget && isTargetLastOwner) { // Owner trying to change their own role when they are the last one
-                            disableButton = true;
-                            titleMessage = "As the last owner, you cannot change your own role via this button.";
-                        }
-                        // Note: The logic to prevent demoting *another* last owner is handled inside `updateUserRole`
-                        // and will return an error message, so the button doesn't need to be disabled for that specific cross-user case here.
-                    }
-
+                    const disableButton = !isAdmin || isCurrentUserTheTarget;
+                    const titleMessage = !isAdmin
+                      ? "Only admins can change roles."
+                      : isCurrentUserTheTarget
+                        ? "You cannot change your own role."
+                        : `Change role for ${user.fullName}`;
 
                     return (
                       <tr key={user.id}>

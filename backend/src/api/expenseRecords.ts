@@ -1,7 +1,8 @@
 import express from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma, expenserecord_category, expenserecord_paymentMethod, expenserecord_status } from '@prisma/client';
 import { prisma } from '../db';
 import crypto from 'crypto';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -15,10 +16,26 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { expenseDate, category, description, amount, payee, paymentMethod, transactionReference, receiptUrl, approvedBy, notes, source, location, status, postedByOwnerId, postedByOwnerName } = req.body;
+  const { expenseDate, category, description, amount, payee, paymentMethod, transactionReference, receiptUrl, approvedBy, notes, source, location, status, postedByAdminId, postedByAdminName } = req.body;
 
   if (!expenseDate || !category || !description || amount === undefined) {
     return res.status(400).json({ error: 'Expense date, category, description, and amount are required.' });
+  }
+
+const normalizedCategory = normalizeEnumValue(category, expenserecord_category);
+  const normalizedPaymentMethod = normalizeEnumValue(paymentMethod, expenserecord_paymentMethod);
+  const normalizedStatus = normalizeEnumValue(status, expenserecord_status);
+
+  if (!normalizedCategory) {
+    return res.status(400).json({ error: 'Invalid expense category.' });
+  }
+
+  if (paymentMethod && !normalizedPaymentMethod) {
+    return res.status(400).json({ error: 'Invalid expense payment method.' });
+  }
+
+  if (status && !normalizedStatus) {
+    return res.status(400).json({ error: 'Invalid expense status.' });
   }
 
   try {
@@ -26,20 +43,20 @@ router.post('/', async (req, res) => {
       data: {
         id: crypto.randomUUID(),
         expenseDate: new Date(expenseDate),
-        category,
+        category: normalizedCategory,
         description,
         amount: Number(amount),
         payee,
-        paymentMethod,
+        paymentMethod: normalizedPaymentMethod,
         transactionReference,
         receiptUrl,
         approvedBy,
         notes,
         source,
         location,
-        status,
-        postedByOwnerId,
-        postedByOwnerName,
+        status: normalizedStatus,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });
@@ -51,27 +68,43 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { expenseDate, category, description, amount, payee, paymentMethod, transactionReference, receiptUrl, approvedBy, notes, source, location, status, postedByOwnerId, postedByOwnerName } = req.body;
+  const { expenseDate, category, description, amount, payee, paymentMethod, transactionReference, receiptUrl, approvedBy, notes, source, location, status, postedByAdminId, postedByAdminName } = req.body;
+
+  const normalizedCategory = normalizeEnumValue(category, expenserecord_category);
+  const normalizedPaymentMethod = normalizeEnumValue(paymentMethod, expenserecord_paymentMethod);
+  const normalizedStatus = normalizeEnumValue(status, expenserecord_status);
+
+  if (category && !normalizedCategory) {
+    return res.status(400).json({ error: 'Invalid expense category.' });
+  }
+
+  if (paymentMethod && !normalizedPaymentMethod) {
+    return res.status(400).json({ error: 'Invalid expense payment method.' });
+  }
+
+  if (status && !normalizedStatus) {
+    return res.status(400).json({ error: 'Invalid expense status.' });
+  }
 
   try {
     const updated = await prisma.expenserecord.update({
       where: { id },
       data: {
         expenseDate: expenseDate ? new Date(expenseDate) : undefined,
-        category,
+        category: normalizedCategory,
         description,
         amount: amount !== undefined ? Number(amount) : undefined,
         payee,
-        paymentMethod,
+        paymentMethod: normalizedPaymentMethod,
         transactionReference,
         receiptUrl,
         approvedBy,
         notes,
         source,
         location,
-        status,
-        postedByOwnerId,
-        postedByOwnerName,
+        status: normalizedStatus,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });

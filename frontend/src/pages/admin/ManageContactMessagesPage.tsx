@@ -14,7 +14,7 @@ const ITEMS_PER_PAGE = 10;
 
 const ManageContactMessagesPage: React.FC = () => {
   const { contactMessages, updateContactMessageStatus, loadingContent } = useContent();
-  const { isOwner } = useAuth(); 
+  const { isAdmin } = useAuth(); 
   
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
@@ -65,7 +65,7 @@ const ManageContactMessagesPage: React.FC = () => {
       return <p className="text-slate-500 p-4">Loading messages...</p>;
   }
 
-  if (!isOwner) { 
+  if (!isAdmin) { 
     return (
       <Card><CardContent><p className="text-center text-slate-500 py-8">You do not have permission to manage contact messages.</p></CardContent></Card>
     );

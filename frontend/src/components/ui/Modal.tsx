@@ -7,7 +7,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -18,6 +18,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    full: 'max-w-screen-2xl h-[94vh]',
   };
 
   return (
@@ -29,7 +30,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow flex flex-col max-h-[85vh]`}
+        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow flex flex-col ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'}`}
         onClick={(e) => e.stopPropagation()} // Prevent click inside modal from closing it
       >
         {/* Header Section (Non-scrollable) */}

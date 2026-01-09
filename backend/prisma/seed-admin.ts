@@ -12,25 +12,13 @@ async function main() {
   const ADMIN_PASSWORD =
     process.env.INIT_ADMIN_PASSWORD || "ChangeMe_Admin123!";
   const ADMIN_FULL_NAME =
-    process.env.INIT_ADMIN_FULL_NAME || "Site Owner";
+    process.env.INIT_ADMIN_FULL_NAME || "Site Administrator";
   const ADMIN_USERNAME =
-    process.env.INIT_ADMIN_USERNAME || "siteowner";
+    process.env.INIT_ADMIN_USERNAME || "siteadmin";
 
   console.log("🔐 Admin seed starting...");
 
-  // 1) If an owner already exists, don't create another
-  const existingOwner = await prisma.user.findFirst({
-    where: { role: "owner" as any },
-  });
-
-  if (existingOwner) {
-    console.log("⚠️ An owner already exists:");
-    console.log(`   Email: ${existingOwner.email}`);
-    console.log("   No new owner created.");
-    return;
-  }
-
-  // 2) If that email already exists, don't create another
+  // 1) If that email already exists, don't create another
   const existingByEmail = await prisma.user.findUnique({
     where: { email: ADMIN_EMAIL },
   });
@@ -42,17 +30,17 @@ async function main() {
     return;
   }
 
-  // 3) Hash password
+  // 2) Hash password
   const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-  // 4) Create the owner user
-  const ownerUser = await prisma.user.create({
+  // 3) Create the admin user
+  const adminUser = await prisma.user.create({
     data: {
       id: crypto.randomUUID(),
       fullName: ADMIN_FULL_NAME,
       email: ADMIN_EMAIL,
       username: ADMIN_USERNAME,
-      role: "owner",               // highest privilege
+      role: "admin",               // highest privilege
       password: hashedPassword as any,
       // ⬇️ If your User model has other NON-NULL fields with NO default,
       // add them here (e.g. createdAt, updatedAt) like:
@@ -61,9 +49,9 @@ async function main() {
     },
   });
 
-  console.log("✅ Owner admin created successfully:");
-  console.log(`   Email:    ${ownerUser.email}`);
-  console.log(`   Username: ${ownerUser.username}`);
+  console.log("✅ Admin user created successfully:");
+  console.log(`   Email:    ${adminUser.email}`);
+  console.log(`   Username: ${adminUser.username}`);
   console.log("   Use the configured password to log in from the UI.");
 }
 

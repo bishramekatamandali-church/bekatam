@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, prayerrequest, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
@@ -8,7 +9,7 @@ const router = express.Router();
 
 const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
     const user = (req as any).user;
-    if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+    if (!user || user.role !== 'admin') {
         res.status(403).json({ error: 'Only administrators can perform this action.' });
         return false;
     }
@@ -49,7 +50,7 @@ router.get('/', async (req, res) => {
 // POST a new prayer request (admin only)
 router.post('/', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
-    const { title, requestText, visibility, category, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByOwnerId, postedByOwnerName, userProfileImageUrl, userName, userId } = req.body;
+    const { title, requestText, visibility, category, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
 
     try {
         const newRequest = await prisma.prayerrequest.create({
@@ -66,8 +67,8 @@ router.post('/', authMiddleware, async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
                 userProfileImageUrl,
                 userName,
                 userId,

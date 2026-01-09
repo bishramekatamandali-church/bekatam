@@ -1,8 +1,8 @@
 
 // components/calendar/PrintableCalendarPDF.ts
 import { jsPDF } from 'jspdf';
-import { EventItem, MonthlyThemeImage } from '../../types';
-import { adToBsSimulated, bsToAdSimulated, getDaysInBsMonthSimulated, formatDateADBS } from '../../dateConverter';
+import { EventItem } from '../../types';
+import { adToBs, bsToAd, getDaysInBsMonth, formatDateADBS } from '../../dateConverter';
 
 const BS_MONTH_NAMES_EN_PDF = [
   "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -88,7 +88,7 @@ const getEventsForMonthList = (bsMonth: number, bsYear: number, allEvents: Event
     return allEvents.filter(event => {
         if(!event.date) return false;
         const eventAdDate = new Date(event.date);
-        const eventBsDate = adToBsSimulated(eventAdDate);
+        const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === bsYear && eventBsDate.month === bsMonth;
     }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
 };
@@ -130,7 +130,6 @@ export const generateYearlyCalendarPDF = async (
   allEvents: EventItem[],
   churchNameFromUI: string, 
   churchWebsite: string,
-  monthlyThemeImages: MonthlyThemeImage[],
   paperSize: PaperSizeType = 'a4'
 ): Promise<void> => {
   const doc = new jsPDF({
@@ -156,7 +155,7 @@ export const generateYearlyCalendarPDF = async (
   const settings = getPaperSettings(doc, paperSize);
   const { 
     pageWidth, pageHeight, margin, baseFontSize, 
-    headerFontSize, subHeaderFontSize, themeImageHeight, qrCodeSize, footerHeight
+    headerFontSize, subHeaderFontSize, qrCodeSize, footerHeight
   } = settings;
   
   const usableWidth = pageWidth - 2 * margin;
@@ -183,9 +182,9 @@ export const generateYearlyCalendarPDF = async (
     const bsMonthNameKey = BS_MONTH_NAMES_EN_PDF[bsMonth - 1];
     const bsMonthNameForDisplay = bsMonthNameKey;
 
-    const numDaysInBsMonth = getDaysInBsMonthSimulated(bsMonth, bsYearToGenerate);
-    const firstAdDateOfBsMonth = bsToAdSimulated(1, bsMonth, bsYearToGenerate);
-    const lastAdDateOfBsMonth = bsToAdSimulated(numDaysInBsMonth, bsMonth, bsYearToGenerate);
+    const numDaysInBsMonth = getDaysInBsMonth(bsMonth, bsYearToGenerate);
+    const firstAdDateOfBsMonth = bsToAd(1, bsMonth, bsYearToGenerate);
+    const lastAdDateOfBsMonth = bsToAd(numDaysInBsMonth, bsMonth, bsYearToGenerate);
 
     let adMonthHeaderDisplay = getAdMonthNameForPdf(firstAdDateOfBsMonth.getMonth(), firstAdDateOfBsMonth.getFullYear());
     if (firstAdDateOfBsMonth.getMonth() !== lastAdDateOfBsMonth.getMonth()) {
@@ -211,41 +210,7 @@ export const generateYearlyCalendarPDF = async (
     yPos += subHeaderFontSize * 0.8;
     doc.setTextColor(0,0,0);
 
-    const currentTheme = monthlyThemeImages.find(img => img.year === bsYearToGenerate && img.month === bsMonth);
-    const themeImageUrl = currentTheme?.imageUrls && currentTheme.imageUrls.length > 0 
-        ? currentTheme.imageUrls[0] 
-        : `https://picsum.photos/seed/pdf_month_${bsMonth}_${bsYearToGenerate}_fallback/1200/300`;
     
-    const themeImageData = await fetchImageAsBase64(themeImageUrl);
-    if (themeImageData) {
-      try {
-        let imageType = 'JPEG'; 
-        if (themeImageData.startsWith('data:image/png')) imageType = 'PNG';
-        else if (themeImageData.startsWith('data:image/jpeg')) imageType = 'JPEG';
-
-        doc.addImage(themeImageData, imageType, margin, yPos, usableWidth, themeImageHeight, undefined, 'FAST');
-        if (currentTheme?.quoteOrCaption) {
-          const caption = currentTheme.quoteOrCaption;
-          doc.setFont(getCurrentFontForPdf(caption), 'italic');
-          doc.setFontSize(baseFontSize * 0.75);
-          doc.setTextColor(80, 80, 80);
-          const captionLines = doc.splitTextToSize(caption, usableWidth - 4);
-          const captionYCalculation = yPos + themeImageHeight - (captionLines.length * (baseFontSize * 0.75 * 0.35)) - 3;
-          const captionX = margin + usableWidth - 3;
-          doc.text(captionLines, captionX, captionYCalculation, { align: 'right'});
-          doc.setTextColor(0,0,0);
-        }
-      } catch (e) {
-        console.warn("PDF: Error adding theme image:", e, "URL:", themeImageUrl);
-        doc.setFillColor(230,230,230); doc.rect(margin, yPos, usableWidth, themeImageHeight, 'F');
-        doc.setFont(BASE_FONT_NAME); doc.text("Image unavailable", usableWidth/2 + margin, yPos + themeImageHeight/2, {align: 'center'});
-      }
-    } else {
-        doc.setFillColor(230,230,230); doc.rect(margin, yPos, usableWidth, themeImageHeight, 'F');
-        doc.setFont(BASE_FONT_NAME); doc.text("Theme Image Area", usableWidth/2 + margin, yPos + themeImageHeight/2, {align: 'center'});
-    }
-    yPos += themeImageHeight + 4;
-
     const daysOfWeek = DAY_LABELS_EN_PDF;
       
     const cellWidth = usableWidth / 7;
@@ -291,7 +256,7 @@ export const generateYearlyCalendarPDF = async (
           }
           doc.rect(cellX, cellY, cellWidth, dayCellHeight, 'FD'); 
 
-          const adDateForBsDay = bsToAdSimulated(currentBsDay, bsMonth, bsYearToGenerate);
+          const adDateForBsDay = bsToAd(currentBsDay, bsMonth, bsYearToGenerate);
           const bsDayString = String(currentBsDay);
           doc.setFont(getCurrentFontForPdf(bsDayString), 'bold');
           doc.setFontSize(baseFontSize * 1.1); 
@@ -414,7 +379,7 @@ export const generateYearlyCalendarPDF = async (
         for (const event of eventsThisMonth) {
             if (currentEventY + (baseFontSize * 0.45) > pageHeight - margin - footerHeight) break; 
             
-            const eventDateBs = adToBsSimulated(new Date(event.date!));
+            const eventDateBs = adToBs(new Date(event.date!));
             const eventDateAdFormatted = (formatDateADBS(event.date!).split(' (')[1] || event.date!).replace(')',''); 
             const eventText = `${eventDateBs.day} ${bsMonthNameForDisplay} - ${event.title} (${eventDateAdFormatted})`;
             

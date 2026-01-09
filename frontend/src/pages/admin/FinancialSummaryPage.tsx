@@ -7,7 +7,7 @@ import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { ArrowDownTrayIcon, BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ScaleIcon } from '@heroicons/react/24/outline';
-import { adToBsSimulated, bsToAdSimulated, BS_MONTH_NAMES_EN, getDaysInBsMonthSimulated, formatDateADBS } from '../../dateConverter';
+import { adToBs, bsToAd, BS_MONTH_NAMES_EN, getDaysInBsMonth, formatDateADBS } from '../../dateConverter';
 
 interface TransactionLogItem {
   id: string;
@@ -41,8 +41,8 @@ const FinancialSummaryPage: React.FC = () => {
   const [endDate, setEndDate] = useState(todayString);
 
   // New state for BS date parts
-  const [startBs, setStartBs] = useState(() => adToBsSimulated(new Date(firstDayOfMonth)));
-  const [endBs, setEndBs] = useState(() => adToBsSimulated(new Date(todayString)));
+  const [startBs, setStartBs] = useState(() => adToBs(new Date(firstDayOfMonth)));
+  const [endBs, setEndBs] = useState(() => adToBs(new Date(todayString)));
 
   // Sync AD date changes to BS state
   useEffect(() => {
@@ -50,7 +50,7 @@ const FinancialSummaryPage: React.FC = () => {
       try {
         const adDate = new Date(startDate);
         if(!isNaN(adDate.getTime())) {
-          setStartBs(adToBsSimulated(adDate));
+          setStartBs(adToBs(adDate));
         }
       } catch (e) { console.error("Error parsing start date:", e); }
     }
@@ -61,7 +61,7 @@ const FinancialSummaryPage: React.FC = () => {
       try {
         const adDate = new Date(endDate);
         if(!isNaN(adDate.getTime())) {
-          setEndBs(adToBsSimulated(adDate));
+          setEndBs(adToBs(adDate));
         }
       } catch (e) { console.error("Error parsing end date:", e); }
     }
@@ -151,13 +151,13 @@ const FinancialSummaryPage: React.FC = () => {
 
     (currentBs as any)[part] = numericValue;
     
-    const daysInMonth = getDaysInBsMonthSimulated(currentBs.month, currentBs.year);
+    const daysInMonth = getDaysInBsMonth(currentBs.month, currentBs.year);
     if (currentBs.day > daysInMonth) {
         currentBs.day = daysInMonth;
     }
 
     try {
-      const newAdDate = bsToAdSimulated(currentBs.day, currentBs.month, currentBs.year);
+      const newAdDate = bsToAd(currentBs.day, currentBs.month, currentBs.year);
       const newAdDateString = newAdDate.toISOString().split('T')[0];
 
       if (type === 'start') {
@@ -171,7 +171,7 @@ const FinancialSummaryPage: React.FC = () => {
   };
 
   const bsYearOptions = useMemo(() => {
-    const currentBsYear = adToBsSimulated(new Date()).year;
+    const currentBsYear = adToBs(new Date()).year;
     return Array.from({ length: 15 }, (_, i) => currentBsYear - i);
   }, []);
 
@@ -191,7 +191,7 @@ const FinancialSummaryPage: React.FC = () => {
                     {BS_MONTH_NAMES_EN.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
                 </select>
                 <select value={bsState.day} onChange={(e) => handleBsChange(type, 'day', e.target.value)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 dark:text-slate-200" aria-label={`${label} Day`}>
-                    {Array.from({ length: getDaysInBsMonthSimulated(bsState.month, bsState.year) }, (_, i) => i + 1).map(day => (
+                    {Array.from({ length: getDaysInBsMonth(bsState.month, bsState.year) }, (_, i) => i + 1).map(day => (
                         <option key={day} value={day}>{day}</option>
                     ))}
                 </select>

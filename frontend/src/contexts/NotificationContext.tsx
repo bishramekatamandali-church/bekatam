@@ -69,7 +69,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           return allUsers.filter(user => friendIds.has(user.id) && user.receiveFriendActivityNotifications);
       }
       if (target === 'admin_group') {
-        return allUsers.filter(u => u.role === 'admin' || u.role === 'owner');
+        return allUsers.filter(u => u.role === 'admin');
       }
       // --- End Special Target ---
 

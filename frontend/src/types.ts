@@ -19,8 +19,8 @@ export interface FeatureInfo {
   linkPath: string;
   category?: string;
   date?: string; // Generally YYYY-MM-DD
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string; // ISO timestamp
   updatedAt?: string; // ISO timestamp
 }
@@ -65,8 +65,8 @@ export interface PrayerRequest {
   lastPrayedAt?: string; // ISO timestamp, updated when someone indicates they prayed for it
   prayers: Array<{ userId: string; userName: string; timestamp: string; }>; // Users who prayed
   adminNotes?: string; // Private notes by admins/pastors
-  postedByOwnerId?: string; // ID of the user who submitted OR admin who entered it
-  postedByOwnerName?: string; // Name of the user who submitted OR admin who entered it
+  postedByAdminId?: string; // ID of the user who submitted OR admin who entered it
+  postedByAdminName?: string; // Name of the user who submitted OR admin who entered it
   linkPath: string; // e.g. /prayer-requests#prayer-id or /prayer-requests/:id
   createdAt?: string; // Same as submittedAt effectively
   updatedAt?: string; // When status or notes change
@@ -97,8 +97,8 @@ export interface Testimonial {
   contentText: string;
   visibility: TestimonialVisibility;
   submittedAt: string; // ISO timestamp
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
   linkPath: string; // e.g., /prayer-requests#testimonial-id
@@ -204,8 +204,8 @@ export interface HomeSlide {
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
 }
 
 // --- About Page Specific Types ---
@@ -233,8 +233,8 @@ export interface KeyPerson {
   bio: string;
   createdAt?: string;
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
 }
 
 export interface HistoryMilestone {
@@ -245,8 +245,8 @@ export interface HistoryMilestone {
   imageUrl?: string;
   createdAt?: string;
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
 }
 // --- End About Page Specific Types ---
 
@@ -264,8 +264,8 @@ export interface HistoryChapter {
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
   lastPublishedAt?: string; // ISO timestamp, for "New" indicators
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   likes?: number;
   comments: Comment[];
   linkPath: string; // e.g., /church-history#chapter-1
@@ -293,8 +293,8 @@ export interface DonatePageContent {
   internationalQrImageUrl?: string;
   receiptVerses?: string; // New: Newline-separated Bible verses
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
 }
 // --- END: Donate Page Content ---
 
@@ -323,8 +323,8 @@ export interface DonationRecord {
   purpose: DonationPurpose;
   donationDate: string; 
   transactionTimestamp: string; 
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
   // New fields for enhanced tracking
@@ -372,11 +372,11 @@ export interface CollectionRecord {
   notes?: string; 
   donors: DonorDetail[]; // List of individual donors
   recordedAt: string; 
-  recordedByOwnerId?: string;
-  recordedByOwnerName?: string;
+  recordedByAdminId?: string;
+  recordedByAdminName?: string;
   updatedAt?: string; 
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   // New fields for financial accountability
   countedBy?: string;
@@ -415,8 +415,8 @@ export interface BranchChurch {
   establishedDate?: string; // YYYY-MM-DD
   createdAt?: string;
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   linkPath?: string; // e.g. /branches#branch-id
 }
 // --- End Branch Church Types ---
@@ -453,8 +453,8 @@ export interface DirectMediaItem {
   tags?: string[];
   uploadDate: string; // ISO timestamp (serves as createdAt)
   linkPath: string; 
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   updatedAt?: string; // Added
 }
 
@@ -483,8 +483,8 @@ export interface ChurchMember {
   notes?: string;
   isActiveMember: boolean; 
   profileImageUrl?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -548,8 +548,8 @@ export interface MeetingLog {
   status?: MeetingLogStatus; 
   imageUrl?: string; 
   decisionPoints?: MeetingDecisionPoint[];
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -562,8 +562,8 @@ export interface DecisionLog {
   madeBy: string; 
   status?: DecisionLogStatus;
   followUpActions?: ActionItem[];
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -597,8 +597,8 @@ export interface ExpenseRecord {
   source?: string;
   location?: string;
   status?: ExpenseStatus; // New status field
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -613,8 +613,8 @@ export interface MonthlyThemeImage {
   quoteOrCaption?: string;
   createdAt?: string; // Added
   updatedAt?: string; // Added
-  postedByOwnerId?: string; // Added
-  postedByOwnerName?: string; // Added
+  postedByAdminId?: string; // Added
+  postedByAdminName?: string; // Added
 }
 // --- END CALENDAR TYPES ---
 
@@ -644,8 +644,8 @@ export interface FellowshipRosterItem {
   contactNumber?: string;
   additionalNotesOrProgramDetails?: string; 
   isTemplate?: boolean; 
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
   linkPath?: string; // e.g., /fellowship-program/roster/:id
@@ -667,8 +667,8 @@ export interface GeneratedScheduleItem {
   publishedEventId?: string; 
   adminNotes?: string; 
   linkPath?: string; // e.g., /fellowship-program/schedule/:id
-  postedByOwnerId?: string; 
-  postedByOwnerName?: string;
+  postedByAdminId?: string; 
+  postedByAdminName?: string;
   createdAt?: string; 
   updatedAt?: string; 
 }
@@ -728,13 +728,13 @@ export interface Advertisement {
   adSizeKey?: AdSizeKey; // Changed to optional
   createdAt: string;
   updatedAt: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
 }
 // --- END ADVERTISEMENT TYPES ---
 
 
-export type UserRole = 'admin' | 'user' | 'owner';
+export type UserRole = 'admin' | 'user';
 
 export type RelationshipStatus = 'Single' | 'In a relationship' | 'Engaged' | 'Married' | 'Its complicated' | 'Separated' | 'Divorced' | 'Widowed';
 export const relationshipStatusList: RelationshipStatus[] = ['Single', 'In a relationship', 'Engaged', 'Married', 'Its complicated', 'Separated', 'Divorced', 'Widowed'];
@@ -813,8 +813,8 @@ export interface Group {
   members: GroupMember[];
   createdAt: string;
   updatedAt: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   linkPath: string;
   permissions?: {
     editSettings: GroupPermissionSetting;
@@ -914,7 +914,6 @@ export interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isOwner: boolean;
   loadingAuthState: boolean;
   login: (identifier: string, pass: string, rememberMe?: boolean) => Promise<boolean>; 
   register: (fullName: string, email: string, countryCode: string, phone: string, pass: string, profileImageUrl?: string) => Promise<boolean>; // Updated signature
@@ -1029,6 +1028,7 @@ export interface SermonFormData extends BaseContentFormData {
 
 export interface EventFormData extends BaseContentFormData {
   location?: string;
+  mapEmbedUrl?: string;
   time?: string; 
   category?: EventCategory;
   expectations?: string;
@@ -1053,6 +1053,7 @@ export interface MinistryFormData extends BaseContentFormData {
 
 export interface BlogPostFormData extends BaseContentFormData {
     category?: BlogPostCategory;
+    enableAutoNarration?: boolean;
     audioUrl?: string;
     // New
     mediaUrls?: string[];
@@ -1068,6 +1069,7 @@ export interface NewsItemFormData extends BaseContentFormData {
     category?: NewsCategory;
     videoUrl?: string;
     audioUrl?: string;
+    enableAutoNarration?: boolean;
 }
 
 export interface HomeSlideFormData {
@@ -1349,7 +1351,6 @@ export type GenericContentFormData =
   | MinistryFormData 
   | BlogPostFormData 
   | NewsItemFormData
-  | HomeSlideFormData
   | AboutSectionFormData
   | KeyPersonFormData
   | HistoryMilestoneFormData
@@ -1361,7 +1362,6 @@ export type GenericContentFormData =
   | DecisionLogFormData     
   | ExpenseRecordFormData
   | CollectionRecordFormData 
-  | MonthlyThemeImageFormData
   | HistoryChapterFormData
   | FellowshipRosterFormData
   | GeneratedScheduleFormData
@@ -1374,7 +1374,6 @@ export type GenericContentFormData =
 
 
 // --- Media Library Types ---
-export type MediaSourceContentType = 'Sermon' | 'Event' | 'Blog Post' | 'News' | 'Home Slide' | 'About Section' | 'Key Person' | 'History Milestone' | 'Branch Church' | 'Ministry' | 'Direct Upload' | 'Other' | 'Church Member' | 'Meeting Log' | 'Expense Record' | 'Monthly Theme Image' | 'History Chapter' | 'Prayer Request' | 'Testimonial'; // New
 
 export interface DisplayedMediaItem {
   id: string; 
@@ -1399,7 +1398,6 @@ export interface ContentContextType {
   ministries: Ministry[];
   blogPosts: BlogPost[];
   newsItems: NewsItem[];
-  homeSlides: HomeSlide[];
   aboutSections: AboutSection[];
   keyPersons: KeyPerson[];
   historyMilestones: HistoryMilestone[];
@@ -1411,7 +1409,6 @@ export interface ContentContextType {
   directMediaItems: DirectMediaItem[]; 
   ministryJoinRequests: MinistryJoinRequest[]; 
   allDerivedMediaItems: DisplayedMediaItem[];
-  monthlyThemeImages: MonthlyThemeImage[]; 
   advertisements: Advertisement[]; 
   prayerRequests: PrayerRequest[]; 
   testimonials: Testimonial[]; // New
@@ -1442,7 +1439,7 @@ export interface ContentContextType {
     itemId?: string
   ) => void;
 
-  addDonationRecord: (recordData: Omit<DonationRecord, 'id' | 'transactionTimestamp' | 'postedByOwnerId' | 'postedByOwnerName' | 'createdAt' | 'updatedAt'>) => Promise<DonationRecord | null>;
+  addDonationRecord: (recordData: Omit<DonationRecord, 'id' | 'transactionTimestamp' | 'postedByAdminId' | 'postedByAdminName' | 'createdAt' | 'updatedAt'>) => Promise<DonationRecord | null>;
   addCollectionRecord: (recordData: CollectionRecordFormData) => Promise<CollectionRecord | null>; 
   
   addContactMessage: (data: Omit<ContactMessage, 'id' | 'submittedAt' | 'status' | 'repliedAt' | 'replyNote'>) => Promise<ContactMessage | null>;
@@ -1526,15 +1523,15 @@ export interface ChatMessage {
 }
 // --- End Chatbot & Chat Types ---
 
-// --- BS Date Simulation Types (Internal to dateConverter) ---
-export interface BSSimulatedDate {
+// --- BS Date Types (Internal to dateConverter) ---
+export interface BSDate {
   year: number;
   month: number; 
   day: number;
   monthName: string; 
   dayOfWeek?: number; 
 }
-// --- End BS Date Simulation Types ---
+// --- End BS Date Types ---
 
 
 // --- Settings Context Types ---

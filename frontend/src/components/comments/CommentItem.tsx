@@ -15,7 +15,7 @@ interface CommentItemProps {
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, itemType, itemId }) => {
-    const { currentUser, isAdmin, isOwner } = useAuth();
+    const { currentUser, isAdmin } = useAuth();
     const { updateComment, deleteComment } = useContent();
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(comment.text);
@@ -23,7 +23,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, itemType, itemId }) 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const canEdit = currentUser && currentUser.id === comment.userId;
-    const canDelete = currentUser && (currentUser.id === comment.userId || isAdmin || isOwner);
+    const canDelete = currentUser && (currentUser.id === comment.userId || isAdmin);
     const canManage = canEdit || canDelete;
     const menuRef = React.useRef<HTMLDivElement>(null);
 

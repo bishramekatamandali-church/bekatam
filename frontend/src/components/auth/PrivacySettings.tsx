@@ -130,7 +130,7 @@ const PrivacySettings: React.FC = () => {
                 onChange={(value) => handleSettingChange('whoCanSendFriendRequest', value)}
                 options={[
                     {value: 'everyone', label: 'Everyone'},
-                    {value: 'friends_of_friends', label: 'Friends of Friends (Simulated)'},
+                    {value: 'friends_of_friends', label: 'Friends of Friends'},
                 ]}
             />
             

@@ -7,9 +7,8 @@ import EventCard from '../components/events/EventCard';
 import FeaturedEventDisplay from '../components/events/FeaturedEventDisplay'; 
 import AdSlot from '../components/ads/AdSlot';
 import { SearchIcon, FilterIcon } from '../components/icons/GenericIcons';
-import InteractiveCalendar from '../components/calendar/InteractiveCalendar';
-import MonthImageDisplay from '../components/calendar/MonthImageDisplay';
-import { adToBsSimulated, formatDateADBS } from '../dateConverter';
+import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
+import { adToBs, formatDateADBS } from '../dateConverter';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import { Link } from "react-router-dom";
 
@@ -22,14 +21,14 @@ const BS_MONTH_NAMES_EN_CAL = [
 ];
 
 const EventsPage: React.FC = () => {
-  const { events, monthlyThemeImages, loadingContent } = useContent();
+  const { events, loadingContent } = useContent();
   const [sortOption, setSortOption] = useState<SortOption>('date-newest');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<EventCategory | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const currentADDate = useMemo(() => new Date(), []);
-  const initialBsDate = useMemo(() => adToBsSimulated(currentADDate), [currentADDate]); 
+  const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]); 
 
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
   const [currentCalendarBsYear, setCurrentCalendarBsYear] = useState<number>(initialBsDate.year);
@@ -82,7 +81,7 @@ const EventsPage: React.FC = () => {
     const monthEvents = events.filter(event => {
         if (!event.date) return false;
         const eventAdDate = new Date(event.date);
-        const eventBsDate = adToBsSimulated(eventAdDate);
+        const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
     }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
 
@@ -94,6 +93,11 @@ const EventsPage: React.FC = () => {
     };
   }, [events, loadingContent, sortOption, searchTerm, selectedCategory, currentCalendarBsMonth, currentCalendarBsYear]);
 
+   const calendarItems: CalendarEntry[] = useMemo(() => (
+    events
+      .filter(event => !!event.date)
+      .map(event => ({ id: event.id, title: event.title, date: event.date!, type: 'event', link: `/events/${event.id}` }))
+  ), [events]);
 
   if (loadingContent && events.length === 0) {
     return (
@@ -228,15 +232,9 @@ const EventsPage: React.FC = () => {
           </>
         ) : (
           <div className="max-w-4xl mx-auto">
-            <MonthImageDisplay
-                currentBsMonth={currentCalendarBsMonth}
-                currentBsYear={currentCalendarBsYear}
-                monthlyThemeImages={monthlyThemeImages}
-                loading={loadingContent}
-            />
-            <Card className="mt-6 shadow-xl">
+            <Card className="shadow-xl">
                 <InteractiveCalendar
-                  events={events}
+                  items={calendarItems}
                   onMonthChange={handleCalendarMonthChange}
                   initialBsMonth={currentCalendarBsMonth}
                   initialBsYear={currentCalendarBsYear}
@@ -255,7 +253,7 @@ const EventsPage: React.FC = () => {
                         ) : (
                             <ul className="space-y-3">
                                 {eventsForSelectedMonth.map(event => {
-                                    const eventBsDate = adToBsSimulated(new Date(event.date!));
+                                    const eventBsDate = adToBs(new Date(event.date!));
                                     const adDatePart = formatDateADBS(event.date!).split(' (')[1]?.replace(')', '');
                                     return (
                                         <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">

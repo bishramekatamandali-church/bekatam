@@ -3,9 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const contentUpdates_1 = require("../services/contentUpdates");
+const enumNormalization_1 = require("../utils/enumNormalization");
 const router = express_1.default.Router();
 const shapeBlogPostForFrontend = (post) => ({
     ...post,
@@ -32,11 +35,13 @@ router.get('/', async (req, res) => {
 // POST a new blog post
 router.post('/', async (req, res) => {
     const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
-    const id = crypto.randomUUID(); // ✅ generate missing id
+    const id = crypto_1.default.randomUUID(); // ✅ generate missing id
     const linkPath = `/blog/${id}`; // ✅ generate missing linkPath
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.blogpost_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid blog category.' });
+    }
     try {
         const newPost = await db_1.prisma.blogpost.create({
             data: {
@@ -46,7 +51,7 @@ router.post('/', async (req, res) => {
                 linkPath, // ✅ required by Prisma
                 updatedAt: new Date(),
                 date: postDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
@@ -55,10 +60,9 @@ router.post('/', async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
             },
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'created', id: newPost.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeBlogPostForFrontend(newPost));
     }
     catch (error) {
@@ -71,6 +75,10 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.blogpost_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid blog category.' });
+    }
     try {
         const updatedPost = await db_1.prisma.blogpost.update({
             where: { id },
@@ -78,7 +86,7 @@ router.put('/:id', async (req, res) => {
                 title,
                 description,
                 date: postDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
@@ -90,6 +98,7 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'updated', id: updatedPost.id, timestamp: new Date().toISOString() });
         res.json(shapeBlogPostForFrontend(updatedPost));
     }
     catch (error) {
@@ -104,6 +113,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await db_1.prisma.blogpost.delete({ where: { id } });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send();
     }
     catch (error) {

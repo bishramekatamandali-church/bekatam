@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import Button from '../ui/Button';
-import { CameraIcon, FolderIcon, MicrophoneIcon, LinkIcon, XCircleIcon, StopCircleIcon, ArrowUpOnSquareIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, FolderIcon, MicrophoneIcon, XCircleIcon, StopCircleIcon, ArrowUpOnSquareIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
 interface AdvancedMediaUploaderProps {
   label: string;
@@ -37,6 +37,7 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -110,6 +111,22 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
   };
 
   const triggerUpload = () => fileInputRef.current?.click();
+  
+  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      onFileUpload(file);
+    }
+  }, [onFileUpload]);
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => setIsDragOver(false); 
 
   if (childrenAsTrigger) {
     const childElement = React.Children.only(children);
@@ -126,36 +143,41 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
 
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
       
-      {currentUrl && (
-        <div className="mt-2 relative p-2 bg-slate-50 dark:bg-slate-900/50 rounded-md border border-slate-200 dark:border-slate-700 min-h-[50px] flex items-center justify-center">
-          {mediaType === 'image' && <img src={currentUrl} alt="Preview" className="max-h-40 w-auto rounded shadow-sm" />}
-          {mediaType === 'video' && <video src={currentUrl} controls className="max-h-40 w-full rounded" />}
-          {mediaType === 'audio' && <audio src={currentUrl} controls className="w-full" />}
-        </div>
-      )}
+     <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
 
-      <div className="mt-1 flex items-center space-x-2">
-        <div className="relative flex-grow">
-          <LinkIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="url"
-            value={currentUrl}
-            onChange={(e) => onUrlChange(e.target.value)}
-            placeholder="https://... or choose an upload method"
-            className="w-full pl-8 p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-slate-200 text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-            disabled={isUploading}
-          />
-        </div>
         {currentUrl && !isUploading && (
-          <Button type="button" onClick={() => onUrlChange('')} variant="ghost" size="sm" className="!p-1.5" aria-label="Clear URL">
+          <Button type="button" onClick={() => onUrlChange('')} variant="ghost" size="sm" className="!p-1.5" aria-label="Clear selected media">
             <XCircleIcon className="w-5 h-5 text-slate-400 hover:text-red-500 dark:hover:text-red-400" />
           </Button>
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div
+        className={`mt-3 border-2 border-dashed rounded-xl p-4 transition-colors duration-200 ${isDragOver ? 'border-purple-500 bg-purple-50 dark:bg-slate-800/60' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40'} cursor-pointer`}
+        onClick={triggerUpload}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {currentUrl ? (
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            {mediaType === 'image' && <img src={currentUrl} alt="Preview" className="max-h-36 w-auto rounded shadow-sm" />}
+            {mediaType === 'video' && <video src={currentUrl} controls className="max-h-36 w-full rounded" />}
+            {mediaType === 'audio' && <audio src={currentUrl} controls className="w-full" />}
+            <p className="text-sm text-slate-500 dark:text-slate-400">Drop a new file to replace or tap to upload.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center text-slate-500 dark:text-slate-400">
+            <PhotoIcon className="w-8 h-8 text-purple-500 mb-2" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Drag & drop or click to upload</p>
+            <p className="text-xs">Files are automatically attached, no need to paste URLs.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept={getAcceptType()} className="hidden" />
         <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} size="sm" variant="outline" className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600">
           <FolderIcon className="w-4 h-4 mr-1.5" /> Browse File

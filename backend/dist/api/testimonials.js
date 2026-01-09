@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res))
         return;
-    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByOwnerId, postedByOwnerName, userId, userName, userProfileImageUrl } = req.body;
+    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
     try {
         const newTestimonial = await db_1.prisma.testimonial.create({
             data: {
@@ -55,8 +55,8 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
                 userId,
                 userName,
                 userProfileImageUrl,

@@ -1,7 +1,8 @@
 import express from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma, decisionlog_status } from '@prisma/client';
 import { prisma } from '../db';
 import crypto from 'crypto';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -15,10 +16,16 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { decisionDate, title, description, madeBy, status, followUpActions, postedByOwnerId, postedByOwnerName } = req.body;
+  const { decisionDate, title, description, madeBy, status, followUpActions, postedByAdminId, postedByAdminName } = req.body;
 
   if (!decisionDate || !title || !description || !madeBy) {
     return res.status(400).json({ error: 'Decision date, title, description, and made by are required.' });
+  }
+
+const normalizedStatus = normalizeEnumValue(status, decisionlog_status);
+
+  if (status && !normalizedStatus) {
+    return res.status(400).json({ error: 'Invalid decision status.' });
   }
 
   try {
@@ -29,10 +36,10 @@ router.post('/', async (req, res) => {
         title,
         description,
         madeBy,
-        status,
+        status: normalizedStatus,
         followUpActions,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });
@@ -44,7 +51,13 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { decisionDate, title, description, madeBy, status, followUpActions, postedByOwnerId, postedByOwnerName } = req.body;
+  const { decisionDate, title, description, madeBy, status, followUpActions, postedByAdminId, postedByAdminName } = req.body;
+
+const normalizedStatus = normalizeEnumValue(status, decisionlog_status);
+
+  if (status && !normalizedStatus) {
+    return res.status(400).json({ error: 'Invalid decision status.' });
+  } 
 
   try {
     const updated = await prisma.decisionlog.update({
@@ -54,10 +67,10 @@ router.put('/:id', async (req, res) => {
         title,
         description,
         madeBy,
-        status,
+        status: normalizedStatus,
         followUpActions,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });

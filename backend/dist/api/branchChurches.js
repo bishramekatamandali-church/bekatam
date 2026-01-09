@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
@@ -30,17 +31,17 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, address, pastorName, phone, email, serviceTimes, mapEmbedUrl, imageUrl, description, establishedDate } = req.body;
     const estDate = establishedDate && !isNaN(new Date(establishedDate).getTime()) ? new Date(establishedDate) : null;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     try {
         const newBranch = await db_1.prisma.branchchurch.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
+                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 updatedAt: new Date(), // REQUIRED
                 name, address, pastorName, phone, email, serviceTimes, mapEmbedUrl, imageUrl, description,
                 establishedDate: estDate,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeBranchForFrontend(newBranch));

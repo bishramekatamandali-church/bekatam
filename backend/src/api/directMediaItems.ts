@@ -19,7 +19,7 @@ router.get('/', async (_req, res) => {
 
 // Create a new direct media item (images, audio, video, pdf, etc.)
 router.post('/', async (req, res) => {
-  const { title, description, url, mediaType, category, tags, postedByOwnerId, postedByOwnerName } = req.body;
+  const { title, description, url, mediaType, category, tags, postedByAdminId, postedByAdminName } = req.body;
 
   if (!title || !url || !mediaType) {
     return res.status(400).json({ error: 'Title, URL, and media type are required.' });
@@ -35,8 +35,8 @@ router.post('/', async (req, res) => {
         mediaType,
         category,
         tags,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
 // Update an existing media item
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, description, url, mediaType, category, tags, postedByOwnerId, postedByOwnerName } = req.body;
+  const { title, description, url, mediaType, category, tags, postedByAdminId, postedByAdminName } = req.body;
 
   try {
     const updated = await prisma.directmediaitem.update({
@@ -61,8 +61,8 @@ router.put('/:id', async (req, res) => {
         mediaType,
         category,
         tags,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });

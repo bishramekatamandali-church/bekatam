@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from "react-router-dom";
 import { NavItem } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import AuthModal from '../auth/AuthModal';
 import Button from '../ui/Button';
 import NotificationIcon from '../notifications/NotificationIcon';
-import { HeroNewspaperIcon, CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon, PrayerHandsIcon, TestimonyIcon, ChatBubbleOvalLeftEllipsisIcon } from '../icons/GenericIcons'; 
+import { HeroNewspaperIcon, CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon } from '../icons/GenericIcons';
 import GlobalSearchModal from '../search/GlobalSearchModal'; 
 import { useNotification } from '../../contexts/NotificationContext';
 import { ArrowDownTrayIcon as HeroArrowDownTrayIcon } from '@heroicons/react/24/outline';
@@ -38,9 +38,6 @@ const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const BookOpenIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-5 h-5"}><path d="M11.25 4.533A9.709 9.709 0 0 0 3 12a9.709 9.709 0 0 0 8.25 7.467c.953.093 1.69.837 1.69 1.779V21.75a.75.75 0 0 0 1.5 0V21.25c0-.942.737-1.686 1.69-1.779A9.709 9.709 0 0 0 21 12a9.709 9.709 0 0 0-8.25-7.467V3.75a.75.75 0 0 0-1.5 0v.783Z" /><path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" /></svg>
-);
-const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-5 h-5"}><path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63L12.5 21.75l-.435.145a.75.75 0 0 1-.63 0l-2.955-.985a.75.75 0 0 1-.363-.63l-.001-.122v-.002ZM17.25 19.128l-.001.121a.75.75 0 0 1-.363.63l-2.955.985a.75.75 0 0 1-.63 0l-.435-.145L10 21.75a.75.75 0 0 1-.363-.63l-.001-.119v-.004a5.625 5.625 0 0 1 11.25 0Z" /></svg>
 );
 
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
@@ -134,20 +131,9 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const { isAuthenticated, isAdmin, logout, currentUser, friendRequestCount } = useAuth();
+  const { isAuthenticated, isAdmin, logout, currentUser } = useAuth();
   const { unreadCount } = useNotification();
-  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
-        setIsProfileDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   
   // Close mobile menu on resize to desktop
   useEffect(() => {
@@ -160,20 +146,11 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const toggleProfileDropdown = () => setIsProfileDropdownOpen(prev => !prev);
-  const closeProfileDropdown = () => setIsProfileDropdownOpen(false);
-
+  
   const baseNavItems: NavItem[] = [
     { label: "Home", path: '/' },
-    {
-      label: "Community",
-      children: [
-        { label: "Updates", path: '/updates', icon: PrayerHandsIcon }, // Prayer Wall
-        { label: "Community Feed", path: '/community', icon: UsersIcon },
-        { label: "Blog", path: '/blog' },
-        { label: "News", path: '/news', icon: HeroNewspaperIcon },
-      ]
-    },
+    { label: "Blog", path: '/blog' },
+    { label: "News", path: '/news', icon: HeroNewspaperIcon },
     {
       label: "Connect",
       children: [
@@ -203,8 +180,7 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
       isActive ? 'bg-teal-500 text-white' : 'hover:bg-indigo-700'
     }`;
 
-  const dropdownItemStyles = "block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors";
-
+  
   return (
     <>
       <header className="bg-indigo-800 text-white shadow-lg sticky top-0 z-50 h-20">
@@ -247,52 +223,23 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
                 </Button>
               )}
               {isAuthenticated && currentUser ? (
-                <>
+                <div className="flex items-center space-x-2">
+                  <NotificationIcon />
                   <Link
-                    to="/community"
-                    className="p-1.5 ml-1 rounded-full text-indigo-200 hover:text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-800"
-                    aria-label="Messages"
+                    to="/profile"
+                    className="flex items-center space-x-2 px-2 py-1 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-800"
                   >
-                    <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />
-                  </Link>
-                  <NotificationIcon /> 
-                  <div className="relative ml-2" ref={profileDropdownRef}>
-                    <button
-                      onClick={toggleProfileDropdown}
-                      className="flex items-center max-w-xs rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-800 p-0.5 hover:bg-indigo-700"
-                      id="user-menu-button" 
-                      aria-expanded={isProfileDropdownOpen} 
-                      aria-haspopup="true"
-                    >
-                      <span className="sr-only">Open user menu</span>
-                      {currentUser.profileImageUrl ? (
-                        <img className="h-8 w-8 rounded-full object-cover" src={currentUser.profileImageUrl} alt="User profile" />
-                      ) : (
-                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600 hover:bg-indigo-500">
-                          <span className="text-sm font-medium leading-none text-white">{currentUser.fullName.charAt(0).toUpperCase()}</span>
-                        </span>
-                      )}
-                       <HeroChevronDownIcon className="ml-1 h-4 w-4 text-indigo-300 group-hover:text-white" />
-                    </button>
-                    {isProfileDropdownOpen && (
-                      <div
-                        className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                        role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabIndex={-1}
-                      >
-                        <div className="px-4 py-3 border-b border-slate-200">
-                            <p className="text-sm text-slate-800">Signed in as</p>
-                            <p className="text-sm font-medium text-slate-900 truncate">{currentUser.fullName}</p>
-                        </div>
-                        <NavLink to="/profile" className={dropdownItemStyles} role="menuitem" tabIndex={-1} onClick={closeProfileDropdown}>
-                            Profile
-                        </NavLink>
-                         <button onClick={() => { logout(); closeProfileDropdown(); }} className={`${dropdownItemStyles} w-full text-left`}>
-                            Logout
-                        </button>
-                      </div>
+                    {currentUser.profileImageUrl ? (
+                      <img className="h-8 w-8 rounded-full object-cover" src={currentUser.profileImageUrl} alt="User profile" />
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600">
+                        <span className="text-sm font-medium leading-none text-white">{currentUser.fullName.charAt(0).toUpperCase()}</span>
+                      </span>
                     )}
-                  </div>
-                </>
+                  <span className="hidden sm:inline text-sm font-semibold">Profile</span>
+                  </Link>
+                  <Button onClick={logout} variant="ghost" size="sm" className="!text-white hover:!bg-indigo-700">Logout</Button>
+                </div>
               ) : (
                 <Button onClick={() => setIsAuthModalOpen(true)} variant="primary" size="sm" className="ml-2 hidden lg:inline-flex">
                   Login / Register

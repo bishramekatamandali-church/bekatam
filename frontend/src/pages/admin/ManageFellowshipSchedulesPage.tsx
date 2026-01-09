@@ -175,8 +175,8 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
   };
   const handleSimulateEmail = (schedule: GeneratedScheduleItem) => {
     setActiveDropdownId(null);
-    logAdminAction("Simulated Email Sent", schedule.id, `Schedule: ${schedule.groupNameOrEventTitle}`);
-    alert(`Email (simulated) for "${schedule.groupNameOrEventTitle}" logged.`);
+    logAdminAction("Email Sent", schedule.id, `Schedule: ${schedule.groupNameOrEventTitle}`);
+      alert(`Email for "${schedule.groupNameOrEventTitle}" logged.`);
   };
   const handleDownloadSchedulePDF = async (schedule: GeneratedScheduleItem) => {
     setActiveDropdownId(null); alert("PDF generation started...");

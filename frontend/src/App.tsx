@@ -7,7 +7,6 @@ import Sidebar from "./components/layout/Sidebar";
 import RightSidebar from "./components/layout/RightSidebar";
 
 import HomePage from "./pages/HomePage";
-import PrayerRequestsPage from "./pages/PrayerRequestsPage";
 import SermonsPage from "./pages/SermonsPage";
 import SingleSermonPage from "./pages/SingleSermonPage";
 import MinistriesPage from "./pages/MinistriesPage";
@@ -30,7 +29,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import FellowshipProgramDetailPage from "./pages/FellowshipProgramDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import CommunityPage from "./pages/CommunityPage";
-import ChatPage from "./pages/ChatPage";
+
 
 // Admin
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -42,7 +41,6 @@ import { ManageEventsPage } from "./pages/admin/ManageEventsPage";
 import ManageMinistriesPage from "./pages/admin/ManageMinistriesPage";
 import ManageBlogPostsPage from "./pages/admin/ManageBlogPostsPage";
 import ManageNewsPage from "./pages/admin/ManageNewsPage";
-import ManageHomeSlidesPage from "./pages/admin/ManageHomeSlidesPage";
 import ManageDirectMediaPage from "./pages/admin/ManageDirectMediaPage";
 import AdminActivityLogPage from "./pages/admin/AdminActivityLogPage";
 import ManageAboutSectionsPage from "./pages/admin/ManageAboutSectionsPage";
@@ -55,7 +53,6 @@ import { ManageCollectionRecordsPage } from "./pages/admin/ManageCollectionRecor
 import ManageContactMessagesPage from "./pages/admin/ManageContactMessagesPage";
 import ManageBranchChurchesPage from "./pages/admin/ManageBranchChurchesPage";
 import ManageMinistryJoinRequestsPage from "./pages/admin/ManageMinistryJoinRequestsPage";
-import ManageMonthlyThemeImagesPage from "./pages/admin/ManageMonthlyThemeImagesPage";
 import SeoToolsPage from "./pages/admin/SeoToolsPage";
 import ManageAdvertisementsPage from "./pages/admin/ManageAdvertisementsPage";
 import ManagePrayerRequestsPage from "./pages/admin/ManagePrayerRequestsPage";
@@ -111,8 +108,7 @@ const AppContent: React.FC = () => {
   };
 
   const isAdminPage = location.pathname.startsWith("/admin");
-  const isChatPage = location.pathname.startsWith("/chat");
-  const showSidebar = !isAdminPage && !isChatPage;
+  const showSidebar = !isAdminPage;
 
   return (
     <div className="flex flex-col min-h-screen text-slate-800 font-sans">
@@ -122,7 +118,7 @@ const AppContent: React.FC = () => {
         <main className="flex-grow min-w-0 p-0 sm:p-4">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/updates" element={<PrayerRequestsPage />} />
+            <Route path="/updates" element={<HomePage />} />
 
             <Route path="/sermons" element={<SermonsPage />} />
             <Route path="/sermons/:sermonId" element={<SingleSermonPage />} />
@@ -152,19 +148,13 @@ const AppContent: React.FC = () => {
               element={<FellowshipProgramDetailPage />}
             />
 
-            <Route
-              path="/community"
-              element={<ProtectedRoute element={<CommunityPage />} />}
-            />
+            <Route path="/community" element={<CommunityPage />} />
             <Route
               path="/profile"
               element={<ProtectedRoute element={<ProfilePage />} />}
             />
             <Route path="/profile/:userId" element={<PublicProfilePage />} />
-            <Route
-              path="/chat/:userId"
-              element={<ProtectedRoute element={<ChatPage />} />}
-            />
+            
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
             {/* Admin Routes */}
@@ -180,12 +170,7 @@ const AppContent: React.FC = () => {
               <Route path="manage-ministries" element={<ManageMinistriesPage />} />
               <Route path="manage-blog" element={<ManageBlogPostsPage />} />
               <Route path="manage-news" element={<ManageNewsPage />} />
-              <Route path="manage-home-slides" element={<ManageHomeSlidesPage />} />
               <Route path="manage-direct-media" element={<ManageDirectMediaPage />} />
-              <Route
-                path="manage-theme-images"
-                element={<ManageMonthlyThemeImagesPage />}
-              />
               <Route
                 path="manage-about-sections"
                 element={<ManageAboutSectionsPage />}
@@ -246,11 +231,9 @@ const AppContent: React.FC = () => {
         {showSidebar && <RightSidebar />}
       </div>
 
-      {!isChatPage && (
-        <div className="w-full">
-          <Footer />
-        </div>
-      )}
+      <div className="w-full">
+        <Footer />
+      </div>
 
       <ChatbotFab
         onToggle={() => setIsChatbotOpen((prev) => !prev)}

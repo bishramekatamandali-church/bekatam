@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, historychapter } from '@prisma/client';
 
@@ -29,8 +30,8 @@ router.get('/', async (req, res) => {
 // POST a new chapter
 router.post('/', async (req, res) => {
     const { chapterNumber, title, content, status, imageUrl, summary } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     const authorId = '0';
     const authorName = 'Admin System';
 
@@ -48,8 +49,8 @@ router.post('/', async (req, res) => {
                 authorId,
                 authorName,
                 lastPublishedAt: status === 'published' ? new Date() : undefined,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeChapterForFrontend(newChapter));

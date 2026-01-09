@@ -3,9 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const contentUpdates_1 = require("../services/contentUpdates");
+const enumNormalization_1 = require("../utils/enumNormalization");
 const router = express_1.default.Router();
 // Helper to shape data for frontend, assuming frontend types.ts expects 'comments' array
 const shapeEventForFrontend = (event) => {
@@ -55,25 +58,42 @@ router.get('/:id', async (req, res) => {
 // POST a new event
 router.post('/', async (req, res) => {
     // Note: In a real app, validate req.body against a schema
-    const { date, videoUrl, audioUrl, ...restOfData } = req.body;
-    // TODO: Get user from auth token for postedByOwnerId/Name
-    const postedByOwnerId = '0'; // Placeholder
-    const postedByOwnerName = 'Admin System'; // Placeholder
+    const { title, description, imageUrl, linkPath: requestLinkPath, category, date, location, time, expectations, guests, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, } = req.body;
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
+    const id = crypto_1.default.randomUUID();
+    const linkPath = requestLinkPath || `/events/${id}`;
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.eventitem_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid event category.' });
+    }
     try {
         const newEvent = await db_1.prisma.eventitem.create({
             data: {
-                ...restOfData,
+                id,
+                title,
+                description,
+                imageUrl,
+                linkPath,
+                category: normalizedCategory,
                 date: eventDate,
+                location,
+                time,
+                expectations,
+                guests,
+                contactPerson,
+                contactEmail,
+                contactPhone,
+                registrationLink,
+                isFeeRequired,
+                feeAmount,
                 videoUrl,
                 audioUrl,
-                postedByOwnerId,
-                postedByOwnerName,
+                updatedAt: new Date(),
                 // Ensure optional numeric fields are handled
-                capacity: restOfData.capacity ? parseInt(restOfData.capacity, 10) : undefined,
-                likes: restOfData.likes || 0,
+                capacity: capacity ? parseInt(capacity, 10) : undefined,
             }
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'event', action: 'created', id: newEvent.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeEventForFrontend(newEvent));
     }
     catch (error) {
@@ -87,21 +107,40 @@ router.post('/', async (req, res) => {
 // PUT (update) an event
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { date, videoUrl, audioUrl, ...restOfData } = req.body;
+    const { title, description, imageUrl, linkPath, category, date, location, time, expectations, guests, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, } = req.body;
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.eventitem_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid event category.' });
+    }
     try {
         const updatedEvent = await db_1.prisma.eventitem.update({
             where: { id: id },
             data: {
-                ...restOfData,
+                title,
+                description,
+                imageUrl,
+                linkPath,
+                category: normalizedCategory,
                 date: eventDate,
+                location,
+                time,
+                expectations,
+                guests,
+                contactPerson,
+                contactEmail,
+                contactPhone,
+                registrationLink,
+                isFeeRequired,
+                feeAmount,
                 videoUrl,
                 audioUrl,
                 // Ensure optional numeric fields are handled
-                capacity: restOfData.capacity ? parseInt(restOfData.capacity, 10) : undefined,
+                capacity: capacity ? parseInt(capacity, 10) : undefined,
                 updatedAt: new Date(),
             }
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'event', action: 'updated', id: updatedEvent.id, timestamp: new Date().toISOString() });
         res.json(shapeEventForFrontend(updatedEvent));
     }
     catch (error) {
@@ -122,6 +161,7 @@ router.delete('/:id', async (req, res) => {
         await db_1.prisma.eventitem.delete({
             where: { id: id },
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'event', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send(); // No Content
     }
     catch (error) {

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
@@ -27,19 +28,19 @@ router.get('/', async (req, res) => {
 // POST a new key person
 router.post('/', async (req, res) => {
     const { name, role, bio, imageUrl } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     try {
         const newPerson = await db_1.prisma.keyperson.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
+                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 updatedAt: new Date(), // REQUIRED
                 name,
                 role,
                 bio,
                 imageUrl,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeKeyPersonForFrontend(newPerson));

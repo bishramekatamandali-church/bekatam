@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { isDatabaseHealthy } from "../db";
 
 // Minimal placeholder payloads for content lists used on the public site.
 const fallbackPayloads: Record<string, unknown> = {
@@ -8,7 +7,6 @@ const fallbackPayloads: Record<string, unknown> = {
   ministries: [],
   blogposts: [],
   newsitems: [],
-  homeslides: [],
   aboutsections: [],
   keypersons: [],
   historymilestones: [],
@@ -31,7 +29,6 @@ export const fallbackMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  if (isDatabaseHealthy) return next();
 
   if (req.method !== "GET") {
     return res.status(503).json({

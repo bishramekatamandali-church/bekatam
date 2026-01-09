@@ -2,7 +2,9 @@
 import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma, newsitem } from '@prisma/client';
+import { Prisma, newsitem, newsitem_category } from '@prisma/client';
+import { publishContentUpdate } from '../services/contentUpdates';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -32,9 +34,12 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
     const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
     const id = crypto.randomUUID();
+    const normalizedCategory = normalizeEnumValue(category, newsitem_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid news category.' });
+    }
 
     try {
         const newItem = await prisma.newsitem.create({
@@ -44,15 +49,14 @@ router.post('/', async (req, res) => {
                 title,
                 description,
                 date: itemDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
                 linkPath: `/news/${id}`,
-                postedByOwnerId,
-                postedByOwnerName,
             }
         });
+    publishContentUpdate({ type: 'news', action: 'created', id: newItem.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeNewsItemForFrontend(newItem));
     } catch (error) {
         res.status(500).json({ error: 'Failed to create news item' });
@@ -64,6 +68,11 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
     const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
+    const normalizedCategory = normalizeEnumValue(category, newsitem_category);
+
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid news category.' });
+    }
     
     try {
         const updatedItem = await prisma.newsitem.update({
@@ -72,13 +81,14 @@ router.put('/:id', async (req, res) => {
                 title,
                 description,
                 date: itemDate,
-                category,
+                category: normalizedCategory,
                 imageUrl,
                 videoUrl,
                 audioUrl,
                 updatedAt: new Date(),
             }
         });
+    publishContentUpdate({ type: 'news', action: 'updated', id: updatedItem.id, timestamp: new Date().toISOString() });
         res.json(shapeNewsItemForFrontend(updatedItem));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -93,6 +103,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.newsitem.delete({ where: { id } });
+        publishContentUpdate({ type: 'news', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send();
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

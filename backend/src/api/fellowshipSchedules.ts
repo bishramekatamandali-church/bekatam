@@ -1,7 +1,8 @@
 import express from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma, fellowshiprosteritem_rosterType, generatedscheduleitem_rosterType } from '@prisma/client';
 import { prisma } from '../db';
 import crypto from 'crypto';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -19,17 +20,23 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/rosters', async (req, res) => {
-  const { rosterType, groupNameOrEventTitle, assignedDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isTemplate, responsibilities, postedByOwnerId, postedByOwnerName } = req.body;
+  const { rosterType, groupNameOrEventTitle, assignedDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isTemplate, responsibilities, postedByAdminId, postedByAdminName } = req.body;
 
   if (!rosterType || !groupNameOrEventTitle || !assignedDate || !timeSlot) {
     return res.status(400).json({ error: 'Roster type, title, assigned date, and time slot are required.' });
+  }
+
+const normalizedRosterType = normalizeEnumValue(rosterType, fellowshiprosteritem_rosterType);
+
+  if (!normalizedRosterType) {
+    return res.status(400).json({ error: 'Invalid roster type.' });
   }
 
   try {
     const created = await prisma.fellowshiprosteritem.create({
       data: {
         id: crypto.randomUUID(),
-        rosterType,
+        rosterType: normalizedRosterType,
         groupNameOrEventTitle,
         assignedDate: new Date(assignedDate),
         timeSlot,
@@ -37,8 +44,8 @@ router.post('/rosters', async (req, res) => {
         contactNumber,
         additionalNotesOrProgramDetails,
         isTemplate: Boolean(isTemplate),
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
         responsibility: responsibilities
           ? {
@@ -60,13 +67,19 @@ router.post('/rosters', async (req, res) => {
 
 router.put('/rosters/:id', async (req, res) => {
   const { id } = req.params;
-  const { rosterType, groupNameOrEventTitle, assignedDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isTemplate, responsibilities, postedByOwnerId, postedByOwnerName } = req.body;
+  const { rosterType, groupNameOrEventTitle, assignedDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isTemplate, responsibilities, postedByAdminId, postedByAdminName } = req.body;
+ 
+  const normalizedRosterType = normalizeEnumValue(rosterType, fellowshiprosteritem_rosterType);
+
+  if (rosterType && !normalizedRosterType) {
+    return res.status(400).json({ error: 'Invalid roster type.' });
+  }
 
   try {
     const updated = await prisma.fellowshiprosteritem.update({
       where: { id },
       data: {
-        rosterType,
+        rosterType: normalizedRosterType,
         groupNameOrEventTitle,
         assignedDate: assignedDate ? new Date(assignedDate) : undefined,
         timeSlot,
@@ -74,8 +87,8 @@ router.put('/rosters/:id', async (req, res) => {
         contactNumber,
         additionalNotesOrProgramDetails,
         isTemplate,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
         responsibility: responsibilities
           ? {
@@ -114,10 +127,16 @@ router.delete('/rosters/:id', async (req, res) => {
 });
 
 router.post('/generated', async (req, res) => {
-  const { basedOnRosterItemId, rosterType, groupNameOrEventTitle, scheduledDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isPublishedAsEvent, publishedEventId, adminNotes, responsibilities, postedByOwnerId, postedByOwnerName } = req.body;
+  const { basedOnRosterItemId, rosterType, groupNameOrEventTitle, scheduledDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isPublishedAsEvent, publishedEventId, adminNotes, responsibilities, postedByAdminId, postedByAdminName } = req.body;
 
   if (!rosterType || !groupNameOrEventTitle || !scheduledDate || !timeSlot) {
     return res.status(400).json({ error: 'Roster type, title, scheduled date, and time slot are required.' });
+  }
+ 
+const normalizedRosterType = normalizeEnumValue(rosterType, generatedscheduleitem_rosterType);
+
+  if (!normalizedRosterType) {
+    return res.status(400).json({ error: 'Invalid roster type.' });
   }
 
   try {
@@ -125,7 +144,7 @@ router.post('/generated', async (req, res) => {
       data: {
         id: crypto.randomUUID(),
         basedOnRosterItemId,
-        rosterType,
+        rosterType: normalizedRosterType,
         groupNameOrEventTitle,
         scheduledDate: new Date(scheduledDate),
         timeSlot,
@@ -135,8 +154,8 @@ router.post('/generated', async (req, res) => {
         isPublishedAsEvent: Boolean(isPublishedAsEvent),
         publishedEventId,
         adminNotes,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
         responsibility: responsibilities
           ? {
@@ -158,14 +177,20 @@ router.post('/generated', async (req, res) => {
 
 router.put('/generated/:id', async (req, res) => {
   const { id } = req.params;
-  const { basedOnRosterItemId, rosterType, groupNameOrEventTitle, scheduledDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isPublishedAsEvent, publishedEventId, adminNotes, responsibilities, postedByOwnerId, postedByOwnerName } = req.body;
+  const { basedOnRosterItemId, rosterType, groupNameOrEventTitle, scheduledDate, timeSlot, location, contactNumber, additionalNotesOrProgramDetails, isPublishedAsEvent, publishedEventId, adminNotes, responsibilities, postedByAdminId, postedByAdminName } = req.body;
+
+  const normalizedRosterType = normalizeEnumValue(rosterType, generatedscheduleitem_rosterType);
+
+  if (rosterType && !normalizedRosterType) {
+    return res.status(400).json({ error: 'Invalid roster type.' });
+  }
 
   try {
     const updated = await prisma.generatedscheduleitem.update({
       where: { id },
       data: {
         basedOnRosterItemId,
-        rosterType,
+        rosterType: normalizedRosterType,
         groupNameOrEventTitle,
         scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
         timeSlot,
@@ -175,8 +200,8 @@ router.put('/generated/:id', async (req, res) => {
         isPublishedAsEvent,
         publishedEventId,
         adminNotes,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
         responsibility: responsibilities
           ? {

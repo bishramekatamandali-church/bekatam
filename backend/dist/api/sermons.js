@@ -7,6 +7,8 @@ const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const contentUpdates_1 = require("../services/contentUpdates");
+const enumNormalization_1 = require("../utils/enumNormalization");
 const router = express_1.default.Router();
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (sermon) => {
@@ -52,12 +54,13 @@ router.get('/:id', async (req, res) => {
 // POST a new sermon
 router.post('/', async (req, res) => {
     const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl } = req.body;
-    // TODO: Add validation and get user from auth token
-    const postedByOwnerId = '0'; // Placeholder
-    const postedByOwnerName = 'Admin System'; // Placeholder
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto_1.default.randomUUID();
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.sermon_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid sermon category.' });
+    }
     try {
         const newSermon = await db_1.prisma.sermon.create({
             data: {
@@ -66,7 +69,7 @@ router.post('/', async (req, res) => {
                 title,
                 description,
                 date: sermonDate, // Use the validated date or null
-                category,
+                category: normalizedCategory,
                 speaker,
                 scripture,
                 videoUrl,
@@ -74,10 +77,9 @@ router.post('/', async (req, res) => {
                 fullContent,
                 imageUrl,
                 linkPath: `/sermons/${id}`,
-                postedByOwnerId,
-                postedByOwnerName,
             }
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeSermonForFrontend(newSermon));
     }
     catch (error) {
@@ -94,6 +96,10 @@ router.put('/:id', async (req, res) => {
     const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl } = req.body;
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
+    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.sermon_category);
+    if (category && !normalizedCategory) {
+        return res.status(400).json({ error: 'Invalid sermon category.' });
+    }
     try {
         const updatedSermon = await db_1.prisma.sermon.update({
             where: { id: id },
@@ -101,7 +107,7 @@ router.put('/:id', async (req, res) => {
                 title,
                 description,
                 date: sermonDate, // Use the validated date or null
-                category,
+                category: normalizedCategory,
                 speaker,
                 scripture,
                 videoUrl,
@@ -111,6 +117,7 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
         res.json(shapeSermonForFrontend(updatedSermon));
     }
     catch (error) {
@@ -131,6 +138,7 @@ router.delete('/:id', async (req, res) => {
         await db_1.prisma.sermon.delete({
             where: { id: id },
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send(); // No Content
     }
     catch (error) {

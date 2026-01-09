@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, aboutsection } from '@prisma/client';
 
@@ -26,8 +27,8 @@ router.get('/', async (req, res) => {
 // POST a new about section (custom only)
 router.post('/', async (req, res) => {
     const { title, content, imageUrl, displayOrder } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
 
     try {
         const newSection = await prisma.aboutsection.create({
@@ -39,8 +40,8 @@ router.post('/', async (req, res) => {
                 imageUrl,
                 displayOrder: Number(displayOrder) || 0,
                 isCoreSection: false, // Can only add custom sections via API
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeAboutSectionForFrontend(newSection));

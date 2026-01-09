@@ -25,10 +25,15 @@ const ManageDirectMediaPage: React.FC = () => {
   const { directMediaItems, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMedia, setEditingMedia] = useState<DirectMediaItem | null>(null);
+  const [mediaFilter, setMediaFilter] = useState<'all' | 'image' | 'video'>('all');
 
-  const sortedMedia = useMemo(() => 
+  const sortedMedia = useMemo(() =>
     [...directMediaItems].sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()), 
   [directMediaItems]);
+ 
+  const filteredMedia = useMemo(() =>
+    mediaFilter === 'all' ? sortedMedia : sortedMedia.filter(item => item.mediaType === mediaFilter),
+  [mediaFilter, sortedMedia]);
 
   const handleOpenModal = (media?: DirectMediaItem) => {
     setEditingMedia(media || null);
@@ -56,27 +61,56 @@ const ManageDirectMediaPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Manage Direct Media Uploads</h1>
-        <Button onClick={() => handleOpenModal()} variant="primary" size="sm">
-          <PlusIcon className="mr-1.5" /> Add New Media
-        </Button>
+    <div className="w-full space-y-6">
+      <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500 text-white rounded-2xl shadow-lg p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="uppercase text-[10px] tracking-[0.3em] text-white/80">Media drop</p>
+            <h1 className="text-2xl font-semibold">Direct Uploads</h1>
+            <p className="text-sm text-white/90">Newly merged files show up instantly and can be reused everywhere.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => handleOpenModal()} variant="primary" size="sm" className="bg-white text-purple-700 hover:bg-white/90">
+              <PlusIcon className="mr-1.5" /> Add New Media
+            </Button>
+            <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg text-xs">
+              <span className="font-semibold">{sortedMedia.length}</span>
+              <span className="text-white/80">items live</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {(['all','image','video'] as const).map(filter => (
+            <Button
+              key={filter}
+              variant={mediaFilter === filter ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setMediaFilter(filter)}
+              className={mediaFilter === filter ? '' : 'text-slate-700'}
+            >
+              {filter === 'all' ? 'All media' : filter === 'image' ? 'Images' : 'Videos'}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">Uploads feel social: pick from your library without pasting URLs.</p>
       </div>
 
       {loadingContent && <p className="text-gray-500">Loading media items...</p>}
       
-      {!loadingContent && sortedMedia.length === 0 && (
+      {!loadingContent && filteredMedia.length === 0 && (
         <Card>
             <CardContent>
-                <p className="text-center text-gray-500 py-8">No media items found. Upload one to get started!</p>
+                <p className="text-center text-gray-500 py-8">No media items match this view. Upload or change the filter to see your library.</p>
             </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {sortedMedia.map((media) => (
-          <Card key={media.id} className="flex flex-col">
+         {filteredMedia.map((media) => (
+          <Card key={media.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
             <div className="relative h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
               {media.mediaType === 'image' ? (
                 <img src={media.url} alt={media.title} className="w-full h-full object-cover"/>
@@ -107,9 +141,12 @@ const ManageDirectMediaPage: React.FC = () => {
                     </div>
                 </CardContent>
             )}
-            <CardFooter className="flex justify-end space-x-2 bg-gray-50 p-3">
-              <Button variant="outline" size="sm" onClick={() => handleOpenModal(media)}>Edit</Button>
-              <Button variant="secondary" size="sm" onClick={() => handleDelete(media.id)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
+            <CardFooter className="flex justify-between items-center bg-gray-50 p-3">
+              <span className="text-[11px] text-slate-400">{media.mediaType.toUpperCase()}</span>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={() => handleOpenModal(media)}>Edit</Button>
+                <Button variant="secondary" size="sm" onClick={() => handleDelete(media.id)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
+              </div>
             </CardFooter>
           </Card>
         ))}

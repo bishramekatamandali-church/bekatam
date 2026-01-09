@@ -19,7 +19,7 @@ router.get('/', async (_req, res) => {
 
 // Create ad
 router.post('/', async (req, res) => {
-  const { name, adType, imageUrl, videoUrl, linkUrl, altText, placements, startDate, endDate, isActive, displayOrder, adSizeKey, postedByOwnerId, postedByOwnerName } = req.body;
+  const { name, adType, imageUrl, videoUrl, linkUrl, altText, placements, startDate, endDate, isActive, displayOrder, adSizeKey, postedByAdminId, postedByAdminName } = req.body;
 
   if (!name || !adType) {
     return res.status(400).json({ error: 'Name and ad type are required.' });
@@ -41,8 +41,8 @@ router.post('/', async (req, res) => {
         isActive: Boolean(isActive),
         displayOrder: displayOrder ?? null,
         adSizeKey,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });
@@ -55,7 +55,7 @@ router.post('/', async (req, res) => {
 // Update ad
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, adType, imageUrl, videoUrl, linkUrl, altText, placements, startDate, endDate, isActive, displayOrder, adSizeKey, postedByOwnerId, postedByOwnerName } = req.body;
+  const { name, adType, imageUrl, videoUrl, linkUrl, altText, placements, startDate, endDate, isActive, displayOrder, adSizeKey, postedByAdminId, postedByAdminName } = req.body;
 
   try {
     const updated = await prisma.advertisement.update({
@@ -73,8 +73,8 @@ router.put('/:id', async (req, res) => {
         isActive: Boolean(isActive),
         displayOrder,
         adSizeKey,
-        postedByOwnerId,
-        postedByOwnerName,
+        postedByAdminId,
+        postedByAdminName,
         updatedAt: new Date(),
       },
     });

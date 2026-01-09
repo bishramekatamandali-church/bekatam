@@ -1,7 +1,8 @@
 import express from 'express';
 import { prisma } from '../db';
 import crypto from "crypto";
-import { Prisma } from '@prisma/client';
+import { Prisma, collectionrecord_purpose } from '@prisma/client';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -30,12 +31,17 @@ router.post('/', async (req, res) => {
         isDeposited, 
         depositDate, 
         bankDepositReference, 
-        recordedByOwnerId, 
-        recordedByOwnerName 
+        recordedByAdminId, 
+        recordedByAdminName 
     } = req.body;
 
     if (!collectorName || !collectionDate || !amount || !purpose) {
         return res.status(400).json({ error: 'Missing required fields.' });
+    }
+    
+    const normalizedPurpose = normalizeEnumValue(purpose, collectionrecord_purpose);
+    if (!normalizedPurpose) {
+        return res.status(400).json({ error: 'Invalid collection purpose.' });
     }
 
     try {
@@ -47,7 +53,7 @@ router.post('/', async (req, res) => {
                 collectorName,
                 collectionDate: new Date(collectionDate),
                 amount: Number(amount),
-                purpose,
+                purpose: normalizedPurpose,
                 source,
                 notes,
                 countedBy,
@@ -56,8 +62,8 @@ router.post('/', async (req, res) => {
                 depositDate: depositDate ? new Date(depositDate) : null,
                 bankDepositReference,
 
-                recordedByOwnerId: recordedByOwnerId || 'system',
-                recordedByOwnerName: recordedByOwnerName || 'System',
+                recordedByAdminId: recordedByAdminId || 'system',
+                recordedByAdminName: recordedByAdminName || 'System',
                 recordedAt: new Date(),
             }
         });
@@ -86,6 +92,11 @@ router.put('/:id', async (req, res) => {
         bankDepositReference 
     } = req.body;
     
+    const normalizedPurpose = normalizeEnumValue(purpose, collectionrecord_purpose);
+    if (purpose && !normalizedPurpose) {
+        return res.status(400).json({ error: 'Invalid collection purpose.' });
+    }
+    
     try {
         const updatedRecord = await prisma.collectionrecord.update({
             where: { id },
@@ -93,7 +104,7 @@ router.put('/:id', async (req, res) => {
                 collectorName,
                 collectionDate: new Date(collectionDate),
                 amount: Number(amount),
-                purpose,
+                purpose: normalizedPurpose,
                 source,
                 notes,
 

@@ -24,6 +24,10 @@ export const ManageEventsPage: React.FC = () => {
   const { events, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  
+  const sortedEvents = React.useMemo(() =>
+    [...events].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
+  [events]);
 
   const handleOpenModal = (event?: EventItem) => {
     setEditingEvent(event || null);
@@ -70,7 +74,7 @@ export const ManageEventsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {events.map((event) => (
+        {sortedEvents.map((event) => (
           <Card key={event.id} className="flex flex-col">
             {event.imageUrl && <img src={event.imageUrl} alt={event.title} className="w-full h-40 object-cover" />}
             <CardHeader className="flex-grow">

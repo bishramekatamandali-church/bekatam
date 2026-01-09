@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
@@ -27,12 +28,12 @@ router.get('/', async (req, res) => {
 // POST a new milestone
 router.post('/', async (req, res) => {
     const { year, title, description, imageUrl } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     try {
         const newMilestone = await db_1.prisma.historymilestone.create({
-            data: { id: crypto.randomUUID(),
-                updatedAt: new Date(), year, title, description, imageUrl, postedByOwnerId, postedByOwnerName }
+            data: { id: crypto_1.default.randomUUID(),
+                updatedAt: new Date(), year, title, description, imageUrl, postedByAdminId, postedByAdminName }
         });
         res.status(201).json(shapeMilestoneForFrontend(newMilestone));
     }

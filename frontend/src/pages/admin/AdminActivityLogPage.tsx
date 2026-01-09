@@ -9,7 +9,7 @@ import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 const ITEMS_PER_PAGE = 10;
 
 const AdminActivityLogPage: React.FC = () => {
-  const { adminActionLogs, loadingAuthState, isOwner } = useAuth();
+  const { adminActionLogs, loadingAuthState, isAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
 
   const sortedLogs = useMemo(() => {
@@ -27,7 +27,7 @@ const AdminActivityLogPage: React.FC = () => {
     return <p>Loading activity logs...</p>;
   }
 
-  if (!isOwner) {
+  if (!isAdmin) {
     return (
         <Card>
             <CardContent>

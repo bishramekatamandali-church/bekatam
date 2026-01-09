@@ -13,8 +13,8 @@ model aboutsection {
   content           String   @db.Text
   imageUrl          String?  @db.Text
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   isCoreSection     Boolean
   displayOrder      Int
   createdAt         DateTime @default(now())
@@ -49,8 +49,8 @@ model advertisement {
   adSizeKey         String?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 }
 
 model blogpost {
@@ -61,8 +61,8 @@ model blogpost {
   linkPath          String
   category          blogpost_category?
   date              DateTime?
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime
   likes             Int                @default(0)
@@ -90,8 +90,8 @@ model branchchurch {
   establishedDate   DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 }
 
 model churchmember {
@@ -109,8 +109,8 @@ model churchmember {
   notes             String?   @db.Text
   isActiveMember    Boolean
   profileImageUrl   String?   @db.Text
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime
   user              user?     @relation(fields: [userId], references: [id], map: "ChurchMember_userId_fkey")
@@ -125,11 +125,11 @@ model collectionrecord {
   source               String?
   notes                String?                  @db.Text
   recordedAt           DateTime                 @default(now())
-  recordedByOwnerId    String?
-  recordedByOwnerName  String?
+  recordedByAdminId    String?
+  recordedByAdminName  String?
   updatedAt            DateTime
-  postedByOwnerId      String?
-  postedByOwnerName    String?
+  postedByAdminId      String?
+  postedByAdminName    String?
   createdAt            DateTime                 @default(now())
   countedBy            String?
   isDeposited          Boolean                  @default(false)
@@ -189,8 +189,8 @@ model decisionlog {
   madeBy            String
   status            decisionlog_status?
   followUpActions   String?             @db.Text
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
 }
@@ -204,8 +204,8 @@ model directmediaitem {
   category          String?
   tags              Json?
   uploadDate        DateTime                  @default(now())
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   updatedAt         DateTime
 }
 
@@ -229,8 +229,8 @@ model donatepagecontent {
   internationalQrImageUrl            String?  @db.Text
   receiptVerses                      String?  @db.Text
   updatedAt                          DateTime
-  postedByOwnerId                    String?
-  postedByOwnerName                  String?
+  postedByAdminId                    String?
+  postedByAdminName                  String?
 }
 
 model donationrecord {
@@ -242,8 +242,8 @@ model donationrecord {
   purpose              donationrecord_purpose
   donationDate         DateTime
   transactionTimestamp DateTime                      @default(now())
-  postedByOwnerId      String?
-  postedByOwnerName    String?
+  postedByAdminId      String?
+  postedByAdminName    String?
   createdAt            DateTime                      @default(now())
   updatedAt            DateTime
   paymentMethod        donationrecord_paymentMethod?
@@ -272,8 +272,8 @@ model eventitem {
   linkPath          String
   category          eventitem_category?
   date              DateTime?
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAminId   String?
+  postedByAdminName String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
   location          String?
@@ -308,8 +308,8 @@ model expenserecord {
   source               String?
   location             String?
   status               expenserecord_status?
-  postedByOwnerId      String?
-  postedByOwnerName    String?
+  postedByAdminId      String?
+  postedByAdminName    String?
   createdAt            DateTime                     @default(now())
   updatedAt            DateTime
 }
@@ -324,8 +324,8 @@ model fellowshiprosteritem {
   contactNumber                   String?
   additionalNotesOrProgramDetails String?                         @db.Text
   isTemplate                      Boolean                         @default(false)
-  postedByOwnerId                 String?
-  postedByOwnerName               String?
+  postedByAdminId                 String?
+  postedByAdminName               String?
   createdAt                       DateTime                        @default(now())
   updatedAt                       DateTime
   generatedscheduleitem           generatedscheduleitem[]
@@ -373,8 +373,8 @@ model generatedscheduleitem {
   isPublishedAsEvent              Boolean                          @default(false)
   publishedEventId                String?
   adminNotes                      String?                          @db.Text
-  postedByOwnerId                 String?
-  postedByOwnerName               String?
+  postedByAdminId                 String?
+  postedByAdminName               String?
   createdAt                       DateTime                         @default(now())
   updatedAt                       DateTime
   fellowshiprosteritem            fellowshiprosteritem?            @relation(fields: [basedOnRosterItemId], references: [id], map: "GeneratedScheduleItem_basedOnRosterItemId_fkey")
@@ -441,8 +441,8 @@ model historychapter {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime
   lastPublishedAt   DateTime?
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   likes             Int                   @default(0)
   comment           comment[]
 }
@@ -455,8 +455,8 @@ model historymilestone {
   imageUrl          String?  @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 }
 
 model homeslide {
@@ -470,8 +470,8 @@ model homeslide {
   isActive          Boolean
   createdAt         DateTime @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 }
 
 model keyperson {
@@ -482,8 +482,8 @@ model keyperson {
   bio               String   @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 }
 
 model meetingdecisionpoint {
@@ -510,8 +510,8 @@ model meetinglog {
   actionItems          String?                 @db.Text
   status               meetinglog_status?
   imageUrl             String?                 @db.Text
-  postedByOwnerId      String?
-  postedByOwnerName    String?
+  postedByAdminId      String?
+  postedByAdminName    String?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime
   meetingdecisionpoint meetingdecisionpoint[]
@@ -524,8 +524,8 @@ model ministry {
   imageUrl            String?               @db.Text
   linkPath            String
   category            ministry_category?
-  postedByOwnerId     String?
-  postedByOwnerName   String?
+  postedByAdminId     String?
+  postedByAdminName   String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime
   leader              String?
@@ -561,8 +561,8 @@ model monthlythemeimage {
   quoteOrCaption    String?  @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
 
   @@unique([year, month], map: "MonthlyThemeImage_year_month_key")
 }
@@ -575,8 +575,8 @@ model newsitem {
   linkPath          String
   category          newsitem_category?
   date              DateTime?
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime
   videoUrl          String?            @db.Text
@@ -624,8 +624,8 @@ model prayerrequest {
   submittedAt         DateTime                 @default(now())
   lastPrayedAt        DateTime?
   adminNotes          String?                  @db.Text
-  postedByOwnerId     String?
-  postedByOwnerName   String?
+  postedByAdminId     String?
+  postedByAdminName   String?
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime
   mediaUrls           Json?
@@ -661,8 +661,8 @@ model sermon {
   linkPath          String
   category          sermon_category?
   date              DateTime?
-  postedByOwnerId   String?
-  postedByOwnerName String?
+  postedByAdminId   String?
+  postedByAdminName String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime
   speaker           String?
@@ -683,8 +683,8 @@ model testimonial {
   contentText         String                 @db.Text
   visibility          testimonial_visibility
   submittedAt         DateTime               @default(now())
-  postedByOwnerId     String?
-  postedByOwnerName   String?
+  postedByAdminId     String?
+  postedByAdminName   String?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime
   mediaUrls           Json?
@@ -983,8 +983,7 @@ enum testimonial_visibility {
 enum user_role {
   user
   admin
-  owner
-}
+  }
 
 enum group_sendMessage {
   admins_only

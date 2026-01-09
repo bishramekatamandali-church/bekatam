@@ -80,7 +80,7 @@ const activityTypeToEnglish = (type: FrontendActivityLog['type']): string => {
     user_login: 'User Login',
     user_logout: 'User Logout',
     notification_preference_update: 'Notification Preference Update',
-    password_change_simulated: 'Password Change (Simulated)',
+    password_change_simulated: 'Password Change',
     forgot_password_request: 'Forgot Password Request',
     password_reset_success: 'Password Reset Success',
     password_reset_failure: 'Password Reset Failure',
@@ -109,7 +109,7 @@ const activityTypeToEnglish = (type: FrontendActivityLog['type']): string => {
 
 const AdminDashboardOverview: React.FC = () => {
   const content = useContent(); 
-  const { userActivityLogs, loadingAuthState, getAllUsers, currentUser, logAdminAction, isOwner } = useAuth();
+  const { userActivityLogs, loadingAuthState, getAllUsers, currentUser, logAdminAction, isAdmin } = useAuth();
   const { addNotification } = useNotification();
 
   const [featureUpdateMessage, setFeatureUpdateMessage] = useState('');
@@ -127,8 +127,7 @@ const AdminDashboardOverview: React.FC = () => {
     {label: "Add New Sermon", path: "/admin/manage-sermons"},
     {label: "Create Event", path: "/admin/manage-events"},
     {label: "New Blog Post", path: "/admin/manage-blog"},
-    {label: "Add Home Slide", path: "/admin/manage-home-slides"},
-  ];
+    ];
 
   const isLoading = content.loadingContent || loadingAuthState;
 
@@ -159,8 +158,8 @@ const AdminDashboardOverview: React.FC = () => {
   };
 
   const handleDownloadJumboReport = useCallback(async () => {
-    if (!isOwner) {
-      alert("Access Denied: Only owners can download this report.");
+    if (!isAdmin) {
+      alert("Access Denied: Only admins can download this report.");
       return;
     }
     setIsGeneratingJumboReport(true);
@@ -181,7 +180,7 @@ const AdminDashboardOverview: React.FC = () => {
     } finally {
       setIsGeneratingJumboReport(false);
     }
-  }, [isOwner, content]);
+  }, [isAdmin, content]);
 
   return (
     <div className="space-y-8">
@@ -253,7 +252,7 @@ const AdminDashboardOverview: React.FC = () => {
         </Card>
       </div>
 
-      {isOwner && (
+      {isAdmin && (
         <>
             <Card>
             <CardHeader><h3 className="font-semibold text-gray-700 flex items-center"><MegaphoneIcon className="w-5 h-5 mr-2 text-purple-500" /> Broadcast Feature Update</h3></CardHeader>
@@ -274,7 +273,7 @@ const AdminDashboardOverview: React.FC = () => {
                 <CardHeader><h3 className="font-semibold text-gray-700 flex items-center"><HeroArrowDownTrayIcon className="w-5 h-5 mr-2 text-purple-500"/> Download Admin Data</h3></CardHeader>
                 <CardContent>
                     <p className="text-sm text-slate-600 mb-3">
-                        Download a comprehensive Excel report containing key administrative data including expenses, collections, donations, members, meetings, rosters, and schedules. This is for owner use only.
+                        Download a comprehensive Excel report containing key administrative data including expenses, collections, donations, members, meetings, rosters, and schedules. This is for admin use only.
                     </p>
                     <Button onClick={handleDownloadJumboReport} variant="primary" disabled={isGeneratingJumboReport}>
                         {isGeneratingJumboReport ? "Generating Report..." : "Download Jumbo Report (Excel)"}

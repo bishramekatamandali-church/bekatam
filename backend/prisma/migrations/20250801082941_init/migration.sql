@@ -6,7 +6,7 @@ CREATE TABLE `User` (
     `email` VARCHAR(191) NOT NULL,
     `countryCode` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
-    `role` ENUM('user', 'admin', 'owner') NOT NULL DEFAULT 'user',
+    `role` ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     `profileImageUrl` TEXT NULL,
     `coverPhotoUrl` TEXT NULL,
     `bio` TEXT NULL,

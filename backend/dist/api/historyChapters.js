@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
@@ -30,14 +31,14 @@ router.get('/', async (req, res) => {
 // POST a new chapter
 router.post('/', async (req, res) => {
     const { chapterNumber, title, content, status, imageUrl, summary } = req.body;
-    const postedByOwnerId = '0';
-    const postedByOwnerName = 'Admin System';
+    const postedByAdminId = '0';
+    const postedByAdminName = 'Admin System';
     const authorId = '0';
     const authorName = 'Admin System';
     try {
         const newChapter = await db_1.prisma.historychapter.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
+                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 updatedAt: new Date(), // REQUIRED
                 chapterNumber: Number(chapterNumber) || 0,
                 title,
@@ -48,8 +49,8 @@ router.post('/', async (req, res) => {
                 authorId,
                 authorName,
                 lastPublishedAt: status === 'published' ? new Date() : undefined,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         res.status(201).json(shapeChapterForFrontend(newChapter));

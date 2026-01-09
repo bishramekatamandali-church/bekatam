@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 
@@ -63,9 +63,9 @@ import {
 } from '../../types';
 
 import {
-  adToBsSimulated,
+  adToBs,
   BS_MONTH_NAMES_EN,
-  bsToAdSimulated,
+  bsToAd,
 } from '../../dateConverter';
 
 import SelectMediaModal from './SelectMediaModal';
@@ -82,7 +82,7 @@ import {
 import RichTextEditor from '../ui/RichTextEditor';
 import BSCalendarPicker from './BSCalendarPicker';
 
-const DEFAULT_BS_YEAR = adToBsSimulated(new Date()).year;
+const DEFAULT_BS_YEAR = adToBs(new Date()).year
 
 const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({
   title,
@@ -206,6 +206,8 @@ const UnifiedMediaInputs: React.FC<{
           ref={unifiedMediaInputRef}
           onChange={handleUnifiedMediaUpload}
           className="hidden"
+          accept="image/*,video/*,audio/*"
+          capture="environment"
         />
         <Button
           type="button"
@@ -251,6 +253,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     date: new Date().toISOString().split('T')[0],
     category: eventCategoriesList[0],
     location: '',
+    mapEmbedUrl: '',
     time: '10:00',
     expectations: '',
     guests: '',
@@ -279,6 +282,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     date: new Date().toISOString().split('T')[0],
     category: blogPostCategoriesList[0],
+    enableAutoNarration: true,
     videoUrl: '',
     audioUrl: '',
   } as BlogPostFormData,
@@ -288,6 +292,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     date: new Date().toISOString().split('T')[0],
     category: newsCategoriesList[0],
+    enableAutoNarration: true,
     videoUrl: '',
     audioUrl: '',
   } as NewsItemFormData,
@@ -401,7 +406,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
 
   monthlyThemeImage: {
     year: DEFAULT_BS_YEAR,
-    month: adToBsSimulated(new Date()).month,
+    month: adToBs(new Date()).month,
     imageUrlsString: '',
     quoteOrCaption: '',
   } as MonthlyThemeImageFormData,
@@ -497,6 +502,7 @@ interface ContentFormModalProps {
   initialData?: ContentItem | null;
   isLoading?: boolean;
   isCoreSectionEditing?: boolean;
+  enableAutoNarration: true,
 }
 
 const ContentFormModal: React.FC<ContentFormModalProps> = ({
@@ -507,6 +513,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   initialData,
   isLoading = false,
   isCoreSectionEditing = false,
+  createDefaults,
 }) => {
   const [formData, setFormData] = useState<GenericContentFormData>(
     defaultFormValues[contentType]
@@ -539,7 +546,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   };
 
   const bsYearOptions = useMemo(() => {
-    const currentBsYear = adToBsSimulated(new Date()).year;
+    const currentBsYear = adToBs(new Date()).year;
     return Array.from({ length: 25 }, (_, i) => currentBsYear - 15 + i).sort(
       (a, b) => b - a
     );
@@ -547,9 +554,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      const mergedDefaults = createDefaults && !initialData
+        ? { ...(defaultFormValues[contentType] as GenericContentFormData), ...createDefaults }
+        : defaultFormValues[contentType];
+
       let dataToSet: GenericContentFormData = initialData
         ? ({ ...defaultFormValues[contentType], ...initialData } as GenericContentFormData)
-        : ({ ...defaultFormValues[contentType] } as GenericContentFormData);
+        : ({ ...mergedDefaults } as GenericContentFormData);
 
       const newBsDateDisplays: Record<string, string> = {};
       const fieldsForType = dateFieldsConfig[contentType] || [];
@@ -562,7 +573,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             const adDateObj = new Date(adDateString);
             if (!isNaN(adDateObj.getTime())) {
               (dataToSet as any)[fieldName] = adDateObj.toISOString().split('T')[0];
-              const bs = adToBsSimulated(adDateObj);
+              const bs = adToBs(adDateObj);
               newBsDateDisplays[fieldName] = `${
                 BS_MONTH_NAMES_EN[bs.month - 1]
               } ${bs.day}, ${bs.year} BS`;
@@ -610,7 +621,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType]);
+  }, [isOpen, initialData, contentType, createDefaults]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
@@ -732,7 +743,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       }));
 
       if (value) {
-        const bs = adToBsSimulated(new Date(value));
+        const bs = adToBs(new Date(value));
         setBsDateDisplays((prev) => ({
           ...prev,
           [name]: `${BS_MONTH_NAMES_EN[bs.month - 1]} ${bs.day}, ${bs.year} BS`,
@@ -752,7 +763,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   };
 
   const handleBsDateSelect = (fieldName: string, bsDay: number, bsMonth: number, bsYear: number) => {
-    const adDate = bsToAdSimulated(bsDay, bsMonth, bsYear);
+    const adDate = bsToAd(bsDay, bsMonth, bsYear);
     const adDateString = adDate.toISOString().split('T')[0];
 
     setFormData((prev) => ({
@@ -962,6 +973,15 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsGeneratingAiContent(false);
     }
   };
+
+  const speakText = useCallback((text?: string) => {
+    if (!text) return;
+    const trimmed = text.replace(/<[^>]+>/g, '').trim();
+    if (!trimmed) return;
+    const utterance = new SpeechSynthesisUtterance(trimmed);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, []);
 
   const finalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1224,6 +1244,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   className={inputClasses}
                 />
               </FullWidthField>
+               <FullWidthField>
+                <label htmlFor="mapEmbedUrl" className={labelClasses}>
+                  Map Embed / Share Link (optional)
+                </label>
+                <input
+                  type="url"
+                  name="mapEmbedUrl"
+                  value={(data as any).mapEmbedUrl || ''}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  placeholder="Google Maps share or embed link"
+                />
+              </FullWidthField>
             </FormSection>
 
             <FormSection title="Event Details">
@@ -1349,6 +1382,8 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.registrationLink || ''}
                   onChange={handleChange}
                   className={inputClasses}
+                  required={!!data.isFeeRequired}
+                  placeholder={data.isFeeRequired ? 'Required when fee is enabled' : 'Optional unless fee required'}
                 />
               </div>
             </FormSection>
@@ -1916,10 +1951,6 @@ export default ContentFormModal;
 
 
 /*
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import Modal from '../ui/Modal';
-import Button from '../ui/Button';
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 
 import {
   ContentType, GenericContentFormData, SermonFormData, EventFormData, MinistryFormData, BlogPostFormData, HomeSlideFormData, AboutSectionFormData, KeyPersonFormData, HistoryMilestoneFormData, BranchChurchFormData, DirectMediaFormData, ChurchMemberFormData, MeetingLogFormData, DecisionLogFormData, ExpenseRecordFormData, CollectionRecordFormData, collectionPurposeList, MonthlyThemeImageFormData, HistoryChapterFormData, NewsItemFormData, FellowshipRosterFormData, AdvertisementFormData, ContentItem, DirectMediaItem, GroupFormData,
@@ -2412,6 +2443,10 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
                     <label htmlFor="location" className={labelClasses}>Location</label>
                     <input type="text" name="location" value={data.location || ''} onChange={handleChange} className={inputClasses}/>
                 </FullWidthField>
+                <FullWidthField>
+                    <label htmlFor="mapEmbedUrl" className={labelClasses}>Map Embed / Share Link (optional)</label>
+                    <input type="url" name="mapEmbedUrl" value={data.mapEmbedUrl || ''} onChange={handleChange} className={inputClasses} placeholder="Google Maps share or embed link" />
+                </FullWidthField>
            </FormSection>
             <FormSection title="Event Details">
                  <FullWidthField>
@@ -2441,11 +2476,117 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
                 <div><label htmlFor="contactPerson" className={labelClasses}>Contact Person</label><input type="text" name="contactPerson" value={data.contactPerson || ''} onChange={handleChange} className={inputClasses}/></div>
                 <div><label htmlFor="contactEmail" className={labelClasses}>Contact Email</label><input type="email" name="contactEmail" value={data.contactEmail || ''} onChange={handleChange} className={inputClasses}/></div>
                 <div><label htmlFor="contactPhone" className={labelClasses}>Contact Phone</label><input type="tel" name="contactPhone" value={data.contactPhone || ''} onChange={handleChange} className={inputClasses}/></div>
-                <div><label htmlFor="registrationLink" className={labelClasses}>Registration Link</label><input type="url" name="registrationLink" value={data.registrationLink || ''} onChange={handleChange} className={inputClasses}/></div>
+                <div><label htmlFor="registrationLink" className={labelClasses}>Registration Link</label><input type="url" name="registrationLink" value={data.registrationLink || ''} onChange={handleChange} className={inputClasses} required={!!data.isFeeRequired} placeholder={data.isFeeRequired ? 'Required when fee is enabled' : 'Optional unless fee required'} /></div>
            </FormSection>
            <FormSection title="Media">
                 <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
            </FormSection>
+          </>;
+      }
+      case 'homeSlide': {
+        const data = formData as HomeSlideFormData;
+        const suggestedPaths = ['/events', '/sermons', '/ministries', '/blog', '/news', '/contact', '/'];
+        return <>
+          <FormSection title="Slide Content">
+            <FullWidthField>
+              <label htmlFor="title" className={labelClasses}>Title</label>
+              <input type="text" name="title" value={data.title} onChange={handleChange} required className={inputClasses} />
+            </FullWidthField>
+            <FullWidthField>
+              <label htmlFor="description" className={labelClasses}>Description</label>
+              <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
+            </FullWidthField>
+            <div>
+              <label htmlFor="ctaText" className={labelClasses}>CTA Text</label>
+              <input type="text" name="ctaText" value={data.ctaText} onChange={handleChange} className={inputClasses} />
+            </div>
+            <div>
+              <label htmlFor="linkPath" className={labelClasses}>Link Path</label>
+              <input list="link-suggestions" type="text" name="linkPath" value={data.linkPath} onChange={handleChange} className={inputClasses} placeholder="e.g., /events" />
+              <datalist id="link-suggestions">
+                {suggestedPaths.map(path => <option key={path} value={path}>{path}</option>)}
+              </datalist>
+            </div>
+            <div>
+              <label htmlFor="order" className={labelClasses}>Display Order (auto-suggested)</label>
+              <input type="number" name="order" value={data.order ?? 0} onChange={handleChange} className={inputClasses} min={0} />
+              <p className="text-xs text-slate-500 mt-1">Newest slides with higher order appear first.</p>
+            </div>
+            <div className="flex items-center">
+              <input type="checkbox" id="isActive" name="isActive" checked={data.isActive} onChange={handleChange} className="h-4 w-4 text-purple-600" />
+              <label htmlFor="isActive" className="ml-2 text-sm font-medium dark:text-slate-300">Visible on home page</label>
+            </div>
+          </FormSection>
+          <FormSection title="Media">
+            <FullWidthField>
+              <AdvancedMediaUploader
+                label="Slide Image"
+                mediaType="image"
+                currentUrl={data.imageUrl}
+                onUrlChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+                onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                isUploading={isFieldUploading['imageUrl']}
+                uploadStatus={uploadingStatus['imageUrl']}
+                onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+              />
+            </FullWidthField>
+          </FormSection>
+        </>;
+      }
+      case 'blogPost': {
+        const data = formData as BlogPostFormData;
+        return <>
+          <FormSection title="Blog Basics">
+            <FullWidthField>
+              <label htmlFor="title" className={labelClasses}>Title</label>
+              <input type="text" name="title" value={data.title} onChange={handleChange} required className={inputClasses} />
+            </FullWidthField>
+            {renderDateFieldWithBSPicker('date', 'Publish Date')}
+            <div>
+              <label htmlFor="category" className={labelClasses}>Category</label>
+              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>{blogPostCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input type="checkbox" id="enableAutoNarration" name="enableAutoNarration" checked={data.enableAutoNarration || false} onChange={handleChange} className="h-4 w-4 text-purple-600" />
+              <label htmlFor="enableAutoNarration" className="text-sm font-medium dark:text-slate-300">Enable auto audio narration</label>
+              <Button type="button" variant="ghost" size="sm" onClick={() => speakText(data.description)} className="!py-1">Preview audio</Button>
+            </div>
+          </FormSection>
+          <FormSection title="Story & Media">
+            <FullWidthField>
+              <label htmlFor="description" className={labelClasses}>Summary</label>
+              <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
+            </FullWidthField>
+            <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+          </FormSection>
+        </>;
+      }
+      case 'news': {
+        const data = formData as NewsItemFormData;
+        return <>
+          <FormSection title="News Details">
+            <FullWidthField>
+              <label htmlFor="title" className={labelClasses}>Headline</label>
+              <input type="text" name="title" value={data.title} onChange={handleChange} required className={inputClasses} />
+            </FullWidthField>
+            {renderDateFieldWithBSPicker('date', 'Publish Date')}
+            <div>
+              <label htmlFor="category" className={labelClasses}>Category</label>
+              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>{newsCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input type="checkbox" id="enableAutoNarration-news" name="enableAutoNarration" checked={data.enableAutoNarration || false} onChange={handleChange} className="h-4 w-4 text-purple-600" />
+              <label htmlFor="enableAutoNarration-news" className="text-sm font-medium dark:text-slate-300">Enable auto audio narration</label>
+              <Button type="button" variant="ghost" size="sm" onClick={() => speakText(data.description)} className="!py-1">Preview audio</Button>
+            </div>
+          </FormSection>
+          <FormSection title="Content & Media">
+            <FullWidthField>
+              <label htmlFor="description" className={labelClasses}>Body</label>
+              <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
+            </FullWidthField>
+            <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+          </FormSection>
         </>;
       }
       case 'ministry': {
@@ -2602,9 +2743,10 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
     if (formattedContentType === 'Donate Page Content') return 'Edit Donate Page Content';
     return `${action} ${formattedContentType}`;
   };
+ const useFullscreen = ['homeSlide', 'sermon', 'event', 'ministry', 'blogPost', 'news'].includes(contentType);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size={useFullscreen ? 'full' : 'lg'}>
       <form onSubmit={finalSubmit}>
         <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-3 scrollbar-thin scrollbar-thumb-slate-400 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
           {renderSpecificFields()}

@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res))
         return;
-    const { title, requestText, visibility, category, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByOwnerId, postedByOwnerName, userProfileImageUrl, userName, userId } = req.body;
+    const { title, requestText, visibility, category, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
     try {
         const newRequest = await db_1.prisma.prayerrequest.create({
             data: {
@@ -67,8 +67,8 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 taggedFriends,
                 feelingActivity,
                 backgroundTheme,
-                postedByOwnerId,
-                postedByOwnerName,
+                postedByAdminId,
+                postedByAdminName,
                 userProfileImageUrl,
                 userName,
                 userId,

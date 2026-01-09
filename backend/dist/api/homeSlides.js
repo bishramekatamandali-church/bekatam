@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
@@ -32,7 +33,7 @@ router.post('/', async (req, res) => {
     try {
         const newSlide = await db_1.prisma.homeslide.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
+                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 updatedAt: new Date(), // REQUIRED
                 title,
                 description,

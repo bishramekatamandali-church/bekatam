@@ -8,7 +8,7 @@ import { DonatePageContentFormData } from '../../types';
 
 const ManageDonatePage: React.FC = () => {
   const { donatePageContent, updateContent, loadingContent } = useContent();
-  const { isOwner } = useAuth();
+  const { isAdmin } = useAuth();
   
   const [formData, setFormData] = useState<DonatePageContentFormData>({} as DonatePageContentFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +80,7 @@ const ManageDonatePage: React.FC = () => {
     return <p className="text-slate-500">Loading donate page content...</p>;
   }
 
-  if (!isOwner) {
+  if (!isAdmin) {
     return (
       <Card>
         <CardContent>

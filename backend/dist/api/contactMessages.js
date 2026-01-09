@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const emailService_1 = require("../services/emailService");
 const router = express_1.default.Router();
-const ADMIN_EMAIL = 'bishramekatamandali@gmail.com'; // Hardcoded admin email for notifications
+const ADMIN_EMAIL = 'shahidsingh1432@gmail.com'; // Hardcoded admin email for notifications
 // Helper to standardize the payload shape for the frontend
 const shapeContactMessage = (message) => ({
     ...message,
@@ -37,7 +38,7 @@ router.post('/', async (req, res) => {
     try {
         const newContactMessage = await db_1.prisma.contactmessage.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
+                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 name,
                 email,
                 subject,

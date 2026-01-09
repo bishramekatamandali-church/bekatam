@@ -1,6 +1,8 @@
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma } from '@prisma/client';
+import { Prisma, donationrecord_paymentMethod, donationrecord_purpose } from '@prisma/client';
+import crypto from 'crypto';
+import { normalizeEnumValue } from '../utils/enumNormalization';
 
 const router = express.Router();
 
@@ -18,10 +20,21 @@ router.get('/', async (req, res) => {
 
 // POST a new donation record
 router.post('/', async (req, res) => {
-    const { donorName, donorEmail, amount, purpose, donationDate, paymentMethod, transactionReference, notes, isReceiptSent, postedByOwnerId, postedByOwnerName } = req.body;
+    const { donorName, donorEmail, amount, purpose, donationDate, paymentMethod, transactionReference, notes, isReceiptSent, postedByAdminId, postedByAdminName } = req.body;
 
     if (!donorName || !donorEmail || !amount || !purpose || !donationDate) {
         return res.status(400).json({ error: 'Missing required fields.' });
+    }
+
+const normalizedPurpose = normalizeEnumValue(purpose, donationrecord_purpose);
+    const normalizedPaymentMethod = normalizeEnumValue(paymentMethod, donationrecord_paymentMethod);
+
+    if (!normalizedPurpose) {
+        return res.status(400).json({ error: 'Invalid donation purpose.' });
+    }
+
+    if (paymentMethod && !normalizedPaymentMethod) {
+        return res.status(400).json({ error: 'Invalid donation payment method.' });
     }
 
     try {
@@ -32,14 +45,14 @@ router.post('/', async (req, res) => {
                 donorName,
                 donorEmail,
                 amount: Number(amount),
-                purpose,
+                purpose: normalizedPurpose,
                 donationDate: new Date(donationDate),
-                paymentMethod,
+                paymentMethod: normalizedPaymentMethod,
                 transactionReference,
                 notes,
                 isReceiptSent: Boolean(isReceiptSent),
-                postedByOwnerId: postedByOwnerId || 'system',
-                postedByOwnerName: postedByOwnerName || 'System',
+                postedByAdminId: postedByAdminId || 'system',
+                postedByAdminName: postedByAdminName || 'System',
                 transactionTimestamp: new Date(),
             }
         });
@@ -54,6 +67,17 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { donorName, donorEmail, amount, purpose, donationDate, paymentMethod, transactionReference, notes, isReceiptSent } = req.body;
     
+const normalizedPurpose = normalizeEnumValue(purpose, donationrecord_purpose);
+    const normalizedPaymentMethod = normalizeEnumValue(paymentMethod, donationrecord_paymentMethod);
+
+    if (!normalizedPurpose) {
+        return res.status(400).json({ error: 'Invalid donation purpose.' });
+    }
+
+    if (paymentMethod && !normalizedPaymentMethod) {
+        return res.status(400).json({ error: 'Invalid donation payment method.' });
+    }
+
     try {
         const updatedRecord = await prisma.donationrecord.update({
             where: { id },
@@ -61,9 +85,9 @@ router.put('/:id', async (req, res) => {
                 donorName,
                 donorEmail,
                 amount: Number(amount),
-                purpose,
+                purpose: normalizedPurpose,
                 donationDate: new Date(donationDate),
-                paymentMethod,
+                paymentMethod: normalizedPaymentMethod,
                 transactionReference,
                 notes,
                 isReceiptSent: Boolean(isReceiptSent),
