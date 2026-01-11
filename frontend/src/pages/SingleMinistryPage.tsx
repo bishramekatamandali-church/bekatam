@@ -118,10 +118,10 @@ const SingleMinistryPage: React.FC = () => {
                 {ministry.leader && <p><strong className="text-gray-700">Leader:</strong> {ministry.leader}</p>}
                 {ministry.meetingTime && <p><strong className="text-gray-700">Meeting Time:</strong> {ministry.meetingTime}</p>}
              </div>
-             {ministry.postedByOwnerName && (
+             {ministry.postedByAdminName && (
                 <p className="text-xs text-slate-400 mt-3 flex items-center">
                     <UserCircleIconSmall className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                    Content maintained by: {ministry.postedByOwnerName}
+                    Content maintained by: {ministry.postedByAdminName}
                 </p>
             )}
           </CardHeader>

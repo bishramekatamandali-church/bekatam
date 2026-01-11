@@ -14,7 +14,7 @@ const ProfilePage: React.FC = () => {
     
      return [
       ...blogPosts
-        .filter((post) => post.postedByOwnerId === currentUser.id)
+        .filter((post) => post.postedByAdminId === currentUser.id)
         .map((post) => ({
           id: post.id,
           title: post.title,
@@ -22,7 +22,7 @@ const ProfilePage: React.FC = () => {
           timestamp: post.publishedAt || post.createdAt,
         })),
       ...prayerRequests
-        .filter((request) => request.postedByOwnerId === currentUser.id)
+        .filter((request) => request.postedByAdminId === currentUser.id)
         .map((request) => ({
           id: request.id,
           title: request.title,

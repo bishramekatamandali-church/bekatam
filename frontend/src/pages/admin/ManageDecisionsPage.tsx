@@ -203,7 +203,7 @@ const ManageDecisionsPage: React.FC = () => {
         });
     }
 
-    addDetail('Recorded By', decision.postedByOwnerName, { isPotentiallyMultilingualValue: true });
+    addDetail('Recorded By', decision.postedByAdminName, { isPotentiallyMultilingualValue: true });
     if (decision.createdAt) addDetail('Record Created At', formatTimestampADBS(decision.createdAt));
 
     const totalPages = doc.getNumberOfPages();
@@ -225,7 +225,7 @@ const ManageDecisionsPage: React.FC = () => {
   
   const downloadAllDecisionsExcel = () => {
     const dataForExcel = [
-      ["ID", "Decision Date", "Title", "Description", "Made By", "Status", "Follow-up Actions", "Posted By Owner ID", "Posted By Owner Name", "Created At", "Updated At"],
+      ["ID", "Decision Date", "Title", "Description", "Made By", "Status", "Follow-up Actions", "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"],
       ...filteredDecisions.map(log => [ 
         log.id,
         new Date(log.decisionDate).toLocaleDateString('en-CA'), // AD Date
@@ -234,8 +234,8 @@ const ManageDecisionsPage: React.FC = () => {
         log.madeBy,
         log.status || 'N/A',
         (log.followUpActions || []).map(a => `${a.description} (Assigned: ${a.assignedTo || 'N/A'}, Due: ${a.dueDate || 'N/A'}, Status: ${a.status})`).join('; '),
-        log.postedByOwnerId || '',
-        log.postedByOwnerName || '',
+        log.postedByAdminId || '',
+        log.postedByAdminName || '',
         log.createdAt ? new Date(log.createdAt).toISOString() : '',
         log.updatedAt ? new Date(log.updatedAt).toISOString() : ''
       ])

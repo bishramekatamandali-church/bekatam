@@ -227,8 +227,8 @@ export const generateRosterItemPDF = async (
   doc.text(churchNameForFooter, settings.pageWidth / 2, footerYBase + (settings.baseFontSize * 0.8 * 1.2), { align: 'center' });
 
   doc.setFont(BASE_FONT_NAME, 'italic');
-  if(rosterItem.postedByOwnerName) {
-      const postedByText = `Posted by: ${rosterItem.postedByOwnerName}`;
+  if(rosterItem.postedByAdminName) {
+      const postedByText = `Posted by: ${rosterItem.postedByAdminName}`;
       doc.text(postedByText, settings.pageWidth - settings.margin - doc.getTextWidth(postedByText), footerYBase);
   }
 

@@ -56,7 +56,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
   
-  const isOwnRequest = currentUser?.id === request.postedByOwnerId;
+  const isOwnRequest = currentUser?.id === request.postedByAdminId;
   const canPray = isAuthenticated && request.status !== 'answered' && request.status !== 'archived';
   const isPrayedByUser = isAuthenticated && request.prayers.some(p => p.userId === currentUser?.id);
   const isAnswered = request.status === 'answered';
@@ -114,7 +114,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
                   </>
                 ) : (
                   <>
-                    <Link to={`/profile/${request.postedByOwnerId}`}>
+                    <Link to={`/profile/${request.postedByAdminId}`}>
                       {request.userProfileImageUrl ? (
                         <img src={request.userProfileImageUrl} alt={request.userName} className="w-10 h-10 rounded-full mr-2 object-cover"/>
                       ) : (
@@ -122,7 +122,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
                       )}
                     </Link>
                     <div>
-                      <Link to={`/profile/${request.postedByOwnerId}`} className="font-semibold text-sm hover:underline text-slate-800 dark:text-slate-200">{request.userName}</Link>
+                      <Link to={`/profile/${request.postedByAdminId}`} className="font-semibold text-sm hover:underline text-slate-800 dark:text-slate-200">{request.userName}</Link>
                       <p>{formatDateADBS(request.submittedAt)}</p>
                     </div>
                   </>

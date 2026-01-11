@@ -63,7 +63,7 @@ const prepareExpenseSheetData = (items: ExpenseRecord[]): SheetPreparationResult
       item.id, new Date(item.expenseDate).toLocaleDateString('en-CA'), item.category, descValue, item.amount.toFixed(2),
       item.payee || '', item.paymentMethod || '', item.transactionReference || '', item.approvedBy || '',
       item.receiptUrl || '', notesValue, item.source || '', item.location || '',
-      item.postedByOwnerId || '', item.postedByOwnerName || '',
+      item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );
@@ -97,7 +97,7 @@ const prepareCollectionSheetData = (items: CollectionRecord[]): SheetPreparation
     row.push(
       item.id, new Date(item.collectionDate).toLocaleDateString('en-CA'), item.purpose, item.amount.toFixed(2),
       item.collectorName, item.source || '', notesValue, (item.donors || []).length, donorDetailsValue,
-      new Date(item.recordedAt).toISOString(), item.recordedByOwnerId || '', item.recordedByOwnerName || '',
+      new Date(item.recordedAt).toISOString(), item.recordedByAdminId || '', item.recordedByAdminName || '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );
     sheetDataArray.push(row);
@@ -147,7 +147,7 @@ const prepareMemberSheetData = (items: ChurchMember[]): SheetPreparationResult =
       item.dateOfBirth ? new Date(item.dateOfBirth).toLocaleDateString('en-CA') : '',
       item.baptismDate ? new Date(item.baptismDate).toLocaleDateString('en-CA') : '',
       item.isActiveMember ? "Yes" : "No", familyValue, notesValue, item.profileImageUrl || '',
-      item.postedByOwnerId || '', item.postedByOwnerName || '',
+      item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );
@@ -192,7 +192,7 @@ const prepareMeetingSheetData = (items: MeetingLog[]): SheetPreparationResult =>
       item.id, new Date(item.meetingDate).toLocaleDateString('en-CA'), item.title, item.meetingType || '',
       processedCells.attendees.cellValue, processedCells.agenda.cellValue, processedCells.minutes.cellValue, processedCells.actionItems.cellValue,
       item.status || '', item.imageUrl || '', processedCells.decisionPoints.cellValue,
-      item.postedByOwnerId || '', item.postedByOwnerName || '',
+      item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );
@@ -224,7 +224,7 @@ const prepareRosterSheetData = (items: FellowshipRosterItem[]): SheetPreparation
       getResponsibility(item.responsibilities, 'choir'),
       getResponsibility(item.responsibilities, 'sermon') || getResponsibility(item.responsibilities, 'speaker'),
       item.location || '', item.contactNumber || '', cellValue, item.isTemplate ? "Yes" : "No",
-      item.postedByOwnerId || '', item.postedByOwnerName || '',
+      item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );
@@ -261,7 +261,7 @@ const prepareScheduleSheetData = (items: GeneratedScheduleItem[]): SheetPreparat
       getResponsibility(item.responsibilities, 'sermon') || getResponsibility(item.responsibilities, 'speaker'),
       item.location || '', item.contactNumber || '', detailsValue, adminNotesValue,
       item.isPublishedAsEvent ? "Yes" : "No", item.publishedEventId || '', new Date(item.generatedAt).toISOString(),
-      item.basedOnRosterItemId || '', item.postedByOwnerId || '', item.postedByOwnerName || '',
+      item.basedOnRosterItemId || '', item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
     );

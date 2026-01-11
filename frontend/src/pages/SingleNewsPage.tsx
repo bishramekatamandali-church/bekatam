@@ -101,7 +101,7 @@ const SingleNewsPage: React.FC = () => {
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{newsItem.title}</h1>
             <p className="text-md text-gray-500">Published on <span className="font-semibold text-gray-700">{formatDateADBS(newsItem.date)}</span></p>
             {newsItem.category && <p className="mt-1 text-sm font-medium uppercase tracking-wider text-purple-600">{newsItem.category}</p>}
-             {newsItem.postedByOwnerName && (<p className="text-xs text-slate-400 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />Posted by: {newsItem.postedByOwnerName}</p>)}
+             {newsItem.postedByAdminName && (<p className="text-xs text-slate-400 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />Posted by: {newsItem.postedByAdminName}</p>)}
           </CardHeader>
           <CardContent>
              {newsItem.audioUrl && (<div className="mb-6"><h3 className="text-lg font-semibold text-gray-700 mb-2">Listen to Audio:</h3><audio controls src={newsItem.audioUrl} className="w-full">Your browser does not support the audio element.</audio></div>)}

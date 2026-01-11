@@ -164,10 +164,10 @@ const MediaPage: React.FC = () => {
                     <h3 className="text-sm font-semibold text-slate-700 truncate mb-0.5" title={item.title}>{item.title}</h3>
                     <p className="text-xs text-slate-500 truncate" title={item.sourceTitle}>Source: {item.sourceTitle}</p>
                     {item.date && <p className="text-xs text-slate-400 mt-0.5">Posted on: {formatDateADBS(item.date)}</p>}
-                    {item.postedByOwnerName && (
+                    {item.postedByAdminName && (
                       <p className="text-xs text-slate-400 mt-0.5 flex items-center">
                         <UserCircleIcon className="w-3 h-3 mr-1 text-slate-400" />
-                        Curated by: {item.postedByOwnerName}
+                        Curated by: {item.postedByAdminName}
                       </p>
                     )}
                   </CardContent>

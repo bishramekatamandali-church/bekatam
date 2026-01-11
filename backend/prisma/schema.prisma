@@ -332,20 +332,6 @@ model fellowshiprosteritem {
   responsibility                  responsibility[]
 }
 
-model friendship {
-  id                                String            @id
-  requesterId                       String
-  addresseeId                       String
-  status                            friendship_status
-  requestedAt                       DateTime          @default(now())
-  updatedAt                         DateTime
-  user_friendship_addresseeIdTouser user              @relation("friendship_addresseeIdTouser", fields: [addresseeId], references: [id], onDelete: Cascade, map: "Friendship_addresseeId_fkey")
-  user_friendship_requesterIdTouser user              @relation("friendship_requesterIdTouser", fields: [requesterId], references: [id], onDelete: Cascade, map: "Friendship_requesterId_fkey")
-
-  @@unique([requesterId, addresseeId], map: "Friendship_requesterId_addresseeId_key")
-  @@index([addresseeId], map: "Friendship_addresseeId_fkey")
-}
-
 model frontendactivitylog {
   id          String   @id
   timestamp   DateTime @default(now())
@@ -381,51 +367,6 @@ model generatedscheduleitem {
   responsibility                  responsibility[]
 
   @@index([basedOnRosterItemId], map: "GeneratedScheduleItem_basedOnRosterItemId_fkey")
-}
-
-model group {
-  id             String               @id
-  name           String
-  creatorId      String
-  groupImageUrl  String?              @db.Text
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime
-  editSettings   group_editSettings   @default(admins_only)
-  sendMessage    group_sendMessage    @default(all_members)
-  addMembers     group_addMembers     @default(admins_only)
-  approveMembers group_approveMembers @default(admins_only)
-  groupmember    groupmember[]
-  groupmessage   groupmessage[]
-}
-
-model groupmember {
-  id      String           @id
-  groupId String
-  userId  String
-  role    groupmember_role
-  addedAt DateTime         @default(now())
-  group   group            @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMember_groupId_fkey")
-  user    user             @relation(fields: [userId], references: [id], onDelete: Cascade, map: "GroupMember_userId_fkey")
-
-  @@unique([groupId, userId], map: "GroupMember_groupId_userId_key")
-  @@index([userId], map: "GroupMember_userId_fkey")
-}
-
-model groupmessage {
-  id                    String                  @id
-  groupId               String
-  senderId              String
-  senderName            String
-  senderProfileImageUrl String?                 @db.Text
-  text                  String?                 @db.Text
-  mediaUrl              String?                 @db.Text
-  mediaType             groupmessage_mediaType?
-  timestamp             DateTime                @default(now())
-  group                 group                   @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "GroupMessage_groupId_fkey")
-  user                  user                    @relation(fields: [senderId], references: [id], onDelete: Cascade, map: "GroupMessage_senderId_fkey")
-
-  @@index([groupId], map: "GroupMessage_groupId_fkey")
-  @@index([senderId], map: "GroupMessage_senderId_fkey")
 }
 
 model historychapter {
@@ -551,20 +492,6 @@ model ministryjoinrequest {
 
   @@index([ministryId], map: "MinistryJoinRequest_ministryId_fkey")
   @@index([userId], map: "MinistryJoinRequest_userId_fkey")
-}
-
-model monthlythemeimage {
-  id                String   @id
-  year              Int
-  month             Int
-  imageUrls         Json
-  quoteOrCaption    String?  @db.Text
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime
-  postedByAdminId   String?
-  postedByAdminName String?
-
-  @@unique([year, month], map: "MonthlyThemeImage_year_month_key")
 }
 
 model newsitem {
@@ -789,18 +716,6 @@ enum generatedscheduleitem_rosterType {
   Saturday_Prayer
 }
 
-enum friendship_status {
-  pending
-  accepted
-  blocked
-  declined
-}
-
-enum groupmember_role {
-  admin
-  member
-}
-
 enum meetingdecisionpoint_status {
   Proposed
   Approved
@@ -961,41 +876,22 @@ enum notification_type {
   prayer_request_submitted_admin
   prayer_request_status_user
   prayer_request_prayed_for
-  friend_request_received
-  friend_request_accepted
-  new_prayer_request_friend
   new_testimonial_friend
   ad_expiring_soon
 }
 
 enum prayerrequest_visibility {
   public
-  friends_only
-  private
-  anonymous
-}
+  }
 
 enum testimonial_visibility {
   public
-  friends_only
-}
+  }
 
 enum user_role {
   user
   admin
   }
-
-enum group_sendMessage {
-  admins_only
-  all_members
-}
-
-enum groupmessage_mediaType {
-  image
-  video
-  file
-  location
-}
 
 enum prayerrequest_category {
   Healing
@@ -1005,11 +901,6 @@ enum prayerrequest_category {
   Community
   Personal
   Other
-}
-
-enum group_addMembers {
-  admins_only
-  all_members
 }
 
 enum meetinglog_status {
@@ -1028,11 +919,6 @@ enum prayerrequest_status {
   prayed_for
   answered
   archived
-}
-
-enum group_approveMembers {
-  admins_only
-  all_members
 }
 
 enum ministryjoinrequest_status {
@@ -1067,16 +953,6 @@ enum user_relationshipStatus {
   Widowed
 }
 
-enum user_friendsListPrivacy {
-  public
-  friends
-  private
-}
-
-enum user_friendRequestPrivacy {
-  everyone
-  friends_of_friends
-}
 
 enum user_groupInvitePrivacy {
   everyone

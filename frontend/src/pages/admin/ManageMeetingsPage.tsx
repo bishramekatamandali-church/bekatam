@@ -237,7 +237,7 @@ const ManageMeetingsPage: React.FC = () => {
         yPosRef.current += sectionSpacing;
     }
     
-    addDetail('Recorded By', meeting.postedByOwnerName, { isPotentiallyMultilingualValue: true });
+    addDetail('Recorded By', meeting.postedByAdminName, { isPotentiallyMultilingualValue: true });
     if (meeting.createdAt) addDetail('Record Created At', formatTimestampADBS(meeting.createdAt));
 
 

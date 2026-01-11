@@ -131,12 +131,12 @@ const BranchesPage: React.FC = () => {
                     )}
                   </div>
                   
-                  {(branch.updatedAt || branch.postedByOwnerName) && (
+                  {(branch.updatedAt || branch.postedByAdminName) && (
                     <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-teal-200 space-y-0.5">
-                        {branch.postedByOwnerName && (
+                        {branch.postedByAdminName && (
                             <p className="flex items-center">
                                <UserCircleIconSmall className="w-3.5 h-3.5 mr-1" />
-                               Info maintained by: {branch.postedByOwnerName}
+                               Info maintained by: {branch.postedByAdminName}
                             </p>
                         )}
                         {branch.updatedAt && <p>Last updated: {formatTimestampADBS(branch.updatedAt)}</p>}

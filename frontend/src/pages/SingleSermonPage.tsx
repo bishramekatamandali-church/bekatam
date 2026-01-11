@@ -149,7 +149,7 @@ const SingleSermonPage: React.FC = () => {
             <p className="text-md text-gray-500">By <span className="font-semibold text-gray-700">{sermon.speaker}</span> on <span className="font-semibold text-gray-700">{formatDateADBS(sermon.date)}</span></p>
             {sermon.scripture && <p className="text-sm text-teal-600 mt-2">Scripture: {sermon.scripture}</p>}
             {sermon.category && <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400">{sermon.category}</p>}
-            {sermon.postedByOwnerName && (<p className="text-xs text-slate-400 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />Posted by: {sermon.postedByOwnerName}</p>)}
+            {sermon.postedByAdminName && (<p className="text-xs text-slate-400 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />Posted by: {sermon.postedByAdminName}</p>)}
           </CardHeader>
 
           <CardContent>

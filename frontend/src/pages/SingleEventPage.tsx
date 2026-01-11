@@ -119,7 +119,7 @@ const SingleEventPage: React.FC = () => {
             <p className="text-md text-gray-500 dark:text-slate-400"><CalendarDaysIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{formatDateADBS(event.date)} {event.time ? `at ${event.time}` : ''}</p>
             {event.location && (<p className="text-md text-gray-500 dark:text-slate-400 mt-1"><MapPinIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{event.location}</p>)}
             {event.category && <p className="mt-2 text-sm font-medium uppercase tracking-wider text-purple-600 dark:text-purple-400">{event.category}</p>}
-            {event.postedByOwnerName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />Posted by: {event.postedByOwnerName}</p>)}
+            {event.postedByAdminName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />Posted by: {event.postedByAdminName}</p>)}
           </CardHeader>
           <CardContent>
              {event.audioUrl && (<div className="mb-6"><h3 className="text-lg font-semibold text-gray-700 dark:text-slate-200 mb-2">Listen to Audio:</h3><audio controls src={event.audioUrl} className="w-full">Your browser does not support the audio element.</audio></div>)}

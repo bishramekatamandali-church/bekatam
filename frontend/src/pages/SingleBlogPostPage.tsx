@@ -87,7 +87,7 @@ const SingleBlogPostPage: React.FC = () => {
             <h1 className={`font-bold ${hasBackground ? 'text-4xl md:text-5xl text-center' : 'text-3xl md:text-4xl text-gray-800'}`}>{post.title}</h1>
             <p className={`text-md mt-2 ${hasBackground ? 'text-white/80 text-center' : 'text-gray-500'}`}>Published on <span className="font-semibold">{formatDateADBS(post.date)}</span></p>
             {post.category && <p className={`mt-1 text-sm font-medium uppercase tracking-wider ${hasBackground ? 'text-white/80 text-center' : 'text-purple-600'}`}>{post.category}</p>}
-             {post.postedByOwnerName && (<p className={`text-xs mt-2 flex items-center ${hasBackground ? 'text-white/70 justify-center' : 'text-slate-400'}`}><UserCircleIcon className="w-3.5 h-3.5 mr-1" />Posted by: {post.postedByOwnerName}</p>)}
+             {post.postedByAdminName && (<p className={`text-xs mt-2 flex items-center ${hasBackground ? 'text-white/70 justify-center' : 'text-slate-400'}`}><UserCircleIcon className="w-3.5 h-3.5 mr-1" />Posted by: {post.postedByAdminName}</p>)}
              <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-3 ${hasBackground ? 'text-white/80 justify-center' : 'text-slate-500'}`}>
                 {post.feelingActivity && <span className="flex items-center"><FaceSmileIcon className="w-4 h-4 mr-1"/> feeling {post.feelingActivity}</span>}
                 {post.taggedFriends && <span className="flex items-center"><UserGroupIcon className="w-4 h-4 mr-1"/> with {post.taggedFriends}</span>}

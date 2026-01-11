@@ -12,8 +12,7 @@ node_modules/
 >>>>>>> d8856ea (Sync VPS project with repository)
 
 # ENV Files
-backend/.env
-frontend/.env
+
 
 
 # Build Output

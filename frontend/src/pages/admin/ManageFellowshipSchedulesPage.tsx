@@ -126,7 +126,7 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
     getResponsibility(item.responsibilities, 'choir'),
     getResponsibility(item.responsibilities, 'sermon') || getResponsibility(item.responsibilities, 'speaker'),
     item.location || '', item.contactNumber || '', item.additionalNotesOrProgramDetails || '',
-    item.isTemplate ? 'Yes' : 'No', item.postedByOwnerName || '', formatTimestampADBS(item.createdAt || '')
+    item.isTemplate ? 'Yes' : 'No', item.postedByAdminName || '', formatTimestampADBS(item.createdAt || '')
   ];
   const rosterExcelHeaders = ["ID", "Type", "Title", "Date", "Time", "Coordinator", "Co-Coordinator", "Choir", "Speaker/Program", "Location", "Contact", "Details", "Is Template", "Posted By", "Created At"];
   

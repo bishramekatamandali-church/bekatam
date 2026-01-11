@@ -195,7 +195,7 @@ const ManageChurchMembersPage: React.FC = () => {
     "ID", "Full Name", "Email", "Phone", "Address", 
     "Member Since", "Date of Birth", "Baptism Date", 
     "Active Member", "Family Members", "Notes", "Profile Image URL",
-    "Posted By Owner ID", "Posted By Owner Name", "Created At", "Updated At"
+    "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"
   ];
 
   const memberToExcelRow = (member: ChurchMember): (string | number | boolean | null)[] => {
@@ -212,8 +212,8 @@ const ManageChurchMembersPage: React.FC = () => {
       member.familyMembers || '',
       member.notes || '',
       member.profileImageUrl || '',
-      member.postedByOwnerId || '',
-      member.postedByOwnerName || '',
+      member.postedByAdminId || '',
+      member.postedByAdminName || '',
       member.createdAt ? new Date(member.createdAt).toISOString() : '',
       member.updatedAt ? new Date(member.updatedAt).toISOString() : ''
     ];

@@ -179,7 +179,7 @@ const FellowshipProgramDetailPage: React.FC = () => {
             )}
 
             <div className="py-3">
-                {programItem.postedByOwnerName && renderDetailRow('admin.viewDetails.postedBy', programItem.postedByOwnerName, <PostedByIcon/>)}
+                {programItem.postedByAdminName && renderDetailRow('admin.viewDetails.postedBy', programItem.postedByAdminName, <PostedByIcon/>)}
                 {programItem.createdAt && renderDetailRow('admin.viewDetails.createdAt', formatTimestampADBS(programItem.createdAt), <ClockIcon/>)}
                 {programItem.updatedAt && programItem.updatedAt !== programItem.createdAt && renderDetailRow('admin.viewDetails.updatedAt', formatTimestampADBS(programItem.updatedAt), <ClockIcon/>)}
             </div>

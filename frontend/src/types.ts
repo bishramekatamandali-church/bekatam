@@ -218,8 +218,8 @@ export interface AboutSection {
   content: string; 
   imageUrl?: string; 
   updatedAt?: string;
-  postedByOwnerId?: string;
-  postedByOwnerName?: string;
+  postedByAdminId?: string;
+  postedByAdminName?: string;
   isCoreSection: boolean; 
   displayOrder: number; 
   createdAt?: string;
@@ -1388,7 +1388,7 @@ export interface DisplayedMediaItem {
   sourceContentType: MediaSourceContentType;
   description?: string; 
   tags?: string[]; 
-  postedByOwnerName?: string;
+  postedByAdminName?: string;
 }
 // --- End Media Library Types ---
 

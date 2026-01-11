@@ -39,7 +39,7 @@ const PublicProfilePage: React.FC = () => {
     if (!targetUser) return [];
     return prayerRequests.filter(
       (pr) =>
-        pr.postedByOwnerId === targetUser.id &&
+        pr.postedByAdminId === targetUser.id &&
         (pr.visibility === 'public' || pr.visibility === 'anonymous')
     );
   }, [prayerRequests, targetUser]);
