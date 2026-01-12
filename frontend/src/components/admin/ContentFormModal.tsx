@@ -115,6 +115,7 @@ const UnifiedMediaInputs: React.FC<{
   handleImageFieldSelect: (fieldName: string) => void;
   isFieldUploading: Record<string, boolean>;
   uploadingStatus: Record<string, string | null>;
+  variant?: 'default' | 'compact';
 }> = ({
   formData,
   setFormData,
@@ -122,6 +123,7 @@ const UnifiedMediaInputs: React.FC<{
   handleImageFieldSelect,
   isFieldUploading,
   uploadingStatus,
+  variant = 'default',
 }) => {
   const anyMediaFieldUploading =
     isFieldUploading['imageUrl'] ||
@@ -209,11 +211,45 @@ const UnifiedMediaInputs: React.FC<{
   return (
     <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg space-y-4 sm:col-span-2">
       <h3 className="font-semibold text-slate-800 dark:text-slate-200">Media Attachments</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MediaSlot type="image" url={(formData as any).imageUrl} />
-        <MediaSlot type="video" url={(formData as any).videoUrl} />
-        <MediaSlot type="audio" url={(formData as any).audioUrl} />
-      </div>
+      {variant === 'default' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MediaSlot type="image" url={(formData as any).imageUrl} />
+          <MediaSlot type="video" url={(formData as any).videoUrl} />
+          <MediaSlot type="audio" url={(formData as any).audioUrl} />
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">
+          {(['image', 'video', 'audio'] as const).map((type) => {
+            const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
+            const currentUrl = (formData as any)[fieldName];
+            if (!currentUrl) return null;
+            return (
+              <span
+                key={type}
+                className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow-sm dark:bg-slate-700"
+              >
+                {type.toUpperCase()} attached
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((p: any) => ({
+                      ...p,
+                      [fieldName]: '',
+                    }))
+                  }
+                  className="text-red-500 hover:text-red-600"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                </button>
+              </span>
+            );
+          })}
+          {!(['image', 'video', 'audio'] as const).some((type) => {
+            const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
+            return Boolean((formData as any)[fieldName]);
+          }) && <span>No media attached yet.</span>}
+        </div>
+      )}
       <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
         <input
           type="file"
@@ -1164,7 +1200,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const renderEmbeddedVideoField = (idSuffix: string) => (
     <FullWidthField>
       <label htmlFor={`videoUrl-${idSuffix}`} className={labelClasses}>
-        Embedded Video URL (Optional)
+        Social Media Embed URL (Optional)
       </label>
       <input
         type="url"
@@ -1172,12 +1208,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         name="videoUrl"
         value={(formData as any).videoUrl || ''}
         onChange={handleChange}
-        placeholder="https://www.youtube.com/watch?v=..."
+        placeholder="Paste a YouTube, Facebook, X, Instagram, Threads, or other embed/share URL"
         className={inputClasses}
       />
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Use this only for embedded videos from YouTube, Facebook, X, Instagram, and similar sources. Leave it
-        blank to upload media directly above.
+        Use this for embedded videos from YouTube, Facebook, X, Instagram, Threads, or similar sources. Leave it
+        blank if you upload media above.
       </p>
     </FullWidthField>
   );
@@ -2814,20 +2850,36 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
             {renderDateFieldWithBSPicker('date', 'Publish Date')}
             <div>
               <label htmlFor="category" className={labelClasses}>Category</label>
-              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>{blogPostCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>
+                {blogPostCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Choose the blog category that best matches this post.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <input type="checkbox" id="enableAutoNarration" name="enableAutoNarration" checked={data.enableAutoNarration || false} onChange={handleChange} className="h-4 w-4 text-purple-600" />
               <label htmlFor="enableAutoNarration" className="text-sm font-medium dark:text-slate-300">Enable auto audio narration</label>
               <Button type="button" variant="ghost" size="sm" onClick={() => speakText(data.description)} className="!py-1">Preview audio</Button>
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Narration reads the summary aloud for accessibility. Turn it off if you do not want audio.
+            </p>
           </FormSection>
           <FormSection title="Story & Media">
             <FullWidthField>
               <label htmlFor="description" className={labelClasses}>Summary</label>
               <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
             </FullWidthField>
-            <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+            <UnifiedMediaInputs
+              formData={data}
+              setFormData={setFormData}
+              handleCloudinaryUpload={handleCloudinaryUpload}
+              handleImageFieldSelect={handleImageFieldSelect}
+              isFieldUploading={isFieldUploading}
+              uploadingStatus={uploadingStatus}
+              variant="compact"
+            />
             {renderEmbeddedVideoField('blog')}
           </FormSection>
         </>;
@@ -2843,20 +2895,36 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
             {renderDateFieldWithBSPicker('date', 'Publish Date')}
             <div>
               <label htmlFor="category" className={labelClasses}>Category</label>
-              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>{newsCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select name="category" value={data.category} onChange={handleChange} className={inputClasses}>
+                {newsCategoriesList.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Pick the news category that best describes this update.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <input type="checkbox" id="enableAutoNarration-news" name="enableAutoNarration" checked={data.enableAutoNarration || false} onChange={handleChange} className="h-4 w-4 text-purple-600" />
               <label htmlFor="enableAutoNarration-news" className="text-sm font-medium dark:text-slate-300">Enable auto audio narration</label>
               <Button type="button" variant="ghost" size="sm" onClick={() => speakText(data.description)} className="!py-1">Preview audio</Button>
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Narration reads the news body aloud for accessibility. Disable it if you do not need audio.
+            </p>
           </FormSection>
           <FormSection title="Content & Media">
             <FullWidthField>
               <label htmlFor="description" className={labelClasses}>Body</label>
               <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
             </FullWidthField>
-            <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+            <UnifiedMediaInputs
+              formData={data}
+              setFormData={setFormData}
+              handleCloudinaryUpload={handleCloudinaryUpload}
+              handleImageFieldSelect={handleImageFieldSelect}
+              isFieldUploading={isFieldUploading}
+              uploadingStatus={uploadingStatus}
+              variant="compact"
+            />
             {renderEmbeddedVideoField('news')}
           </FormSection>
         </>;
