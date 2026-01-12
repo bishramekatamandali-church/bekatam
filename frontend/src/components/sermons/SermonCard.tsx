@@ -88,7 +88,7 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
         'sermon',
         sermon.id
     );
-    alert(`Like action simulated for "${sermon.title}"!`);
+    alert(`Like updated for "${sermon.title}".`);
   };
 
   const handleCommentClick = () => {

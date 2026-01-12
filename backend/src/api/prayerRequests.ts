@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, prayerrequest, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -43,6 +44,9 @@ router.get('/', async (req, res) => {
         });
         res.json(requests.map(shapePrayerRequestForFrontend));
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch prayer requests" });
     }
 });
@@ -50,7 +54,7 @@ router.get('/', async (req, res) => {
 // POST a new prayer request (admin only)
 router.post('/', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
-    const { title, requestText, visibility, category, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
+    const { title, requestText, visibility, category, mediaUrls, location, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
 
     try {
         const newRequest = await prisma.prayerrequest.create({
@@ -64,9 +68,6 @@ router.post('/', authMiddleware, async (req, res) => {
                 status: 'active',
                 mediaUrls: mediaUrls || undefined,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 postedByAdminId,
                 postedByAdminName,
                 userProfileImageUrl,

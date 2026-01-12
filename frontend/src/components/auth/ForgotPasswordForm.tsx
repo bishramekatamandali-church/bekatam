@@ -37,7 +37,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onSwitchToLogin
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <p className="text-sm text-slate-600">
-        Enter your email address and we will send you a link to reset your password (simulation).
+        Enter your email address and we will send you a link to reset your password.
       </p>
       <div>
         <label htmlFor="forgot-email" className="block text-xs font-medium text-slate-700">Email Address</label>

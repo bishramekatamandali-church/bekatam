@@ -84,7 +84,7 @@ const SingleSermonPage: React.FC = () => {
             'sermon',
             sermon.id
         );
-        alert(`Like action simulated for "${sermon.title}"!`);
+        alert(`Like updated for "${sermon.title}".`);
     }
   };
 

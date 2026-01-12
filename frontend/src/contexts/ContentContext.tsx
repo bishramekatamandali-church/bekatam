@@ -1,10 +1,10 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
   Sermon, EventItem, Ministry, BlogPost, AboutSection, KeyPerson, HistoryMilestone, CoreAboutSectionId, coreAboutSectionIds,
-  Comment, NewsItem, DonatePageContent, Group, GroupMember,
+  Comment, NewsItem, DonatePageContent,
   ContentType, ContentItem,
   SermonFormData, EventFormData, MinistryFormData, BlogPostFormData,
-  NewsItemFormData, DonatePageContentFormData, GroupFormData,
+  NewsItemFormData, DonatePageContentFormData,
   AboutSectionFormData, KeyPersonFormData, HistoryMilestoneFormData, BranchChurchFormData,
   MinistryJoinRequestFormData, MinistryJoinRequest, MinistryJoinRequestStatus,
   DirectMediaItem, DirectMediaFormData, DonorDetail,
@@ -51,15 +51,6 @@ Bring the whole tithe into the storehouse, that there may be food in my house. T
 Honor the LORD with your wealth, with the firstfruits of all your crops. - Proverbs 3:9
 A generous person will prosper; whoever refreshes others will be refreshed. - Proverbs 11:25`
 };
-const initialGroups: Group[] = [
-    {
-        id: 'group-1', name: 'Saturday Main Fellowship Coordinators', creatorId: '0', 
-        members: [{userId: '0', role: 'admin', addedAt: '2024-07-30T10:00:00Z'}, {userId: '1', role: 'admin', addedAt: '2024-07-30T10:00:00Z'}, {userId: '2', role: 'member', addedAt: '2024-07-30T10:00:00Z'}], 
-        createdAt: '2024-07-30T10:00:00Z', updatedAt: '2024-07-30T10:00:00Z', linkPath: '/chat/group-1', 
-        groupImageUrl: 'https://picsum.photos/seed/group1/100/100'
-    },
-];
-
 const getStoredData = <T,>(key: string, defaultValue: T): T => {
   try {
     const storedData = localStorage.getItem(key);
@@ -107,8 +98,6 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [fellowshipRosters, setFellowshipRosters] = useState<FellowshipRosterItem[]>(() => getStoredData('bem_fellowshipRosters', []));
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedScheduleItem[]>(() => getStoredData('bem_generatedSchedules', []));
   const [advertisements, setAdvertisements] = useState<Advertisement[]>(() => getStoredData('bem_advertisements', []));
-  const [groups, setGroups] = useState<Group[]>(() => getStoredData('bem_groups', initialGroups));
-
   const [churchMembers, setChurchMembers] = useState<ChurchMember[]>(() => getStoredData('bem_churchMembers', []));
   const [meetingLogs, setMeetingLogs] = useState<MeetingLog[]>(() => getStoredData('bem_meetingLogs', []));
   const [decisionLogs, setDecisionLogs] = useState<DecisionLog[]>(() => getStoredData('bem_decisionLogs', []));
@@ -270,7 +259,6 @@ useEffect(() => {
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
   useEffect(() => { saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
-  useEffect(() => { saveStoredData('bem_groups', groups); }, [groups]);
   useEffect(() => { saveStoredData('bem_churchMembers', churchMembers); }, [churchMembers]);
   useEffect(() => { saveStoredData('bem_meetingLogs', meetingLogs); }, [meetingLogs]);
   useEffect(() => { saveStoredData('bem_decisionLogs', decisionLogs); }, [decisionLogs]);
@@ -433,9 +421,6 @@ useEffect(() => {
           audioUrl: formData.audioUrl,
           mediaUrls: formData.mediaUrls,
           location: formData.location,
-          taggedFriends: formData.taggedFriends,
-          feelingActivity: formData.feelingActivity,
-          backgroundTheme: formData.backgroundTheme,
           postedByAdminId: currentUser?.id,
           postedByAdminName: currentUser?.fullName,
           createdAt: timestamp,
@@ -479,8 +464,7 @@ useEffect(() => {
       case 'expenseRecord': { const formData = data as ExpenseRecordFormData; const newRecord: ExpenseRecord = { id: newItemId, ...formData, amount: Number(formData.amount), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setExpenseRecords(prev => [newRecord, ...prev]); newItem = newRecord; success = true; break; }
       case 'fellowshipRoster': { const newRoster: FellowshipRosterItem = { id: newItemId, ...(data as FellowshipRosterFormData), linkPath: `/fellowship-program/roster/${newItemId}`, createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setFellowshipRosters(prev => [newRoster, ...prev]); newItem = newRoster; success = true; break; }
       case 'advertisement': { const newAd: Advertisement = { id: newItemId, ...(data as AdvertisementFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setAdvertisements(prev => [newAd, ...prev]); newItem = newAd; success = true; break; }
-      case 'group': { if (!currentUser) return { success: false, message: "User not logged in." }; const formData = data as GroupFormData; const newGroup: Group = { id: `group-${Date.now()}`, name: formData.name, creatorId: currentUser.id, groupImageUrl: formData.groupImageUrl, members: [ { userId: currentUser.id, role: 'admin', addedAt: timestamp }, ...formData.memberIds.map(id => ({ userId: id, role: 'member' as const, addedAt: timestamp })) ], createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser.id, postedByAdminName: currentUser.fullName, linkPath: `/chat/group-${Date.now()}`, permissions: formData.permissions, }; setGroups(prev => [newGroup, ...prev]); newItem = newGroup; success = true; break; }
-    }
+      }
     if (success && newItem) logContentActivity(`${type} created: "${(newItem as any).title || (newItem as any).name}"`, 'content_creation', type, newItemId);
     return { success, newItem: newItem || undefined, message: success ? 'Content added successfully.' : message };
   };
@@ -549,7 +533,6 @@ useEffect(() => {
         case 'expenseRecord': { const result = updateAndLog<ExpenseRecord>(setExpenseRecords, { ...(data as any), amount: Number((data as ExpenseRecordFormData).amount) }); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'fellowshipRoster': { const result = updateAndLog<FellowshipRosterItem>(setFellowshipRosters, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'advertisement': { const result = updateAndLog<Advertisement>(setAdvertisements, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
-        case 'group': { const result = updateAndLog<Group>(setGroups, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'donatePageContent':
             const updatedPageContent = { ...donatePageContent, ...(data as DonatePageContentFormData), updatedAt: timestamp };
             setDonatePageContent(updatedPageContent); updatedItem = updatedPageContent; success = true; message = 'Donate page updated successfully.';
@@ -597,7 +580,6 @@ useEffect(() => {
         case 'expenseRecord': success = deleteAndLog(setExpenseRecords); break;
         case 'fellowshipRoster': success = deleteAndLog(setFellowshipRosters); break;
         case 'advertisement': success = deleteAndLog(setAdvertisements); break;
-        case 'group': success = deleteAndLog(setGroups); break;
         case 'prayerRequest': success = deleteAndLog(setPrayerRequests); break;
         case 'testimonial': success = deleteAndLog(setTestimonials); break;
         case 'donation': success = deleteAndLog(setDonationRecords); break;
@@ -609,7 +591,7 @@ useEffect(() => {
   }
   
   const getContentById = (type: ContentType, id: string): ContentItem | undefined => {
-    const allContentArrays = [ sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, branchChurches, directMediaItems, churchMembers, meetingLogs, decisionLogs, expenseRecords, collectionRecords, fellowshipRosters, generatedSchedules, advertisements, prayerRequests, testimonials, groups, donationRecords ];
+    const allContentArrays = [ sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, branchChurches, directMediaItems, churchMembers, meetingLogs, decisionLogs, expenseRecords, collectionRecords, fellowshipRosters, generatedSchedules, advertisements, prayerRequests, testimonials, donationRecords ];
     if (type === 'donatePageContent' && id === 'singleton') return donatePageContent;
     for (const contentArray of allContentArrays) { const item = (contentArray as ContentItem[]).find(item => item.id === id); if (item) return item; }
     return undefined;
@@ -744,7 +726,7 @@ useEffect(() => {
    return (
     <ContentContext.Provider
       value={{	
-        sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, groups, donatePageContent,
+        sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
         churchMembers, meetingLogs, decisionLogs, expenseRecords, fellowshipRosters, generatedSchedules,
         allDerivedMediaItems: [],
         loadingContent,

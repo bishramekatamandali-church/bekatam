@@ -7,6 +7,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 // GET all ministry join requests
 router.get('/', async (req, res) => {
@@ -17,6 +18,9 @@ router.get('/', async (req, res) => {
         res.json(requests);
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: 'Failed to fetch ministry join requests.' });
     }
 });

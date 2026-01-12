@@ -9,6 +9,7 @@ const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 const shapeBlogPostForFrontend = (post) => ({
     ...post,
@@ -29,12 +30,15 @@ router.get('/', async (req, res) => {
         res.json(posts.map(shapeBlogPostForFrontend));
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch blog posts" });
     }
 });
 // POST a new blog post
 router.post('/', async (req, res) => {
-    const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
     const id = crypto_1.default.randomUUID(); // ✅ generate missing id
     const linkPath = `/blog/${id}`; // ✅ generate missing linkPath
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
@@ -57,9 +61,6 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 mediaUrls,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
             },
         });
         (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'created', id: newPost.id, timestamp: new Date().toISOString() });
@@ -73,7 +74,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a blog post
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.blogpost_category);
     if (category && !normalizedCategory) {
@@ -92,9 +93,6 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 mediaUrls: mediaUrls || undefined,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 updatedAt: new Date(),
             }
         });

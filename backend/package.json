@@ -7,11 +7,14 @@
     "seed:admin": "ts-node prisma/seed-admin.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "migrate:deploy": "prisma migrate deploy",
+    "start:prod": "npm run migrate:deploy && node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "prisma:setup": "npx prisma migrate dev --name init && npx prisma generate",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
-    "prisma:pull": "npx prisma db pull"
+    "prisma:pull": "npx prisma db pull",
+    "postinstall": "npm run build && npx prisma generate"
   },
   "dependencies": {
     "@google/genai": "^1.10.0",

@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import crypto from "crypto";
 import { Prisma, collectionrecord_purpose } from '@prisma/client';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -14,6 +15,9 @@ router.get('/', async (req, res) => {
         });
         res.json(records);
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: 'Failed to fetch collection records.' });
     }
 });

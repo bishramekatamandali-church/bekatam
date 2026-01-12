@@ -3,22 +3,23 @@ module.exports = {
     {
       name: 'BEM-Backend',
       script: 'npm',
-      args: 'run dev',
+      args: 'run start:prod',
       cwd: 'backend',
-      watch: ['backend/src'],
+      watch: false,
       ignore_watch: ['node_modules'],
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
       },
     },
     {
       name: 'BEM-Frontend',
-      script: 'serve',
-      args: '-s frontend -l 5000',
-      watch: ['frontend'],
+      script: 'npx',
+      args: 'serve -s dist -l 5000',
+      cwd: 'frontend',
+      watch: false,
       ignore_watch: ['node_modules'],
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
       },
     }
   ]

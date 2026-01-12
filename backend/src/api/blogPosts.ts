@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { Prisma, blogpost, blogpost_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -27,6 +28,9 @@ router.get('/', async (req, res) => {
         });
         res.json(posts.map(shapeBlogPostForFrontend));
     } catch (error) {
+if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch blog posts" });
     }
 });
@@ -41,9 +45,6 @@ router.post('/', async (req, res) => {
         imageUrl, 
         mediaUrls, 
         location, 
-        taggedFriends, 
-        feelingActivity, 
-        backgroundTheme, 
         videoUrl, 
         audioUrl 
     } = req.body;
@@ -72,9 +73,6 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 mediaUrls,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 },
         });
 
@@ -89,7 +87,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a blog post
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, imageUrl, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
     const normalizedCategory = normalizeEnumValue(category, blogpost_category);
 
@@ -110,9 +108,6 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 mediaUrls: mediaUrls || undefined,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 updatedAt: new Date(),
             }
         });

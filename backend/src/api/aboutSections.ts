@@ -3,6 +3,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, aboutsection } from '@prisma/client';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -20,6 +21,9 @@ router.get('/', async (req, res) => {
         });
         res.json(sections.map(shapeAboutSectionForFrontend));
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch about sections" });
     }
 });

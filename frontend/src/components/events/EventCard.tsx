@@ -93,7 +93,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
         'event',
         currentEventData.id
     );
-    alert(`Like action simulated for "${currentEventData.title}"!`);
+    alert(`Like updated for "${currentEventData.title}".`);
   };
 
   const handleCommentClick = () => {

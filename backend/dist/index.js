@@ -7,15 +7,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 // --- Environment Variable Validation ---
-if (!process.env.GEMINI_API_KEY || !process.env.DATABASE_URL || !process.env.FRONTEND_URL) {
+const missingRequiredVars = [];
+if (!process.env.DATABASE_URL) {
+    missingRequiredVars.push("DATABASE_URL");
+}
+if (!process.env.JWT_SECRET) {
+    missingRequiredVars.push("JWT_SECRET");
+}
+if (missingRequiredVars.length > 0) {
     console.error("❌ FATAL ERROR: Missing required environment variables.");
-    if (!process.env.GEMINI_API_KEY)
-        console.error("-> GEMINI_API_KEY is missing. Please add it to backend/.env");
-    if (!process.env.DATABASE_URL)
-        console.error("-> DATABASE_URL is missing.");
-    if (!process.env.FRONTEND_URL)
-        console.error("-> FRONTEND_URL is missing. Should be http://localhost:3000 for development.");
+    missingRequiredVars.forEach((key) => console.error(`-> ${key} is missing.`));
     process.exit(1);
+}
+if (!process.env.FRONTEND_URL) {
+    console.warn("⚠️ FRONTEND_URL is missing. Falling back to http://localhost:3000 for development.");
+}
+if (!process.env.API_KEY) {
+    console.warn("⚠️ API_KEY is missing. Chatbot responses will be unavailable.");
 }
 // --- End Environment Validation ---
 const express_1 = __importDefault(require("express"));
@@ -46,8 +54,6 @@ const donationRecords_1 = __importDefault(require("./api/donationRecords"));
 const collectionRecords_1 = __importDefault(require("./api/collectionRecords"));
 const ministryJoinRequests_1 = __importDefault(require("./api/ministryJoinRequests"));
 const users_1 = __importDefault(require("./api/users"));
-const friendships_1 = __importDefault(require("./api/friendships"));
-const groups_1 = __importDefault(require("./api/groups"));
 const directMediaItems_1 = __importDefault(require("./api/directMediaItems"));
 const advertisements_1 = __importDefault(require("./api/advertisements"));
 const churchMembers_1 = __importDefault(require("./api/churchMembers"));
@@ -100,8 +106,6 @@ app.use("/api/donation-records", donationRecords_1.default);
 app.use("/api/collection-records", collectionRecords_1.default);
 app.use("/api/ministry-join-requests", ministryJoinRequests_1.default);
 app.use("/api/users", users_1.default);
-app.use("/api/friendships", friendships_1.default);
-app.use("/api/groups", groups_1.default);
 app.use("/api/direct-media", directMediaItems_1.default);
 app.use("/api/advertisements", advertisements_1.default);
 app.use("/api/church-members", churchMembers_1.default);

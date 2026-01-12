@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { Prisma, ministry, ministry_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { handleDatabaseFallback } from '../utils/databaseFallback'
 
 const router = express.Router();
 
@@ -24,6 +25,9 @@ router.get('/', async (req, res) => {
     });
     res.json(ministries.map(shapeMinistryForFrontend));
   } catch (error) {
+      if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     res.status(500).json({ error: 'Failed to fetch ministries' });
   }
 });

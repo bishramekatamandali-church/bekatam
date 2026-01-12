@@ -86,7 +86,7 @@ const ChurchHistoryPage: React.FC = () => {
             `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} history chapter: "${chapter.title}"`,
             'content_update', 'historyChapter', chapter.id
         );
-        alert(`Like action simulated for "${chapter.title}"!`);
+        alert(`Like updated for "${chapter.title}".`);
     }
   };
 

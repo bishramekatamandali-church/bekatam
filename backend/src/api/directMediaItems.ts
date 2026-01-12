@@ -2,17 +2,21 @@ import express from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import crypto from 'crypto';
-
+import { handleDatabaseFallback } from '../utils/databaseFallback';
+ 
 const router = express.Router();
 
 // Fetch all direct media uploads
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
     const items = await prisma.directmediaitem.findMany({
       orderBy: { uploadDate: 'desc' },
     });
     res.json(items);
   } catch (error) {
+      if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     res.status(500).json({ error: 'Failed to load media library.' });
   }
 });

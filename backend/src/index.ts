@@ -3,19 +3,27 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // --- Environment Variable Validation ---
-if (!process.env.GEMINI_API_KEY || !process.env.DATABASE_URL || !process.env.FRONTEND_URL) {
+const missingRequiredVars: string[] = [];
+  if (!process.env.DATABASE_URL) {
+  missingRequiredVars.push("DATABASE_URL");
+}
+
+if (!process.env.JWT_SECRET) {
+  missingRequiredVars.push("JWT_SECRET");
+}
+
+if (missingRequiredVars.length > 0) {
   console.error("❌ FATAL ERROR: Missing required environment variables.");
-
-  if (!process.env.GEMINI_API_KEY)
-    console.error("-> GEMINI_API_KEY is missing. Please add it to backend/.env");
-
-  if (!process.env.DATABASE_URL)
-    console.error("-> DATABASE_URL is missing.");
-
-  if (!process.env.FRONTEND_URL)
-    console.error("-> FRONTEND_URL is missing. Should be http://localhost:3000 for development.");
-
+  missingRequiredVars.forEach((key) => console.error(`-> ${key} is missing.`));
+  
   process.exit(1);
+}
+if (!process.env.FRONTEND_URL) {
+  console.warn("⚠️ FRONTEND_URL is missing. Falling back to http://localhost:3000 for development.");
+}
+
+if (!process.env.API_KEY) {
+  console.warn("⚠️ API_KEY is missing. Chatbot responses will be unavailable.");
 }
 // --- End Environment Validation ---
 
@@ -48,8 +56,6 @@ import donationRecordRoutes from "./api/donationRecords";
 import collectionRecordRoutes from "./api/collectionRecords";
 import ministryJoinRequestRoutes from "./api/ministryJoinRequests";
 import userRoutes from "./api/users";
-import friendshipRoutes from "./api/friendships";
-import groupRoutes from "./api/groups";
 import directMediaItemRoutes from "./api/directMediaItems";
 import advertisementRoutes from "./api/advertisements";
 import churchMemberRoutes from "./api/churchMembers";
@@ -109,8 +115,6 @@ app.use("/api/donation-records", donationRecordRoutes);
 app.use("/api/collection-records", collectionRecordRoutes);
 app.use("/api/ministry-join-requests", ministryJoinRequestRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/friendships", friendshipRoutes);
-app.use("/api/groups", groupRoutes);
 app.use("/api/direct-media", directMediaItemRoutes);
 app.use("/api/advertisements", advertisementRoutes);
 app.use("/api/church-members", churchMemberRoutes);

@@ -53,7 +53,6 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
   const { translatedText: description } = useAITranslate(post.description, 'en');
   const { translatedText: category } = useAITranslate(post.category, 'en');
   
-  const hasBackground = post.backgroundTheme && post.backgroundTheme !== 'post-theme-default';
   const hasMedia = post.mediaUrls && post.mediaUrls.length > 0;
 
   const handleLike = () => {
@@ -70,7 +69,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
         'blogPost',
         post.id
     );
-    alert(`Like action simulated for "${post.title}"!`);
+    alert(`Like updated for "${post.title}".`);
   };
 
   const handleCommentClick = () => {
@@ -97,7 +96,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
 
   return (
     <>
-      <Card className={`flex flex-col ${className} h-full ${hasBackground ? post.backgroundTheme : 'bg-white'}`}>
+      <Card className={`flex flex-col ${className} h-full bg-white`}>
         {hasMedia ? (
              <Link to={detailUrl} aria-label={`Read more about ${title}`}>
                 <img src={post.mediaUrls![0]} alt={title} className="w-full h-56 object-cover" />
@@ -108,24 +107,22 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
             </Link>
         ) : null}
         
-        <CardHeader className={hasBackground ? 'flex-grow flex flex-col justify-center text-center' : ''}>
-          <h2 className={`font-semibold mb-1 ${hasBackground ? 'text-2xl text-white' : 'text-xl text-slate-800'}`}>
+        <CardHeader>
+          <h2 className="font-semibold mb-1 text-xl text-slate-800">
             <Link to={detailUrl} className="hover:text-purple-600 transition-colors">{title}</Link>
           </h2>
-          {post.category && <span className={`text-xs font-medium uppercase tracking-wider ${hasBackground ? 'text-white/80' : 'text-purple-600'}`}>{category}</span>}
+          {post.category && <span className="text-xs font-medium uppercase tracking-wider text-purple-600">{category}</span>}
         </CardHeader>
-        
-        {!hasBackground && 
-         <CardContent className="flex-grow">
+        <CardContent className="flex-grow">
           <div className="text-sm text-slate-500 mb-2 flex items-center">
             <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
             <span>{formatDateADBS(post.date)}</span>
           </div>
           <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">{description}</p>
         </CardContent>
-        }
         
-        <CardFooter className={`flex justify-around items-center flex-wrap gap-1 sm:gap-2 ${!hasBackground ? 'bg-slate-50 border-t border-slate-200' : ''}`}>
+        
+        <CardFooter className="flex justify-around items-center flex-wrap gap-1 sm:gap-2 bg-slate-50 border-t border-slate-200">
             <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500 px-1.5 sm:px-2 py-1" aria-pressed={isLiked} aria-label={isLiked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}>
                 <HeartIcon className="w-5 h-5 mr-1" isFilled={isLiked} /> {likeCount > 0 ? likeCount : ''} <span className="sr-only sm:not-sr-only ml-1">Like</span>
             </Button>

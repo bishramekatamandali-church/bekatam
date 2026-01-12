@@ -45,7 +45,7 @@ export type NewsCategory = typeof newsCategoriesList[number];
 export const prayerRequestCategoriesList = ["Healing", "Guidance", "Family", "Thanksgiving", "Community", "Personal", "Other"] as const;
 export type PrayerRequestCategory = typeof prayerRequestCategoriesList[number];
 
-export const prayerRequestVisibilityList = ['public', 'friends_only', 'private', 'anonymous'] as const;
+export const prayerRequestVisibilityList = ['public', 'private', 'anonymous'] as const;
 export type PrayerRequestVisibility = typeof prayerRequestVisibilityList[number];
 
 export const prayerRequestStatusList = ['active', 'prayed_for', 'answered', 'archived'] as const;
@@ -74,9 +74,6 @@ export interface PrayerRequest {
   // New Facebook-like fields
   mediaUrls?: string[];
   location?: string;
-  taggedFriends?: string; // Simple text field for simulation
-  feelingActivity?: string; // Simple text field
-  backgroundTheme?: string; // e.g., a CSS class name for a gradient background
   // Deprecated fields
   imageUrl?: string;
   videoUrl?: string;
@@ -85,7 +82,7 @@ export interface PrayerRequest {
 // --- END: Prayer Request Types ---
 
 // --- NEW: Testimonial Types ---
-export const testimonialVisibilityList = ['public', 'friends_only'] as const;
+export const testimonialVisibilityList = ['public'] as const;
 export type TestimonialVisibility = typeof testimonialVisibilityList[number];
 
 export interface Testimonial {
@@ -175,13 +172,8 @@ export interface BlogPost extends FeatureInfo {
   likes?: number; 
   comments: Comment[];
   audioUrl?: string;
-  // New Facebook-like fields
   mediaUrls?: string[];
   location?: string;
-  taggedFriends?: string;
-  feelingActivity?: string;
-  backgroundTheme?: string;
-  // Deprecated
   videoUrl?: string; 
 }
 
@@ -739,10 +731,6 @@ export type UserRole = 'admin' | 'user';
 export type RelationshipStatus = 'Single' | 'In a relationship' | 'Engaged' | 'Married' | 'Its complicated' | 'Separated' | 'Divorced' | 'Widowed';
 export const relationshipStatusList: RelationshipStatus[] = ['Single', 'In a relationship', 'Engaged', 'Married', 'Its complicated', 'Separated', 'Divorced', 'Widowed'];
 
-export type PrivacySetting = 'public' | 'friends' | 'private';
-export type FriendRequestSetting = 'everyone' | 'friends_of_friends';
-export type GroupInviteSetting = 'everyone' | 'friends';
-
 export interface User {
   id: string;
   username: string;
@@ -768,78 +756,9 @@ export interface User {
   receiveContentUpdateNotifications?: boolean;
   receivePrayerRequestNotifications?: boolean;
   receiveTestimonialNotifications?: boolean;
-  receiveFriendActivityNotifications?: boolean;
-
-  // New Privacy Settings
-  privacySettings?: {
-    friendsList: PrivacySetting;
-    profileInSearch: boolean;
-    whoCanSendFriendRequest: FriendRequestSetting;
-    whoCanAddToGroups: GroupInviteSetting;
-  };
+  profileInSearchPrivacy?: boolean;
 }
-
-
-// --- NEW: Friendship Types ---
-export type FriendshipStatus = 'pending' | 'accepted' | 'blocked' | 'declined';
-
-export interface Friendship {
-  id: string;
-  // The user who sent the request
-  requesterId: string;
-  // The user who received the request
-  addresseeId: string;
-  status: FriendshipStatus;
-  requestedAt: string; // ISO timestamp of the initial request
-  updatedAt: string; // ISO timestamp of status change
-}
-// --- END: Friendship Types ---
-
-
-// --- NEW: Group Chat Types ---
-export interface GroupMember {
-  userId: string;
-  role: 'admin' | 'member';
-  addedAt: string;
-}
-
-export type GroupPermissionSetting = 'admins_only' | 'all_members';
-
-export interface Group {
-  id: string;
-  name: string;
-  creatorId: string;
-  groupImageUrl?: string;
-  members: GroupMember[];
-  createdAt: string;
-  updatedAt: string;
-  postedByAdminId?: string;
-  postedByAdminName?: string;
-  linkPath: string;
-  permissions?: {
-    editSettings: GroupPermissionSetting;
-    sendMessage: GroupPermissionSetting;
-    addMembers: GroupPermissionSetting;
-    approveMembers: GroupPermissionSetting; // For future use
-  };
-}
-
-export interface GroupMessage {
-  id: string;
-  groupId: string;
-  senderId: string;
-  senderName: string;
-  senderProfileImageUrl?: string;
-  text?: string;
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video' | 'file' | 'location';
-  timestamp: string;
-  isLoading?: boolean;
-  error?: boolean;
-}
-// --- END: Group Chat Types ---
-
-export interface AdminActionLog {
+ export interface AdminActionLog {
   id: string;
   timestamp: string;
   adminId: string;
@@ -875,26 +794,14 @@ export interface FrontendActivityLog {
     | 'prayer_request_status_update'   // New
     | 'prayer_request_prayed_for'      // New
     | 'testimonial_submission'         // New
-    | 'friend_request_sent'            // New
-    | 'friend_request_accepted'        // New
-    | 'friend_request_declined'        // New
-    | 'friend_removed'                 // New
     | 'notification_added'
     | 'direct_media_upload'
     | 'user_login' 
     | 'user_logout' 
     | 'notification_preference_update'
-    | 'password_change_simulated'
     | 'forgot_password_request'
     | 'password_reset_success'
     | 'password_reset_failure'
-    | 'social_login_google'
-    | 'social_login_x'
-    | 'social_login_facebook'
-    | 'social_login_apple'
-    | 'social_login_microsoft'
-    | 'social_login_github'     // Added
-    | 'social_login_linkedin'   // Added
     | 'roster_item_created'       
     | 'roster_item_updated'       
     | 'roster_item_deleted'       
@@ -904,10 +811,9 @@ export interface FrontendActivityLog {
     | 'schedule_draft_published'
     | 'ad_created'
     | 'ad_updated'
-    | 'ad_deleted'
-    | 'group_created'; // New
+    | 'ad_deleted';
   itemId?: string; 
-  itemType?: ContentType | 'donation' | 'contactMessage' | 'ministryJoinRequest' | 'comment' | 'notification' | 'mediaItem' | 'directMedia' | 'userPreference' | 'userAccount' | 'advertisement' | 'prayerRequest' | 'testimonial' | 'friendship' | 'group';
+  itemType?: ContentType | 'donation' | 'contactMessage' | 'ministryJoinRequest' | 'comment' | 'notification' | 'mediaItem' | 'directMedia' | 'userPreference' | 'userAccount' | 'advertisement' | 'prayerRequest' | 'testimonial';
 }
 
 export interface AuthContextType {
@@ -928,22 +834,7 @@ export interface AuthContextType {
   changePassword?: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string; token?: string }>;
   resetPassword: (token: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
-  loginWithGoogle: () => Promise<boolean>;
-  loginWithX: () => Promise<boolean>;
-  loginWithFacebook: () => Promise<boolean>;
-  loginWithApple: () => Promise<boolean>;
-  loginWithMicrosoft: () => Promise<boolean>;
-  loginWithGitHub: () => Promise<boolean>;     // Added
-  loginWithLinkedIn: () => Promise<boolean>;   // Added
-  // New Friendship context items
-  friendships: Friendship[];
-  friendRequestCount: number;
-  sendFriendRequest: (targetUserId: string) => Promise<{ success: boolean; message?: string }>;
-  acceptFriendRequest: (friendshipId: string) => Promise<{ success: boolean; message?: string }>;
-  declineFriendRequest: (friendshipId: string) => Promise<{ success: boolean; message?: string }>;
-  removeFriend: (friendshipId: string) => Promise<{ success: boolean; message?: string }>;
-  getFriendshipStatus: (targetUserId: string) => { status: 'friends' | 'pending_sent' | 'pending_received' | 'not_friends'; friendshipId?: string };
-}
+  }
 
 export type ContentType = 
   | 'sermon' 
@@ -972,7 +863,6 @@ export type ContentType =
   | 'advertisement'
   | 'prayerRequest'
   | 'testimonial'
-  | 'group'
   | 'donation'
   | 'donatePageContent';
 
@@ -1003,7 +893,6 @@ export type ContentItem =
   | Advertisement
   | PrayerRequest
   | Testimonial
-  | Group
   | DonationRecord
   | DonatePageContent;
 
@@ -1058,9 +947,6 @@ export interface BlogPostFormData extends BaseContentFormData {
     // New
     mediaUrls?: string[];
     location?: string;
-    taggedFriends?: string;
-    feelingActivity?: string;
-    backgroundTheme?: string;
     // Deprecated
     videoUrl?: string;
 }
@@ -1147,9 +1033,6 @@ export interface PrayerRequestFormData {
   // New
   mediaUrls?: string[];
   location?: string;
-  taggedFriends?: string;
-  feelingActivity?: string;
-  backgroundTheme?: string;
   // Deprecated
   imageUrl?: string;
   videoUrl?: string;
@@ -1165,29 +1048,11 @@ export interface TestimonialFormData {
    // New
   mediaUrls?: string[];
   location?: string;
-  taggedFriends?: string;
-  feelingActivity?: string;
-  backgroundTheme?: string;
   // Deprecated
   imageUrl?: string;
   videoUrl?: string;
 }
 // --- END: Testimonial FormData ---
-
-// --- NEW: Group FormData ---
-export interface GroupFormData {
-  name: string;
-  groupImageUrl?: string;
-  memberIds: string[];
-  permissions: {
-    editSettings: GroupPermissionSetting;
-    sendMessage: GroupPermissionSetting;
-    addMembers: GroupPermissionSetting;
-    approveMembers: GroupPermissionSetting;
-  };
-}
-// --- END: Group FormData ---
-
 
 // --- Branch Church FormData Type ---
 export interface BranchChurchFormData {
@@ -1368,7 +1233,6 @@ export type GenericContentFormData =
   | AdvertisementFormData
   | PrayerRequestFormData
   | TestimonialFormData
-  | GroupFormData
   | DonationRecordFormData
   | DonatePageContentFormData;
 
@@ -1412,7 +1276,6 @@ export interface ContentContextType {
   advertisements: Advertisement[]; 
   prayerRequests: PrayerRequest[]; 
   testimonials: Testimonial[]; // New
-  groups: Group[]; // New
   donatePageContent: DonatePageContent;
 
   // New Administrative Data
@@ -1493,10 +1356,6 @@ export interface Notification {
     | 'prayer_request_submitted_admin' // New
     | 'prayer_request_status_user' // New
     | 'prayer_request_prayed_for'      // New
-    | 'friend_request_received'      // New
-    | 'friend_request_accepted'      // New
-    | 'new_prayer_request_friend'
-    | 'new_testimonial_friend'
     | 'ad_expiring_soon'; 
 }
 

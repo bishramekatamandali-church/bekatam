@@ -71,26 +71,14 @@ const activityTypeToEnglish = (type: FrontendActivityLog['type']): string => {
     prayer_request_status_update: 'Prayer Request Status Updated',
     prayer_request_prayed_for: 'Prayer Request Prayed For',
     testimonial_submission: 'Testimonial Submitted',
-    friend_request_sent: 'Friend Request Sent',
-    friend_request_accepted: 'Friend Request Accepted',
-    friend_request_declined: 'Friend Request Declined',
-    friend_removed: 'Friend Removed',
     notification_added: 'Notification Added',
     direct_media_upload: 'Direct Media Upload',
     user_login: 'User Login',
     user_logout: 'User Logout',
     notification_preference_update: 'Notification Preference Update',
-    password_change_simulated: 'Password Change',
     forgot_password_request: 'Forgot Password Request',
     password_reset_success: 'Password Reset Success',
     password_reset_failure: 'Password Reset Failure',
-    social_login_google: 'Social Login (Google)',
-    social_login_x: 'Social Login (X)',
-    social_login_facebook: 'Social Login (Facebook)',
-    social_login_apple: 'Social Login (Apple)',
-    social_login_microsoft: 'Social Login (Microsoft)',
-    social_login_github: 'Social Login (GitHub)',
-    social_login_linkedin: 'Social Login (LinkedIn)',
     roster_item_created: 'Roster Item Created',
     roster_item_updated: 'Roster Item Updated',
     roster_item_deleted: 'Roster Item Deleted',
@@ -101,8 +89,7 @@ const activityTypeToEnglish = (type: FrontendActivityLog['type']): string => {
     ad_created: 'Advertisement Created',
     ad_updated: 'Advertisement Updated',
     ad_deleted: 'Advertisement Deleted',
-    group_created: 'Group Created',
-  };
+    };
   return map[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
@@ -152,7 +139,7 @@ const AdminDashboardOverview: React.FC = () => {
         });
     });
     logAdminAction("Broadcasted Feature Update", undefined, `Message: ${featureUpdateMessage}`);
-    setBroadcastFeedback({type: 'success', message: `Feature update notification (simulated) sent to ${allUsers.length} users.`});
+    setBroadcastFeedback({type: 'success', message: `Feature update notification sent to ${allUsers.length} users.`});
     setFeatureUpdateMessage('');
     setTimeout(() => setBroadcastFeedback(null), 5000);
   };

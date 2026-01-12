@@ -3,7 +3,6 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import { EyeIcon, EyeSlashIcon, CameraIcon } from '../icons/GenericIcons';
-import SocialLoginButtons from './SocialLoginButtons';
 import { RegistrationFormData } from '../../types';
 
 interface RegisterFormProps {
@@ -425,8 +424,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onR
         </button>
       </p>
       </form>
-      <SocialLoginButtons onSocialLoginSuccess={onRegisterSuccess} />
-    </>
+     </>
   );
 }; */
 
@@ -474,7 +472,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     "+298", "+299", "+350", "+351", "+352", "+353", "+354", "+355",
     "+356", "+357", "+358", "+359", "+370", "+371", "+372", "+373",
     "+374", "+375", "+376", "+377", "+378", "+380", "+381", "+382",
-    "+385", "+386", "+387", "+389", "+420", "+421", "+423"
+    "+385", "+386", "+387", "+389", "+420", "+421", "+423", "+977",
+    "+971", "+974"
   ];
 
   const submitHandler = async (e: React.FormEvent) => {

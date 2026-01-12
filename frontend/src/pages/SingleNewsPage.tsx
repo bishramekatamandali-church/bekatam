@@ -65,7 +65,7 @@ const SingleNewsPage: React.FC = () => {
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    if(newsItem) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} news item: "${newsItem.title}"`, 'content_update', 'news', newsItem.id); alert(`Like action simulated for "${newsItem.title}"!`); }
+    if(newsItem) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} news item: "${newsItem.title}"`, 'content_update', 'news', newsItem.id); alert(`Like updated for "${newsItem.title}".`); }
   };
 
   const handleAddCommentClick = () => {

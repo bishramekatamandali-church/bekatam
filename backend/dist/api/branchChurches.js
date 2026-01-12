@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 const shapeBranchForFrontend = (branch) => ({
     ...branch,
@@ -24,6 +25,9 @@ router.get('/', async (req, res) => {
         res.json(branches.map(shapeBranchForFrontend));
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch branch churches" });
     }
 });

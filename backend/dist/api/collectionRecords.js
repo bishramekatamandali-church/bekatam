@@ -8,6 +8,7 @@ const db_1 = require("../db");
 const crypto_1 = __importDefault(require("crypto"));
 const client_1 = require("@prisma/client");
 const enumNormalization_1 = require("../utils/enumNormalization");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 // GET all collection records
 router.get('/', async (req, res) => {
@@ -18,6 +19,9 @@ router.get('/', async (req, res) => {
         res.json(records);
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: 'Failed to fetch collection records.' });
     }
 });

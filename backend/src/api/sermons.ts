@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { Prisma, sermon, sermon_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -26,6 +27,9 @@ router.get('/', async (req, res) => {
         });
         res.json(sermons.map(shapeSermonForFrontend));
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         console.error("Error fetching sermons:", error);
         res.status(500).json({ error: "Failed to fetch sermons" });
     }

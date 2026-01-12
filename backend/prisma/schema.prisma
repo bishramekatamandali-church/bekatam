@@ -69,9 +69,6 @@ model blogpost {
   audioUrl          String?            @db.Text
   mediaUrls         Json?
   location          String?
-  taggedFriends     String?
-  feelingActivity   String?
-  backgroundTheme   String?
   videoUrl          String?            @db.Text
   comment           comment[]
 }
@@ -557,9 +554,6 @@ model prayerrequest {
   updatedAt           DateTime
   mediaUrls           Json?
   location            String?
-  taggedFriends       String?
-  feelingActivity     String?
-  backgroundTheme     String?
   comment             comment[]
   prayer              prayer[]
   user                user?                    @relation(fields: [userId], references: [id], map: "PrayerRequest_userId_fkey")
@@ -616,9 +610,6 @@ model testimonial {
   updatedAt           DateTime
   mediaUrls           Json?
   location            String?
-  taggedFriends       String?
-  feelingActivity     String?
-  backgroundTheme     String?
   user                user                   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Testimonial_userId_fkey")
 
   @@index([userId], map: "Testimonial_userId_fkey")
@@ -647,21 +638,13 @@ model user {
   receiveContentUpdateNotifications       Boolean                   @default(true)
   receivePrayerRequestNotifications       Boolean                   @default(true)
   receiveTestimonialNotifications         Boolean                   @default(true)
-  receiveFriendActivityNotifications      Boolean                   @default(true)
-  friendsListPrivacy                      user_friendsListPrivacy   @default(public)
   profileInSearchPrivacy                  Boolean                   @default(true)
-  friendRequestPrivacy                    user_friendRequestPrivacy @default(everyone)
-  groupInvitePrivacy                      user_groupInvitePrivacy   @default(everyone)
   createdAt                               DateTime                  @default(now())
   updatedAt                               DateTime @updatedAt
   adminactionlog                          adminactionlog[]
   churchmember                            churchmember?
   comment                                 comment[]
-  friendship_friendship_addresseeIdTouser friendship[]              @relation("friendship_addresseeIdTouser")
-  friendship_friendship_requesterIdTouser friendship[]              @relation("friendship_requesterIdTouser")
   frontendactivitylog                     frontendactivitylog[]
-  groupmember                             groupmember[]
-  groupmessage                            groupmessage[]
   ministryjoinrequest                     ministryjoinrequest[]
   notification                            notification[]
   prayer                                  prayer[]
@@ -859,11 +842,6 @@ enum expenserecord_paymentMethod {
   Other
 }
 
-enum group_editSettings {
-  admins_only
-  all_members
-}
-
 enum notification_type {
   comment
   ministry_request_update
@@ -876,7 +854,6 @@ enum notification_type {
   prayer_request_submitted_admin
   prayer_request_status_user
   prayer_request_prayed_for
-  new_testimonial_friend
   ad_expiring_soon
 }
 
@@ -951,10 +928,4 @@ enum user_relationshipStatus {
   Separated
   Divorced
   Widowed
-}
-
-
-enum user_groupInvitePrivacy {
-  everyone
-  friends
 }

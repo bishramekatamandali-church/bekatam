@@ -8,6 +8,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 const ensureAdmin = (req, res) => {
     const user = req.user;
@@ -34,6 +35,9 @@ router.get('/', async (req, res) => {
         res.json(testimonials.map(shapeTestimonialForFrontend));
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch testimonials" });
     }
 });
@@ -41,7 +45,7 @@ router.get('/', async (req, res) => {
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res))
         return;
-    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
+    const { title, contentText, visibility, mediaUrls, location, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
     try {
         const newTestimonial = await db_1.prisma.testimonial.create({
             data: {
@@ -52,9 +56,6 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 visibility: visibility,
                 mediaUrls: mediaUrls || undefined,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 postedByAdminId,
                 postedByAdminName,
                 userId,

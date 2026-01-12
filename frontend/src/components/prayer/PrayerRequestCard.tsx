@@ -4,7 +4,7 @@ import { PrayerRequest, PrayerRequestStatus, prayerRequestStatusList } from '../
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import { formatDateADBS } from '../../dateConverter';
-import { UserCircleIcon as HeroUserCircleIcon, HandRaisedIcon, ChatBubbleBottomCenterTextIcon, ShareIcon, TrashIcon, MapPinIcon, FaceSmileIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon as HeroUserCircleIcon, HandRaisedIcon, ChatBubbleBottomCenterTextIcon, ShareIcon, TrashIcon, MapPinIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
@@ -60,7 +60,6 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
   const canPray = isAuthenticated && request.status !== 'answered' && request.status !== 'archived';
   const isPrayedByUser = isAuthenticated && request.prayers.some(p => p.userId === currentUser?.id);
   const isAnswered = request.status === 'answered';
-  const hasBackground = request.backgroundTheme && request.backgroundTheme !== 'post-theme-default';
 
   const TEXT_TRUNCATE_LENGTH = 120;
   const isTruncated = request.requestText.length > TEXT_TRUNCATE_LENGTH;
@@ -79,16 +78,14 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
     let classes = `flex flex-col h-full shadow-lg transition-all duration-300 ease-in-out bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600`;
     if (isAnswered) {
       classes += ' border-2 border-amber-400 dark:border-amber-500 animate-radiant-glow';
-    } else if (request.status === 'active' && !hasBackground) {
-       classes += ' border-2 border-transparent hover:border-teal-400/50 animate-pulse-light';
+    } else if (request.status === 'active') {
+      classes += ' border-2 border-transparent hover:border-teal-400/50 animate-pulse-light';
     }
     return classes;
   }
 
   const PostMeta: React.FC<{ className?: string }> = ({ className }) => (
     <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mt-3 ${className}`}>
-        {request.feelingActivity && <span className="flex items-center"><FaceSmileIcon className="w-3.5 h-3.5 mr-1"/> feeling {request.feelingActivity}</span>}
-        {request.taggedFriends && <span className="flex items-center"><UserGroupIcon className="w-3.5 h-3.5 mr-1"/> with {request.taggedFriends}</span>}
         {request.location && <span className="flex items-center"><MapPinIcon className="w-3.5 h-3.5 mr-1"/> at {request.location}</span>}
     </div>
   );
@@ -143,18 +140,18 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
            </div>
         </CardHeader>
         <CardContent className="flex-grow py-3 space-y-3">
-          <div className={`p-4 rounded-lg ${request.backgroundTheme || 'post-theme-default'}`}>
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wider ${hasBackground ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200'}`}>
+          <div className="p-4 rounded-lg bg-white dark:bg-slate-800">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wider bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
                 <PrayerHandsIcon className="w-4 h-4 mr-1.5 text-teal-600 dark:text-teal-400"/>
                 PRAYER REQUEST
               </div>
-              <h3 className={`font-semibold mt-2 ${hasBackground ? 'text-2xl text-white' : 'text-lg text-slate-800 dark:text-slate-200'}`} title={request.title}>
+              <h3 className="font-semibold mt-2 text-lg text-slate-800 dark:text-slate-200" title={request.title}>
                 {request.title}
               </h3>
-              <p className={`text-sm leading-relaxed whitespace-pre-line mt-2 ${hasBackground ? 'text-white/90' : 'text-slate-600 dark:text-slate-300'}`}>
+              <p className="text-sm leading-relaxed whitespace-pre-line mt-2 text-slate-600 dark:text-slate-300">
                 {isExpanded ? request.requestText : `${request.requestText.substring(0, TEXT_TRUNCATE_LENGTH)}${isTruncated ? '...' : ''}`}
                 {isTruncated && (
-                  <button onClick={() => setIsExpanded(!isExpanded)} className={`ml-1 font-semibold text-sm ${hasBackground ? 'text-white/70 hover:text-white underline' : 'text-purple-600 dark:text-purple-400 hover:underline'}`}>
+                  <button onClick={() => setIsExpanded(!isExpanded)} className="ml-1 font-semibold text-sm text-purple-600 dark:text-purple-400 hover:underline">
                     {isExpanded ? 'Read Less' : 'Read More'}
                   </button>
                 )}

@@ -3,7 +3,8 @@ import { prisma } from '../db';
 import { Prisma, donationrecord_paymentMethod, donationrecord_purpose } from '@prisma/client';
 import crypto from 'crypto';
 import { normalizeEnumValue } from '../utils/enumNormalization';
-
+import { handleDatabaseFallback } from '../utils/databaseFallback';
+ 
 const router = express.Router();
 
 // GET all donation records
@@ -14,6 +15,9 @@ router.get('/', async (req, res) => {
         });
         res.json(records);
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: 'Failed to fetch donation records.' });
     }
 });

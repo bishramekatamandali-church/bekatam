@@ -68,7 +68,7 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
         `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${currentEventState.title}"`,
         'content_update', 'event', currentEventState.id
     );
-    alert(`Like action simulated for "${currentEventState.title}"!`);
+    alert(`Like updated for "${currentEventState.title}".`);
   };
 
   const handleCommentClick = () => {

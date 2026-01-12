@@ -67,7 +67,7 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
         'news',
         item.id
     );
-    alert(`Like action simulated for "${item.title}"!`);
+    alert(`Like updated for "${item.title}".`);
   };
 
   const handleCommentClick = () => {

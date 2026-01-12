@@ -9,6 +9,7 @@ const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 const shapeNewsItemForFrontend = (item) => ({
     ...item,
@@ -28,6 +29,9 @@ router.get('/', async (req, res) => {
         res.json(items.map(shapeNewsItemForFrontend));
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch news items" });
     }
 });

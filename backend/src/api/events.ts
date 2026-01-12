@@ -5,6 +5,7 @@ import { prisma } from '../db';
 import { Prisma, eventitem, eventitem_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
@@ -30,6 +31,9 @@ router.get('/', async (req, res) => {
         });
         res.json(events.map(shapeEventForFrontend));
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         console.error("Error fetching events:", error);
         res.status(500).json({ error: "Failed to fetch events" });
     }

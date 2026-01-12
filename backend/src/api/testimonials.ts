@@ -4,7 +4,8 @@ import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, testimonial, testimonial_visibility } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
-
+import { handleDatabaseFallback } from '../utils/databaseFallback';
+ 
 const router = express.Router();
 
 const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
@@ -33,6 +34,9 @@ router.get('/', async (req, res) => {
         });
         res.json(testimonials.map(shapeTestimonialForFrontend));
     } catch (error) {
+        if (handleDatabaseFallback(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Failed to fetch testimonials" });
     }
 });
@@ -40,7 +44,7 @@ router.get('/', async (req, res) => {
 // POST a new testimonial (admin only)
 router.post('/', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
-    const { title, contentText, visibility, mediaUrls, location, taggedFriends, feelingActivity, backgroundTheme, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
+    const { title, contentText, visibility, mediaUrls, location, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
 
     try {
         const newTestimonial = await prisma.testimonial.create({
@@ -52,9 +56,6 @@ router.post('/', authMiddleware, async (req, res) => {
                 visibility: visibility as testimonial_visibility,
                 mediaUrls: mediaUrls || undefined,
                 location,
-                taggedFriends,
-                feelingActivity,
-                backgroundTheme,
                 postedByAdminId,
                 postedByAdminName,
                 userId,

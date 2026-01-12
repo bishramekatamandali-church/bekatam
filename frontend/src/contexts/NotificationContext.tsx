@@ -10,7 +10,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentUser, getAllUsers, friendships } = useAuth();
+  const { currentUser, getAllUsers } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
@@ -57,17 +57,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       if (target === 'all_users_for_testimonials') {
           return allUsers.filter(user => user.receiveTestimonialNotifications);
       }
-      if (target.startsWith('friends_of_')) {
-          const authorId = target.split('_')[2];
-          const friendIds = new Set<string>();
-          friendships.forEach(f => {
-              if (f.status === 'accepted') {
-                  if (f.requesterId === authorId) friendIds.add(f.addresseeId);
-                  if (f.addresseeId === authorId) friendIds.add(f.requesterId);
-              }
-          });
-          return allUsers.filter(user => friendIds.has(user.id) && user.receiveFriendActivityNotifications);
-      }
       if (target === 'admin_group') {
         return allUsers.filter(u => u.role === 'admin');
       }
@@ -96,7 +85,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       setNotifications(prev => [...newNotifications, ...prev].slice(0, 250)); // Keep a reasonable amount of notifications
     }
 
-  }, [getAllUsers, friendships, currentUser]);
+  }, [getAllUsers, currentUser]);
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prevNotifications =>

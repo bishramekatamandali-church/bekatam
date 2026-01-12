@@ -9,6 +9,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
 const auth_1 = require("../middleware/auth");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "bishramekatamandali@15Done";
 const ADMIN_FULL_NAME = process.env.ADMIN_FULL_NAME || "Bishram Admin";
@@ -115,6 +116,9 @@ router.post("/register", async (req, res) => {
     }
     catch (error) {
         console.error("REGISTER ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Internal error" });
     }
 });
@@ -140,9 +144,10 @@ router.post("/login", async (req, res) => {
                 ].filter(Boolean),
             },
         });
-        if (!user || !user.password)
+        const storedPassword = user?.password || user?.passwordHash;
+        if (!user || !storedPassword)
             return res.status(401).json({ error: "Invalid credentials" });
-        const match = await bcryptjs_1.default.compare(password, user.password);
+        const match = await bcryptjs_1.default.compare(password, storedPassword);
         if (!match)
             return res.status(401).json({ error: "Invalid credentials" });
         const token = createToken(user);
@@ -151,6 +156,9 @@ router.post("/login", async (req, res) => {
     }
     catch (error) {
         console.error("LOGIN ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Internal error" });
     }
 });
@@ -166,6 +174,9 @@ router.get("/me", auth_1.authMiddleware, async (req, res) => {
     }
     catch (error) {
         console.error("ME ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: "Internal error" });
     }
 });

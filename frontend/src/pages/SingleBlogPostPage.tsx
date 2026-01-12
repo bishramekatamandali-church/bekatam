@@ -12,7 +12,7 @@ import { formatDateADBS, formatTimestampADBS } from '../dateConverter';
 import AdSlot from '../components/ads/AdSlot';
 import CommentItem from '../components/comments/CommentItem';
 import PostMediaDisplay from '../components/post/PostMediaDisplay';
-import { MapPinIcon, FaceSmileIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 import { ChatBubbleOvalLeftEllipsisIcon } from '../components/icons/GenericIcons';
 
 
@@ -54,7 +54,7 @@ const SingleBlogPostPage: React.FC = () => {
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    if(post) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} blog post: "${post.title}"`, 'content_update', 'blogPost', post.id); alert(`Like action simulated for "${post.title}"!`); }
+    if(post) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} blog post: "${post.title}"`, 'content_update', 'blogPost', post.id); alert(`Like updated for "${post.title}".`); }
   };
 
   const handleAddCommentClick = () => {
@@ -76,31 +76,27 @@ const SingleBlogPostPage: React.FC = () => {
   
   const detailUrl = `/blog/${post.id}`;
   const currentCommentCount = post.comments?.length || 0;
-  const hasBackground = post.backgroundTheme && post.backgroundTheme !== 'post-theme-default';
-
   return (
     <div className="pb-12">
       <div className="container mx-auto px-4">
-        <Card className={`max-w-3xl mx-auto ${post.backgroundTheme || 'bg-white'}`}>
+        <Card className="max-w-3xl mx-auto bg-white">
           {(post.mediaUrls && post.mediaUrls.length > 0) ? (<PostMediaDisplay mediaUrls={post.mediaUrls} title={post.title} />) : post.imageUrl ? (<img src={post.imageUrl} alt={post.title} className="w-full h-auto max-h-[500px] object-cover rounded-t-xl"/>) : null}
-          <CardHeader className={hasBackground ? 'text-white' : ''}>
-            <h1 className={`font-bold ${hasBackground ? 'text-4xl md:text-5xl text-center' : 'text-3xl md:text-4xl text-gray-800'}`}>{post.title}</h1>
-            <p className={`text-md mt-2 ${hasBackground ? 'text-white/80 text-center' : 'text-gray-500'}`}>Published on <span className="font-semibold">{formatDateADBS(post.date)}</span></p>
-            {post.category && <p className={`mt-1 text-sm font-medium uppercase tracking-wider ${hasBackground ? 'text-white/80 text-center' : 'text-purple-600'}`}>{post.category}</p>}
-             {post.postedByAdminName && (<p className={`text-xs mt-2 flex items-center ${hasBackground ? 'text-white/70 justify-center' : 'text-slate-400'}`}><UserCircleIcon className="w-3.5 h-3.5 mr-1" />Posted by: {post.postedByAdminName}</p>)}
-             <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-3 ${hasBackground ? 'text-white/80 justify-center' : 'text-slate-500'}`}>
-                {post.feelingActivity && <span className="flex items-center"><FaceSmileIcon className="w-4 h-4 mr-1"/> feeling {post.feelingActivity}</span>}
-                {post.taggedFriends && <span className="flex items-center"><UserGroupIcon className="w-4 h-4 mr-1"/> with {post.taggedFriends}</span>}
-                {post.location && <span className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/> at {post.location}</span>}
+          <CardHeader>
+            <h1 className="font-bold text-3xl md:text-4xl text-gray-800">{post.title}</h1>
+            <p className="text-md mt-2 text-gray-500">Published on <span className="font-semibold">{formatDateADBS(post.date)}</span></p>
+            {post.category && <p className="mt-1 text-sm font-medium uppercase tracking-wider text-purple-600">{post.category}</p>}
+             {post.postedByAdminName && (<p className="text-xs mt-2 flex items-center text-slate-400"><UserCircleIcon className="w-3.5 h-3.5 mr-1" />Posted by: {post.postedByAdminName}</p>)}
+             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-3 text-slate-500">          
+            {post.location && <span className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/> at {post.location}</span>}
             </div>
           </CardHeader>
           <CardContent>
             {post.audioUrl && (<div className="mb-6"><h3 className="text-lg font-semibold text-gray-700 mb-2">Listen to Audio:</h3><audio controls src={post.audioUrl} className="w-full">Your browser does not support the audio element.</audio></div>)}
-            <div className={`prose max-w-none leading-relaxed ${hasBackground ? 'text-xl text-white/90 text-center' : 'text-gray-700'}`} dangerouslySetInnerHTML={{ __html: post.description }}/>
-            <div className={`mt-8 pt-6 flex justify-around items-center ${hasBackground ? 'border-t border-white/20' : 'border-t border-gray-200'}`}>
-                <Button variant="ghost" onClick={handleLike} className={`flex items-center ${hasBackground ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-red-500'}`} aria-pressed={isLiked}><HeartIcon className="w-5 h-5 mr-1.5" isFilled={isLiked} /> {likeCount} <span className="ml-1 hidden sm:inline">Like</span></Button>
-                <Button variant="ghost" onClick={handleAddCommentClick} className={`flex items-center ${hasBackground ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-purple-500'}`}><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
-                <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className={`flex items-center ${hasBackground ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-purple-500'}`}><ShareIconUI className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span></Button>
+            <div className="prose max-w-none leading-relaxed text-gray-700" dangerouslySetInnerHTML={{ __html: post.description }}/>
+            <div className="mt-8 pt-6 flex justify-around items-center border-t border-gray-200">
+                <Button variant="ghost" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500" aria-pressed={isLiked}><HeartIcon className="w-5 h-5 mr-1.5" isFilled={isLiked} /> {likeCount} <span className="ml-1 hidden sm:inline">Like</span></Button>
+                <Button variant="ghost" onClick={handleAddCommentClick} className="flex items-center text-slate-600 hover:text-purple-500"><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
+                <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 hover:text-purple-500"><ShareIconUI className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span></Button>
             </div>
             <div className="mt-8 pt-6 border-t"><h3 className="text-xl font-semibold text-gray-700 mb-4">Comments ({currentCommentCount})</h3>{post.comments && post.comments.length > 0 ? (<div className="space-y-4">{post.comments.slice().sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((comment: CommentType) => (<CommentItem key={comment.id} comment={comment} itemType="blogPost" itemId={post.id} />))}</div>) : (<p className="text-slate-500 text-center py-4">No comments yet. Be the first to share your thoughts!</p>)}</div>
             <AdSlot placementKey="single_page_bottom" className="mt-8" />

@@ -7,9 +7,10 @@ const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const db_1 = require("../db");
 const crypto_1 = __importDefault(require("crypto"));
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 // Fetch all direct media uploads
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
     try {
         const items = await db_1.prisma.directmediaitem.findMany({
             orderBy: { uploadDate: 'desc' },
@@ -17,6 +18,9 @@ router.get('/', async (_req, res) => {
         res.json(items);
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         res.status(500).json({ error: 'Failed to load media library.' });
     }
 });

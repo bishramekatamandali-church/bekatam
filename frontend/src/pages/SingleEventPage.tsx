@@ -81,7 +81,7 @@ const SingleEventPage: React.FC = () => {
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    if(event) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${event.title}"`, 'content_update', 'event', event.id); alert(`Like action simulated for "${event.title}"!`); }
+    if(event) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${event.title}"`, 'content_update', 'event', event.id); alert(`Like updatedfor "${event.title}".`); }
   };
 
   const handleAddCommentClick = () => {

@@ -9,6 +9,7 @@ const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
+const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (sermon) => {
@@ -28,6 +29,9 @@ router.get('/', async (req, res) => {
         res.json(sermons.map(shapeSermonForFrontend));
     }
     catch (error) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
         console.error("Error fetching sermons:", error);
         res.status(500).json({ error: "Failed to fetch sermons" });
     }

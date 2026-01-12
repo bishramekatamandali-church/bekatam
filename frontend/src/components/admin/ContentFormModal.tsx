@@ -28,7 +28,6 @@ import {
   AdvertisementFormData,
   ContentItem,
   DirectMediaItem,
-  GroupFormData,
   sermonCategoriesList,
   eventCategoriesList,
   ministryCategoriesList,
@@ -43,7 +42,6 @@ import {
   meetingLogStatusList,
   decisionLogStatusList,
   DonorDetail,
-  MonthlyThemeImage,
   HistoryChapter,
   FellowshipRosterItem,
   Advertisement,
@@ -450,18 +448,6 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     contentText: '',
     visibility: 'public',
   } as TestimonialFormData,
-
-  group: {
-    name: '',
-    groupImageUrl: '',
-    memberIds: [],
-    permissions: {
-      editSettings: 'admins_only',
-      sendMessage: 'all_members',
-      addMembers: 'admins_only',
-      approveMembers: 'admins_only',
-    },
-  } as GroupFormData,
 
   donation: {
     donorName: '',

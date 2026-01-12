@@ -4,7 +4,7 @@ import { Testimonial } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import { formatDateADBS } from '../../dateConverter';
-import { UserCircleIcon as HeroUserCircleIcon, TrashIcon, MapPinIcon, FaceSmileIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon as HeroUserCircleIcon, TrashIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
 import { Link } from "react-router-dom";
@@ -19,7 +19,6 @@ interface TestimonialCardProps {
 const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial }) => {
   const { isAdmin, logAdminAction } = useAuth();
   const { deleteContent } = useContent();
-  const hasBackground = testimonial.backgroundTheme && testimonial.backgroundTheme !== 'post-theme-default';
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
@@ -40,8 +39,6 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial }) => {
   
   const PostMeta: React.FC<{ className?: string }> = ({ className }) => (
     <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mt-3 ${className}`}>
-        {testimonial.feelingActivity && <span className="flex items-center"><FaceSmileIcon className="w-3.5 h-3.5 mr-1"/> feeling {testimonial.feelingActivity}</span>}
-        {testimonial.taggedFriends && <span className="flex items-center"><UserGroupIcon className="w-3.5 h-3.5 mr-1"/> with {testimonial.taggedFriends}</span>}
         {testimonial.location && <span className="flex items-center"><MapPinIcon className="w-3.5 h-3.5 mr-1"/> at {testimonial.location}</span>}
     </div>
   );
@@ -65,15 +62,15 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial }) => {
         </div>
       </CardHeader>
       <CardContent className="flex-grow py-3 space-y-3">
-        <div className={`p-4 rounded-lg ${testimonial.backgroundTheme || 'post-theme-default'}`}>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wider ${hasBackground ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'}`}>
+        <div className="p-4 rounded-lg bg-white dark:bg-slate-800">
+            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                 <TestimonyIcon className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400"/>
                 TESTIMONY
             </div>
-            <h3 className={`font-semibold mt-2 ${hasBackground ? 'text-2xl text-white' : 'text-lg text-slate-800 dark:text-slate-200'}`} title={testimonial.title}>
+            <h3 className="font-semibold mt-2 text-lg text-slate-800 dark:text-slate-200" title={testimonial.title}>
             {testimonial.title}
             </h3>
-            <p className={`text-sm leading-relaxed whitespace-pre-line mt-2 ${hasBackground ? 'text-white/90' : 'text-slate-600 dark:text-slate-300'}`}>
+            <p className="text-sm leading-relaxed whitespace-pre-line mt-2 text-slate-600 dark:text-slate-300">
             {testimonial.contentText}
             </p>
         </div>

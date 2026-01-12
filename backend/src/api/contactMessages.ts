@@ -3,7 +3,8 @@ import express from 'express';
 import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
 import { sendEmail } from '../services/emailService';
-
+import { handleDatabaseFallback } from '../utils/databaseFallback';
+ 
 const router = express.Router();
 
 const ADMIN_EMAIL = 'shahidsingh1432@gmail.com'; // Hardcoded admin email for notifications
@@ -16,13 +17,16 @@ const shapeContactMessage = (message: any) => ({
 });
 
 // GET all contact messages (admin panel)
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
     const messages = await prisma.contactmessage.findMany({
       orderBy: { submittedAt: 'desc' },
     });
     res.json(messages.map(shapeContactMessage));
   } catch (error) {
+      if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     console.error('Error fetching contact messages:', error);
     res.status(500).json({ error: 'Failed to fetch contact messages.' });
   }

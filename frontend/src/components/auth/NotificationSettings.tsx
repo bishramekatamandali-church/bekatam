@@ -87,12 +87,6 @@ const NotificationSettings: React.FC = () => {
                 isChecked={currentUser.receiveTestimonialNotifications ?? true}
                 onChange={(value) => handleSettingChange('receiveTestimonialNotifications', value)}
             />
-            <NotificationToggle
-                label="Friend Activity"
-                description="Receive notifications for friend requests and when a friend shares a 'Friends Only' post."
-                isChecked={currentUser.receiveFriendActivityNotifications ?? true}
-                onChange={(value) => handleSettingChange('receiveFriendActivityNotifications', value)}
-            />
             {feedback && (
                 <p className={`text-xs ${feedback.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
                     {feedback.message}

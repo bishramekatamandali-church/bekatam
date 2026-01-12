@@ -4,7 +4,6 @@ import React, {
   useContext,
   useEffect,
   ReactNode,
-  useMemo,
   useCallback,
 } from "react";
 import {
@@ -13,8 +12,7 @@ import {
   UserRole,
   AdminActionLog,
   FrontendActivityLog,
-  Friendship,
-} from "../types";
+  } from "../types";
 import { API_BASE_URL } from "../utils/apiConfig";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +21,6 @@ const AUTH_TOKEN_KEY = "bem_auth_token";
 const CURRENT_USER_KEY = "bem_current_user";
 const ADMIN_ACTION_LOGS_STORAGE_KEY = "bem_admin_action_logs";
 const USER_ACTIVITY_LOGS_STORAGE_KEY = "bem_user_activity_logs";
-const FRIENDSHIPS_STORAGE_KEY = "bem_friendships";
 
 const getStoredData = <T,>(key: string, defaultValue: T): T => {
   try {
@@ -55,10 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     useState<FrontendActivityLog[]>(() =>
       getStoredData(USER_ACTIVITY_LOGS_STORAGE_KEY, [])
     );
-  const [friendships, setFriendships] = useState<Friendship[]>(() =>
-    getStoredData(FRIENDSHIPS_STORAGE_KEY, [])
-  );
-
+  
   const isAuthenticated = !!currentUser;
   const isAdmin = currentUser?.role === "admin";
 
@@ -235,7 +229,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  /* --------------------------- PASSWORD (SIMULATED) --------------------------- */
+  /* --------------------------- PASSWORD  --------------------------- */
 
   const changePassword = async () => ({
     success: false,
@@ -251,25 +245,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     success: false,
     message: "Reset password endpoint not implemented yet.",
   });
-
-  /* --------------------------- FRIENDSHIPS (FRONTEND ONLY) --------------------------- */
-
-  const friendRequestCount = useMemo(() => {
-    if (!currentUser) return 0;
-    return friendships.filter(
-      (f) => f.addresseeId === currentUser.id && f.status === "pending"
-    ).length;
-  }, [friendships, currentUser]);
-
-  const getFriendshipStatus = () => ({ status: "not_friends" } as any);
-  const sendFriendRequest = async () => ({ success: false });
-  const acceptFriendRequest = async () => ({ success: false });
-  const declineFriendRequest = async () => ({ success: false });
-  const removeFriend = async () => ({ success: false });
-
-  /* --------------------------- SOCIAL LOGIN (NOT REAL YET) --------------------------- */
-
-  const socialLoginSim = async () => false;
 
   return (
     <AuthContext.Provider
@@ -291,21 +266,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         changePassword,
         forgotPassword,
         resetPassword,
-        loginWithGoogle: () => socialLoginSim(),
-        loginWithX: () => socialLoginSim(),
-        loginWithFacebook: () => socialLoginSim(),
-        loginWithApple: () => socialLoginSim(),
-        loginWithMicrosoft: () => socialLoginSim(),
-        loginWithGitHub: () => socialLoginSim(),
-        loginWithLinkedIn: () => socialLoginSim(),
-        friendships,
-        friendRequestCount,
-        sendFriendRequest,
-        acceptFriendRequest,
-        declineFriendRequest,
-        removeFriend,
-        getFriendshipStatus,
-      }}
+        }}
     >
       {children}
     </AuthContext.Provider>

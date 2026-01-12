@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 
 // Minimal placeholder payloads for content lists used on the public site.
-const fallbackPayloads: Record<string, unknown> = {
+export const fallbackPayloads: Record<string, unknown> = {
   sermons: [],
   events: [],
   ministries: [],
@@ -12,12 +12,22 @@ const fallbackPayloads: Record<string, unknown> = {
   historymilestones: [],
   historychapters: [],
   branchchurches: [],
+  "direct-media": [],
   "prayer-requests": [],
   testimonials: [],
+  "contact-messages": [],
   "donation-records": [],
   "collection-records": [],
   "ministry-join-requests": [],
 };
+
+export const resolveFallbackResource = (req: Request): string | null => {
+  const baseParts = req.baseUrl.replace(/^\/+/, "").split("/").filter(Boolean);
+  const pathParts = req.path.replace(/^\/+/, "").split("/").filter(Boolean);
+  const resource = baseParts[0] === "api" ? baseParts[1] : baseParts[0];
+  return resource || pathParts[0] || null;
+};
+
 
 /**
  * If the database is unavailable, short-circuit GET requests with a 200/empty
@@ -29,17 +39,15 @@ export const fallbackMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-
-  if (req.method !== "GET") {
+if (req.method !== "GET") {
     return res.status(503).json({
       error: "Database unavailable. Write operations are temporarily disabled.",
     });
   }
 
-  const normalizedPath = req.path.replace(/^\/+/, "");
-  const resource = normalizedPath.split("/")[0];
+  const resource = resolveFallbackResource(req);
 
-  if (resource in fallbackPayloads) {
+  if (resource && resource in fallbackPayloads) {
     return res.status(200).json(fallbackPayloads[resource]);
   }
 

@@ -3,9 +3,9 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
-import { BlogPostFormData, PrayerRequestFormData, PrayerRequestVisibility, TestimonialFormData, prayerRequestCategoriesList, prayerRequestVisibilityList, blogPostCategoriesList, testimonialVisibilityList } from '../../types';
+import { PrayerRequestFormData, PrayerRequestVisibility, TestimonialFormData, prayerRequestCategoriesList, prayerRequestVisibilityList, testimonialVisibilityList } from '../../types';
 import AdvancedMediaUploader from '../admin/AdvancedMediaUploader';
-import { PencilSquareIcon, CalendarDaysIcon, SpeakerWaveIcon, PhotoIcon, MapPinIcon, UserGroupIcon, FaceSmileIcon, SparklesIcon, XCircleIcon, PaperClipIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, CalendarDaysIcon, SpeakerWaveIcon, PhotoIcon, MapPinIcon, XCircleIcon, PaperClipIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
 import { PrayerHandsIcon, TestimonyIcon } from '../icons/GenericIcons';
 
 type PostType = 'prayer' | 'testimonial';
@@ -16,17 +16,6 @@ interface CreatePostModalProps {
   initialPostType: PostType;
 }
 
-const postBackgroundThemes = [
-    { name: 'Default', class: 'post-theme-default' },
-    { name: 'Ocean', class: 'post-theme-1' },
-    { name: 'Sunset', class: 'post-theme-2' },
-    { name: 'Forest', class: 'post-theme-3' },
-    { name: 'Galaxy', class: 'post-theme-4' },
-    { name: 'Rose', class: 'post-theme-5' },
-    { name: 'Night', class: 'post-theme-6' },
-    { name: 'Paper', class: 'post-theme-7' },
-];
-
 const emojiCategories = {
   'Smileys & People': ['😀', '😂', '😍', '🤔', '😎', '😢', '😡', '👍', '👎', '🙌', '🙏', '❤️', '😊', '🥳', '😭', '😇', '💪', '🤗', '🤝'],
   'Animals & Nature': ['🐶', '🐱', '🦄', '🌍', '🌸', '☀️', '⭐', '🔥', '🌊', '🌳', '🕊️', '🦋'],
@@ -35,7 +24,7 @@ const emojiCategories = {
 };
 
 
-const CLOUDINARY_CLOUD_NAME = 'dl94nfxom';
+const CLOUDINARY_CLOUD_NAME = 'dhqoftm46';
 const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
 
 const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, initialPostType }) => {
@@ -48,10 +37,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
     const [title, setTitle] = useState('');
     const [mediaUrls, setMediaUrls] = useState<string[]>([]);
     const [location, setLocation] = useState('');
-    const [taggedFriends, setTaggedFriends] = useState('');
-    const [feelingActivity, setFeelingActivity] = useState('');
-    const [backgroundTheme, setBackgroundTheme] = useState('post-theme-default');
-
+    
     // Specific States
     const [prayerVisibility, setPrayerVisibility] = useState<PrayerRequestVisibility>('public');
     const [prayerCategory, setPrayerCategory] = useState<typeof prayerRequestCategoriesList[number] | undefined>();
@@ -60,7 +46,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
     // Control States
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [showExtraInputs, setShowExtraInputs] = useState<'location' | 'tags' | 'feeling' | 'background' | null>(null);
+    const [showExtraInputs, setShowExtraInputs] = useState<'location' | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -70,7 +56,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
     const resetFormState = () => {
         setContent(''); setTitle(''); setMediaUrls([]);
-        setLocation(''); setTaggedFriends(''); setFeelingActivity(''); setBackgroundTheme('post-theme-default');
+        setLocation('');
         setPrayerVisibility('public'); setPrayerCategory(undefined);
         setTestimonialVisibility('public');
         setError(''); setIsSubmitting(false); setShowExtraInputs(null);
@@ -154,9 +140,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
         const commonData = {
             location: location || undefined,
-            taggedFriends: taggedFriends || undefined,
-            feelingActivity: feelingActivity || undefined,
-            backgroundTheme: mediaUrls.length > 0 ? undefined : backgroundTheme,
             mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
         };
 
@@ -247,8 +230,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="What's on your mind?"
-                                className={`w-full text-base p-3 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-purple-500 focus:border-purple-500 resize-none min-h-[150px] ${backgroundTheme}`}
-                                style={{ color: (backgroundTheme === 'post-theme-default' || backgroundTheme === 'post-theme-7') ? 'inherit' : 'white', '--tw-ring-color': 'rgba(167, 139, 250, 0.5)' } as React.CSSProperties}
+                                className="w-full text-base p-3 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-purple-500 focus:border-purple-500 resize-none min-h-[150px]"
                                 rows={6}
                             />
                             <button type="button" onClick={() => setShowEmojiPicker(p => !p)} className="absolute bottom-2 right-2 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-600 dark:hover:bg-slate-500">
@@ -287,30 +269,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
                         </div>
                     )}
                     {/* Extra Inputs */}
-                    {showExtraInputs === 'location' && <input type="text" placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2 mt-2 border rounded dark:bg-slate-700 dark:border-slate-600"/>}
-                    {showExtraInputs === 'tags' && <input type="text" placeholder="Tag friends by typing their names, separated by commas." value={taggedFriends} onChange={e => setTaggedFriends(e.target.value)} className="w-full p-2 mt-2 border rounded dark:bg-slate-700 dark:border-slate-600"/>}
-                    {showExtraInputs === 'feeling' && <input type="text" placeholder="How are you feeling?" value={feelingActivity} onChange={e => setFeelingActivity(e.target.value)} className="w-full p-2 mt-2 border rounded dark:bg-slate-700 dark:border-slate-600"/>}
-                    {showExtraInputs === 'background' && mediaUrls.length === 0 && (
-                        <div className="p-2 mt-2 border rounded-lg dark:border-slate-600">
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Select a background theme for your post:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {postBackgroundThemes.map(theme => (
-                                    <button 
-                                        key={theme.name} 
-                                        onClick={() => setBackgroundTheme(theme.class)} 
-                                        className={`w-10 h-10 rounded-lg cursor-pointer border-2 flex items-center justify-center
-                                                    ${backgroundTheme === theme.class ? 'border-purple-500 ring-2 ring-purple-500' : 'border-slate-300 dark:border-slate-500'} 
-                                                    ${theme.class}`}
-                                        title={theme.name}
-                                        type="button"
-                                    >
-                                        <span className={`font-bold text-sm ${(theme.class === 'post-theme-default' || theme.class === 'post-theme-7') ? 'text-black' : 'text-white'}`}>
-                                            Aa
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                    {showExtraInputs === 'location' && (
+                      <input
+                        type="text"
+                        placeholder="Location"
+                        value={location}
+                        onChange={e => setLocation(e.target.value)}
+                        className="w-full p-2 mt-2 border rounded dark:bg-slate-700 dark:border-slate-600"
+                      />
                     )}
                 </div>
 
@@ -319,10 +285,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
                     <AdvancedMediaUploader label="Photo/Video" mediaType="image" onUrlChange={handleFileAdd} onFileUpload={handleCloudinaryUpload} isUploading={isUploading} uploadStatus={uploadStatus} className="!p-0" childrenAsTrigger>
                          <button className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><PhotoIcon className="w-5 h-5 text-green-500"/> <span className="ml-1.5 hidden sm:inline">Photo/Video</span></button>
                     </AdvancedMediaUploader>
-                    <button onClick={() => setShowExtraInputs(showExtraInputs==='tags' ? null : 'tags')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><UserGroupIcon className="w-5 h-5 text-blue-500"/> <span className="ml-1.5 hidden sm:inline">Tag People</span></button>
-                    <button onClick={() => setShowExtraInputs(showExtraInputs==='location' ? null : 'location')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><MapPinIcon className="w-5 h-5 text-red-500"/> <span className="ml-1.5 hidden sm:inline">Location</span></button>
-                    <button onClick={() => setShowExtraInputs(showExtraInputs==='feeling' ? null : 'feeling')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><FaceSmileIcon className="w-5 h-5 text-yellow-500"/> <span className="ml-1.5 hidden sm:inline">Feeling</span></button>
-                    {mediaUrls.length === 0 && <button onClick={() => setShowExtraInputs(showExtraInputs==='background' ? null : 'background')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><SparklesIcon className="w-5 h-5 text-pink-500"/> <span className="ml-1.5 hidden sm:inline">Background</span></button>}
+                    <button onClick={() => setShowExtraInputs(showExtraInputs === 'location' ? null : 'location')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><MapPinIcon className="w-5 h-5 text-red-500"/> <span className="ml-1.5 hidden sm:inline">Location</span></button>
                 </div>
 
                 {/* Footer and Submit */}

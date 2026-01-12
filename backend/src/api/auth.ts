@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../db";
 import { authMiddleware } from "../middleware/auth";
+import { handleDatabaseFallback } from "../utils/databaseFallback";
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "bishramekatamandali@15Done";
@@ -136,6 +137,9 @@ router.post("/register", async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
+    if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     res.status(500).json({ error: "Internal error" });
   }
 });
@@ -167,10 +171,11 @@ router.post("/login", async (req, res) => {
       },
     });
 
-    if (!user || !user.password)
+    const storedPassword = user?.password || user?.passwordHash;
+    if (!user || !storedPassword)
       return res.status(401).json({ error: "Invalid credentials" });
 
-    const match = await bcrypt.compare(password, user.password as any);
+    const match = await bcrypt.compare(password, storedPassword as any);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
     const token = createToken(user);
@@ -180,6 +185,9 @@ router.post("/login", async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
+    if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     res.status(500).json({ error: "Internal error" });
   }
 });
@@ -196,6 +204,9 @@ router.get("/me", authMiddleware, async (req: any, res) => {
     res.json({ user: user ? sanitizeUser(user) : null });
   } catch (error) {
     console.error("ME ERROR:", error);
+    if (handleDatabaseFallback(req, res, error)) {
+      return;
+    }
     res.status(500).json({ error: "Internal error" });
   }
 });
