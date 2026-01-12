@@ -50,13 +50,23 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false); 
   const [likeCount, setLikeCount] = useState(currentEventState.likes || 0);
+  const locationDisplay =
+    currentEventState.location ||
+    (currentEventState.locations && currentEventState.locations.length > 0
+      ? currentEventState.locations.join(', ')
+      : '');
+  const guestsDisplay =
+    currentEventState.guests ||
+    (currentEventState.speakers && currentEventState.speakers.length > 0
+      ? currentEventState.speakers.join(', ')
+      : '');
 
   const { translatedText: title, isLoading: isLoadingTitle } = useAITranslate(currentEventState.title, 'en');
   const { translatedText: description, isLoading: isLoadingDescription } = useAITranslate(currentEventState.description, 'en');
   const { translatedText: category, isLoading: isLoadingCategory } = useAITranslate(currentEventState.category, 'en');
-  const { translatedText: location, isLoading: isLoadingLocation } = useAITranslate(currentEventState.location, 'en');
+  const { translatedText: location, isLoading: isLoadingLocation } = useAITranslate(locationDisplay, 'en');
   const { translatedText: expectations, isLoading: isLoadingExpectations } = useAITranslate(currentEventState.expectations, 'en');
-  const { translatedText: guests, isLoading: isLoadingGuests } = useAITranslate(currentEventState.guests, 'en');
+  const { translatedText: guests, isLoading: isLoadingGuests } = useAITranslate(guestsDisplay, 'en');
 
 
   const handleLike = () => {
@@ -131,13 +141,13 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
             </h1>
             <div className="space-y-2 text-sm text-slate-600 mb-4">
               <p className="flex items-center"><CalendarIconOutline className="w-4 h-4 mr-2 text-slate-500" /> {formatDateADBS(currentEventState.date)} {currentEventState.time ? `at ${currentEventState.time}` : ''}</p>
-              {currentEventState.location && <p className="flex items-center"><LocationIconOutline className="w-4 h-4 mr-2 text-slate-500" /> {isLoadingLocation ? currentEventState.location : location}</p>}
+              {locationDisplay && <p className="flex items-center"><LocationIconOutline className="w-4 h-4 mr-2 text-slate-500" /> {isLoadingLocation ? locationDisplay : location}</p>}
             </div>
             <p className="text-slate-700 leading-relaxed mb-4 text-sm md:text-base">
               {isLoadingDescription ? currentEventState.description : description}
             </p>
             {currentEventState.expectations && <p className="text-sm text-slate-600 mb-2 flex items-start"><ExpectationsIconOutline className="w-4 h-4 mr-2 mt-0.5 text-purple-500 flex-shrink-0"/> <strong>Expect:</strong> <span className="ml-1">{isLoadingExpectations ? currentEventState.expectations : expectations}</span></p>}
-            {currentEventState.guests && <p className="text-sm text-slate-600 mb-2 flex items-start"><GuestsIconOutline className="w-4 h-4 mr-2 mt-0.5 text-purple-500 flex-shrink-0"/> <strong>Guests:</strong> <span className="ml-1">{isLoadingGuests ? currentEventState.guests : guests}</span></p>}
+            {guestsDisplay && <p className="text-sm text-slate-600 mb-2 flex items-start"><GuestsIconOutline className="w-4 h-4 mr-2 mt-0.5 text-purple-500 flex-shrink-0"/> <strong>Guests:</strong> <span className="ml-1">{isLoadingGuests ? guestsDisplay : guests}</span></p>}
             {currentEventState.isFeeRequired && <p className="text-sm text-slate-600 mb-2 flex items-start"><TicketIconOutline className="w-4 h-4 mr-2 mt-0.5 text-purple-500 flex-shrink-0"/> <strong>Fee:</strong> {currentEventState.feeAmount || 'Details in link'}</p>}
 
           </div>

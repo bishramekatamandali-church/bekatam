@@ -49,9 +49,23 @@ const EventsPage: React.FC = () => {
       const term = searchTerm.toLowerCase();
       const titleMatch = event.title.toLowerCase().includes(term);
       const locationMatch = event.location?.toLowerCase().includes(term) || false;
+      const locationsMatch = (event.locations || []).some((loc) => loc.toLowerCase().includes(term));
       const descriptionMatch = event.description.toLowerCase().includes(term);
       const guestsMatch = event.guests?.toLowerCase().includes(term) || false;
-      const searchMatch = titleMatch || locationMatch || descriptionMatch || guestsMatch;
+      const speakersMatch = (event.speakers || []).some((speaker) =>
+        speaker.toLowerCase().includes(term)
+      );
+      const conductedByMatch = (event.conductedBy || []).some((host) =>
+        host.toLowerCase().includes(term)
+      );
+      const searchMatch =
+        titleMatch ||
+        locationMatch ||
+        locationsMatch ||
+        descriptionMatch ||
+        guestsMatch ||
+        speakersMatch ||
+        conductedByMatch;
       return categoryMatch && searchMatch;
     });
 

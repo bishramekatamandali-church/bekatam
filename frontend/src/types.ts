@@ -32,6 +32,22 @@ export type SermonCategory = typeof sermonCategoriesList[number];
 export const eventCategoriesList = ["Community Outreach", "Conference", "Workshop", "Holiday Service", "Youth Event", "Worship Night", "Fellowship", "Special Meeting"] as const;
 export type EventCategory = typeof eventCategoriesList[number];
 
+export const eventTypeOptions = ["REGULAR", "SPECIAL"] as const;
+export type EventType = typeof eventTypeOptions[number];
+
+export const eventScheduleTypeList = [
+  "ONE_TIME",
+  "SATURDAY_SERVICE",
+  "WEDNESDAY_SERVICE",
+  "MONTHLY_15TH",
+  "FIRST_WEEKEND_LORDS_SUPPER",
+  "SECOND_WEEKEND_BIBLE_STUDY",
+  "FOURTH_WEEKEND_LEADERS_MEETING",
+  "LAST_SUNDAY_PRAYER_TEAM_VISIT",
+  "OTHER",
+] as const;
+export type EventScheduleType = typeof eventScheduleTypeList[number];
+
 export const ministryCategoriesList = ["Youth & Young Adults", "Children & Family", "Men's Ministry", "Women's Ministry", "Worship Team", "Outreach & Missions", "Pastoral Care"] as const;
 export type MinistryCategory = typeof ministryCategoriesList[number];
 
@@ -138,7 +154,14 @@ export interface Comment {
 }
 
 export interface EventItem extends FeatureInfo {
+  eventType?: EventType;
+  scheduleType?: EventScheduleType;
+  scheduleNotes?: string;
+  locations?: string[];
+  conductedBy?: string[];
+  speakers?: string[];
   location?: string;
+  mapEmbedUrl?: string;
   time?: string; // HH:MM format
   category?: EventCategory;
   expectations?: string;
@@ -916,6 +939,12 @@ export interface SermonFormData extends BaseContentFormData {
 }
 
 export interface EventFormData extends BaseContentFormData {
+  eventType?: EventType;
+  scheduleType?: EventScheduleType;
+  scheduleNotes?: string;
+  locations?: string[];
+  conductedBy?: string[];
+  speakers?: string[];
   location?: string;
   mapEmbedUrl?: string;
   time?: string; 

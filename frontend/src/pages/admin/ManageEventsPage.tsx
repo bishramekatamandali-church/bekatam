@@ -4,7 +4,7 @@ import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
-import { EventItem, EventFormData, GenericContentFormData } from '../../types';
+import { EventItem, EventFormData,EventType, GenericContentFormData } from '../../types';
 import { formatDateADBS } from '../../dateConverter'; 
 
 const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -24,13 +24,15 @@ export const ManageEventsPage: React.FC = () => {
   const { events, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
-  
+  const [eventFormVariant, setEventFormVariant] = useState<EventType>('REGULAR');
+
   const sortedEvents = React.useMemo(() =>
     [...events].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
   [events]);
 
-  const handleOpenModal = (event?: EventItem) => {
+  const handleOpenModal = (event?: EventItem, variant: EventType = 'REGULAR') => {
     setEditingEvent(event || null);
+    setEventFormVariant(event?.eventType || variant);
     setIsModalOpen(true);
   };
 
@@ -58,9 +60,14 @@ export const ManageEventsPage: React.FC = () => {
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Manage Events</h1>
-        <Button onClick={() => handleOpenModal()} variant="primary" size="sm">
-          <PlusIcon className="mr-1.5" /> Add Event
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => handleOpenModal(undefined, 'REGULAR')} variant="primary" size="sm">
+            <PlusIcon className="mr-1.5" /> Add Regular Event
+          </Button>
+          <Button onClick={() => handleOpenModal(undefined, 'SPECIAL')} variant="outline" size="sm">
+            <PlusIcon className="mr-1.5" /> Add Special Event
+          </Button>
+        </div>
       </div>
 
       {loadingContent && <p className="text-gray-500">Loading events...</p>}
@@ -97,7 +104,7 @@ export const ManageEventsPage: React.FC = () => {
                 </span>
               </div>
               <div className="space-x-2">
-                <Button variant="outline" size="sm" onClick={() => handleOpenModal(event)}>Edit</Button>
+                <Button variant="outline" size="sm" onClick={() => handleOpenModal(event, event.eventType || 'REGULAR')}>Edit</Button>
                 <Button variant="secondary" size="sm" onClick={() => handleDelete(event.id)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
               </div>
             </CardFooter>
@@ -113,6 +120,7 @@ export const ManageEventsPage: React.FC = () => {
           contentType="event"
           initialData={editingEvent}
           isLoading={loadingContent}
+          eventFormVariant={eventFormVariant}
         />
       )}
     </div>

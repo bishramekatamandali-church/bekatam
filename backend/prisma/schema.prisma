@@ -269,7 +269,13 @@ model eventitem {
   linkPath          String
   category          eventitem_category?
   date              DateTime?
-  postedByAminId   String?
+  eventType         eventitem_type       @default(REGULAR)
+  scheduleType      eventitem_schedule_type?
+  scheduleNotes     String?             @db.Text
+  locations         Json?
+  conductedBy       Json?
+  speakers          Json?
+  postedByAdminId   String?
   postedByAdminName String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
@@ -288,6 +294,23 @@ model eventitem {
   audioUrl          String?             @db.Text
   likes             Int                 @default(0)
   comment           comment[]
+}
+
+enum eventitem_type {
+  REGULAR
+  SPECIAL
+}
+
+enum eventitem_schedule_type {
+  ONE_TIME
+  SATURDAY_SERVICE
+  WEDNESDAY_SERVICE
+  MONTHLY_15TH
+  FIRST_WEEKEND_LORDS_SUPPER
+  SECOND_WEEKEND_BIBLE_STUDY
+  FOURTH_WEEKEND_LEADERS_MEETING
+  LAST_SUNDAY_PRAYER_TEAM_VISIT
+  OTHER
 }
 
 model expenserecord {

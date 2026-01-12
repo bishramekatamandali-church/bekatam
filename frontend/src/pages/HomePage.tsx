@@ -11,7 +11,7 @@ import AuthModal from '../components/auth/AuthModal';
 
 // Helper to get a consistent, sortable date from any content item
 const getSortDate = (item: any): Date => {
-  const dateStr = item.date || item.lastPublishedAt || item.submittedAt || item.uploadDate || item.createdAt || item.expenseDate || item.collectionDate || item.meetingDate || item.decisionDate;
+  const dateStr = item.date || item.lastPublishedAt || item.submittedAt || item.uploadDate || item.updatedAt || item.createdAt || item.expenseDate || item.collectionDate || item.meetingDate || item.decisionDate;
   return dateStr ? new Date(dateStr) : new Date(0);
 };
 
@@ -21,6 +21,8 @@ const HomePage: React.FC = () => {
     events,
     newsItems,
     blogPosts,
+    prayerRequests,
+    testimonials,
     loadingContent,
   } = useContent();
 
@@ -40,15 +42,21 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const mapToFeatureInfo = (item: ContentItem, typeKey: string): FeatureInfo => ({
-    id: (item as any).id,
-    title: (item as any).title || (item as any).name || 'Untitled',
-    description: (item as any).description || (item as any).summary || (item as any).content || (item as any).contentText || (item as any).requestText || 'No description available.',
-    imageUrl: (item as any).imageUrl || ((item as any).mediaType === 'image' ? (item as any).url : undefined),
-    linkPath: (item as any).linkPath || `/${typeKey}/${(item as any).id}`,
-    category: (item as any).category || typeKey,
-    date: getSortDate(item).toISOString(),
-  });
+  const mapToFeatureInfo = (item: ContentItem, typeKey: string): FeatureInfo => {
+    const id = (item as any).id;
+    const rawLinkPath = (item as any).linkPath || `/${typeKey}/${id}`;
+    const linkPath = typeKey === 'testimonials' ? '/prayer-requests' : rawLinkPath;
+
+    return ({
+      id,
+      title: (item as any).title || (item as any).name || 'Untitled',
+      description: (item as any).description || (item as any).summary || (item as any).content || (item as any).contentText || (item as any).requestText || 'No description available.',
+      imageUrl: (item as any).imageUrl || ((item as any).mediaType === 'image' ? (item as any).url : undefined),
+      linkPath,
+      category: (item as any).category || typeKey,
+      date: getSortDate(item).toISOString(),
+    });
+  };
 
   const sortedEvents = useMemo(
     () => [...events].filter(Boolean).sort((a, b) => getSortDate(b).getTime() - getSortDate(a).getTime()),
@@ -65,6 +73,18 @@ const HomePage: React.FC = () => {
   const sortedNews = useMemo(
     () => [...newsItems].filter(Boolean).sort((a, b) => getSortDate(b).getTime() - getSortDate(a).getTime()),
     [newsItems]
+  );
+  const sortedPrayerRequests = useMemo(
+    () => [...prayerRequests]
+      .filter((item) => item && (item.visibility === 'public' || item.visibility === 'anonymous'))
+      .sort((a, b) => getSortDate(b).getTime() - getSortDate(a).getTime()),
+    [prayerRequests]
+  );
+  const sortedTestimonials = useMemo(
+    () => [...testimonials]
+      .filter((item) => item && item.visibility === 'public')
+      .sort((a, b) => getSortDate(b).getTime() - getSortDate(a).getTime()),
+    [testimonials]
   );
 
   const NEWS_BATCH_SIZE = 6;
@@ -223,6 +243,58 @@ const HomePage: React.FC = () => {
                 ),
               },
               {
+                key: 'prayers',
+                items: sortedPrayerRequests,
+                render: () => (
+                  <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <h2 className="text-xl font-bold text-slate-900">Prayer Requests</h2>
+                        <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Community</span>
+                      </div>
+                      <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
+                      {sortedPrayerRequests.map((item) => (
+                        <div key={(item as any).id} className="snap-start">
+                          {renderMediaCard(item, 'prayer-requests', {
+                            containerClass: 'w-48 sm:w-52 md:w-56',
+                            imageClass: 'h-28',
+                            titleClass: 'text-sm sm:text-base',
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ),
+              },
+              {
+                key: 'testimonials',
+                items: sortedTestimonials,
+                render: () => (
+                  <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <h2 className="text-xl font-bold text-slate-900">Testimonials</h2>
+                        <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Stories</span>
+                      </div>
+                      <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
+                      {sortedTestimonials.map((item) => (
+                        <div key={(item as any).id} className="snap-start">
+                          {renderMediaCard(item, 'testimonials', {
+                            containerClass: 'w-52 sm:w-56',
+                            imageClass: 'h-32',
+                            titleClass: 'text-sm sm:text-base',
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ),
+              },
+              {
                 key: 'news',
                 items: sortedNews,
                 render: () => (
@@ -266,14 +338,29 @@ const HomePage: React.FC = () => {
               },
             ]
               .filter((section) => section.items.length > 0)
-              .sort((a, b) => getSortDate(b.items[0]).getTime() - getSortDate(a.items[0]).getTime())
+              .map((section, index) => ({
+                ...section,
+                sortDate: Math.max(...section.items.map((item) => getSortDate(item).getTime())),
+                fallbackIndex: index,
+              }))
+              .sort((a, b) => {
+                const dateDiff = b.sortDate - a.sortDate;
+                if (dateDiff !== 0) return dateDiff;
+                return a.fallbackIndex - b.fallbackIndex;
+              })
               .map((section) => (
                 <React.Fragment key={section.key}>{section.render()}</React.Fragment>
               ))}
           </div>
         )}
 
-        {!loadingContent && sortedEvents.length === 0 && sortedSermons.length === 0 && sortedBlogs.length === 0 && sortedNews.length === 0 && (
+        {!loadingContent
+          && sortedEvents.length === 0
+          && sortedSermons.length === 0
+          && sortedBlogs.length === 0
+          && sortedPrayerRequests.length === 0
+          && sortedTestimonials.length === 0
+          && sortedNews.length === 0 && (
           <p className="text-center text-slate-500 py-10">No recent updates to show.</p>
         )}
 

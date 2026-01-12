@@ -30,6 +30,8 @@ import {
   DirectMediaItem,
   sermonCategoriesList,
   eventCategoriesList,
+  eventScheduleTypeList,
+  EventType,
   ministryCategoriesList,
   blogPostCategoriesList,
   newsCategoriesList,
@@ -130,16 +132,26 @@ const UnifiedMediaInputs: React.FC<{
 
   const unifiedMediaInputRef = useRef<HTMLInputElement>(null);
 
-  const handleUnifiedMediaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUnifiedMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    const setPreview = (fieldName: string) => {
+      if (file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+        const previewUrl = URL.createObjectURL(file);
+        setFormData((prev) => ({ ...prev, [fieldName]: previewUrl }));
+      }
+    };
 
     if (file.type.startsWith('image/')) {
-      handleCloudinaryUpload(file, 'imageUrl');
+      setPreview('imageUrl');
+      await handleCloudinaryUpload(file, 'imageUrl');
     } else if (file.type.startsWith('video/')) {
-      handleCloudinaryUpload(file, 'videoUrl');
+      setPreview('videoUrl');
+      await handleCloudinaryUpload(file, 'videoUrl');
     } else if (file.type.startsWith('audio/')) {
-      handleCloudinaryUpload(file, 'audioUrl');
+      setPreview('audioUrl');
+      await handleCloudinaryUpload(file, 'audioUrl');
     } else {
       alert('Unsupported file type. Please upload an image, video, or audio file.');
     }
@@ -250,6 +262,12 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     date: new Date().toISOString().split('T')[0],
     category: eventCategoriesList[0],
+    eventType: 'REGULAR',
+    scheduleType: 'ONE_TIME',
+    scheduleNotes: '',
+    locations: [],
+    conductedBy: [],
+    speakers: [],
     location: '',
     mapEmbedUrl: '',
     time: '10:00',
@@ -488,7 +506,9 @@ interface ContentFormModalProps {
   initialData?: ContentItem | null;
   isLoading?: boolean;
   isCoreSectionEditing?: boolean;
-  enableAutoNarration: true,
+  createDefaults?: Partial<GenericContentFormData>;
+  eventFormVariant?: EventType;
+  enableAutoNarration?: boolean;
 }
 
 const ContentFormModal: React.FC<ContentFormModalProps> = ({
@@ -500,6 +520,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   isLoading = false,
   isCoreSectionEditing = false,
   createDefaults,
+  eventFormVariant,
 }) => {
   const [formData, setFormData] = useState<GenericContentFormData>(
     defaultFormValues[contentType]
@@ -601,13 +622,30 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       ) {
         (dataToSet as FellowshipRosterFormData).responsibilities = [];
       }
+      
+      if (contentType === 'event') {
+        const eventData = dataToSet as EventFormData;
+        const fallbackEventType = eventData.eventType || eventFormVariant || 'REGULAR';
+        eventData.eventType = fallbackEventType;
+        eventData.scheduleType = eventData.scheduleType || 'ONE_TIME';
+        eventData.scheduleNotes = eventData.scheduleNotes || '';
+        eventData.locations = Array.isArray(eventData.locations)
+          ? eventData.locations
+          : eventData.location
+          ? [eventData.location]
+          : [];
+        eventData.conductedBy = Array.isArray(eventData.conductedBy)
+          ? eventData.conductedBy
+          : [];
+        eventData.speakers = Array.isArray(eventData.speakers) ? eventData.speakers : [];
+      }
 
       setFormData(dataToSet);
       setBsDateDisplays(newBsDateDisplays);
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType, createDefaults]);
+  }, [isOpen, initialData, contentType, createDefaults, eventFormVariant]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
@@ -921,6 +959,45 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       decisionPoints: updatedPoints || [],
     }));
   };
+ 
+ const updateEventStringArrayField = (
+    field: 'locations' | 'conductedBy' | 'speakers',
+    index: number,
+    value: string
+  ) => {
+    const current = Array.isArray((formData as EventFormData)[field])
+      ? ([...(formData as EventFormData)[field]!] as string[])
+      : [];
+    current[index] = value;
+    setFormData((prev) => ({
+      ...(prev as EventFormData),
+      [field]: current,
+    }));
+  };
+
+  const addEventStringArrayField = (field: 'locations' | 'conductedBy' | 'speakers') => {
+    const current = Array.isArray((formData as EventFormData)[field])
+      ? ([...(formData as EventFormData)[field]!] as string[])
+      : [];
+    setFormData((prev) => ({
+      ...(prev as EventFormData),
+      [field]: [...current, ''],
+    }));
+  };
+
+  const removeEventStringArrayField = (
+    field: 'locations' | 'conductedBy' | 'speakers',
+    index: number
+  ) => {
+    const current = Array.isArray((formData as EventFormData)[field])
+      ? ([...(formData as EventFormData)[field]!] as string[])
+      : [];
+    const updated = current.filter((_, i) => i !== index);
+    setFormData((prev) => ({
+      ...(prev as EventFormData),
+      [field]: updated,
+    }));
+  };
 
   // Simplified local "AI" helper that just suggests a name + alt text from URL (no network, no env)
   const handleGenerateAdCopy = () => {
@@ -983,6 +1060,17 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         ...d,
         amount: Number(d.amount) || 0,
       }));
+    }
+
+  if (contentType === 'event') {
+      const eventData = dataToSubmit as EventFormData;
+      eventData.eventType = eventData.eventType || eventFormVariant || 'REGULAR';
+      eventData.locations = (eventData.locations || []).map((entry) => entry.trim()).filter(Boolean);
+      eventData.conductedBy = (eventData.conductedBy || []).map((entry) => entry.trim()).filter(Boolean);
+      eventData.speakers = (eventData.speakers || []).map((entry) => entry.trim()).filter(Boolean);
+      if (!eventData.location && eventData.locations.length > 0) {
+        eventData.location = eventData.locations[0];
+      }
     }
 
     onSubmit(dataToSubmit);
@@ -1149,10 +1237,69 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
       case 'event': {
         const data = formData as EventFormData;
+        const resolvedEventType = data.eventType || eventFormVariant || 'REGULAR';
+        const isRegularEvent = resolvedEventType === 'REGULAR';
+
+        const scheduleTypeLabels: Record<string, string> = {
+          ONE_TIME: 'One-time (single date)',
+          SATURDAY_SERVICE: 'Saturday Service',
+          WEDNESDAY_SERVICE: 'Wednesday Service',
+          MONTHLY_15TH: '15th Day of Each Month',
+          FIRST_WEEKEND_LORDS_SUPPER: "First Weekend: Lord's Supper",
+          SECOND_WEEKEND_BIBLE_STUDY: 'Second Weekend: Bible Study',
+          FOURTH_WEEKEND_LEADERS_MEETING: 'Fourth Weekend: Leaders Meeting',
+          LAST_SUNDAY_PRAYER_TEAM_VISIT: 'Last Sunday: Prayer Team Visit',
+          OTHER: 'Other / Custom',
+        };
+
+        const renderStringListField = (
+          label: string,
+          field: 'locations' | 'conductedBy' | 'speakers',
+          placeholder: string
+        ) => {
+          const values = Array.isArray(data[field]) && data[field]!.length > 0 ? data[field]! : [''];
+          return (
+            <FullWidthField>
+              <label className={labelClasses}>{label}</label>
+              <div className="space-y-2">
+                {values.map((value, index) => (
+                  <div key={`${field}-${index}`} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(event) => updateEventStringArrayField(field, index, event.target.value)}
+                      placeholder={placeholder}
+                      className={inputClasses}
+                    />
+                    {values.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeEventStringArrayField(field, index)}
+                        className="text-red-500 hover:text-red-600"
+                        aria-label={`Remove ${label}`}
+                      >
+                        <XCircleIcon className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addEventStringArrayField(field)}
+                  className="text-xs"
+                >
+                  Add another
+                </Button>
+              </div>
+            </FullWidthField>
+          );
+        };
 
         return (
           <>
-            <FormSection title="Basic Info">
+            <FormSection title={isRegularEvent ? 'Regular Event Form' : 'Special Event Form'}>
               <FullWidthField>
                 <label htmlFor="title" className={labelClasses}>
                   Event Title
@@ -1181,6 +1328,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   }
                 />
               </FullWidthField>
+              
+              <div>
+                <label htmlFor="eventType" className={labelClasses}>
+                  Event Type
+                </label>
+                <input
+                  type="text"
+                  name="eventType"
+                  value={resolvedEventType}
+                  readOnly
+                  className={`${inputClasses} bg-slate-100 dark:bg-slate-800`}
+                />
+              </div>
 
               <div>
                 <label htmlFor="category" className={labelClasses}>
@@ -1200,6 +1360,42 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
             </FormSection>
+             
+            {isRegularEvent && (
+              <FormSection title="Schedule Pattern">
+                <FullWidthField>
+                  <label htmlFor="scheduleType" className={labelClasses}>
+                    Schedule Type
+                  </label>
+                  <select
+                    name="scheduleType"
+                    value={data.scheduleType || 'ONE_TIME'}
+                    onChange={handleChange}
+                    className={inputClasses}
+                  >
+                    {eventScheduleTypeList.map((type) => (
+                      <option key={type} value={type}>
+                        {scheduleTypeLabels[type]}
+                      </option>
+                    ))}
+                  </select>
+                </FullWidthField>
+
+                <FullWidthField>
+                  <label htmlFor="scheduleNotes" className={labelClasses}>
+                    Recurrence Notes (optional)
+                  </label>
+                  <textarea
+                    name="scheduleNotes"
+                    value={data.scheduleNotes || ''}
+                    onChange={handleChange}
+                    rows={2}
+                    className={inputClasses}
+                    placeholder="Add any additional recurrence details or notes."
+                  />
+                </FullWidthField>
+              </FormSection>
+            )}
 
             <FormSection title="Date, Time & Location">
               {renderDateFieldWithBSPicker('date', 'Event Date')}
@@ -1217,20 +1413,24 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   className={inputClasses}
                 />
               </div>
-
+                
+              {isRegularEvent ? (
+                renderStringListField('Locations', 'locations', 'Add a location')
+              ) : (
+                <FullWidthField>
+                  <label htmlFor="location" className={labelClasses}>
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={data.location || ''}
+                    onChange={handleChange}
+                    className={inputClasses}
+                  />
+                </FullWidthField>
+              )}
               <FullWidthField>
-                <label htmlFor="location" className={labelClasses}>
-                  Location
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={data.location || ''}
-                  onChange={handleChange}
-                  className={inputClasses}
-                />
-              </FullWidthField>
-               <FullWidthField>
                 <label htmlFor="mapEmbedUrl" className={labelClasses}>
                   Map Embed / Share Link (optional)
                 </label>
@@ -1245,78 +1445,83 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </FullWidthField>
             </FormSection>
 
-            <FormSection title="Event Details">
-              <FullWidthField>
-                <label htmlFor="expectations" className={labelClasses}>
-                  What to Expect
-                </label>
-                <textarea
-                  name="expectations"
-                  value={data.expectations || ''}
-                  onChange={handleChange}
-                  rows={2}
-                  className={inputClasses}
-                />
-              </FullWidthField>
+            {isRegularEvent && (
+              <FormSection title="Event Details">
+                {renderStringListField('Conducted By', 'conductedBy', 'Add a host/team')}
+                {renderStringListField('Speakers', 'speakers', 'Add a speaker')}
+             
+            <FullWidthField>
+                  <label htmlFor="expectations" className={labelClasses}>
+                    What to Expect
+                  </label>
+                  <textarea
+                    name="expectations"
+                    value={data.expectations || ''}
+                    onChange={handleChange}
+                    rows={2}
+                    className={inputClasses}
+                  />
+                </FullWidthField>
 
-              <FullWidthField>
-                <label htmlFor="guests" className={labelClasses}>
-                  Special Guests
-                </label>
-                <input
-                  type="text"
-                  name="guests"
-                  value={data.guests || ''}
-                  onChange={handleChange}
-                  className={inputClasses}
-                />
-              </FullWidthField>
-
-              <div>
-                <label htmlFor="capacity" className={labelClasses}>
-                  Capacity (0 for unlimited)
-                </label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={data.capacity || 0}
-                  onChange={handleChange}
-                  className={inputClasses}
-                />
-              </div>
-
-              <div className="flex items-center mt-6">
-                <input
-                  type="checkbox"
-                  id="isFeeRequired"
-                  name="isFeeRequired"
-                  checked={data.isFeeRequired || false}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
-                />
-                <label
-                  htmlFor="isFeeRequired"
-                  className="ml-2 text-sm font-medium dark:text-slate-300"
-                >
-                  Fee Required?
-                </label>
-              </div>
-
-              {data.isFeeRequired && (
-                <FullWidthField>
-                  <label htmlFor="feeAmount" className={labelClasses}>
-                    Fee Amount/Details
+               <FullWidthField>
+                  <label htmlFor="guests" className={labelClasses}>
+                    Special Guests (optional)
                   </label>
                   <input
                     type="text"
-                    name="feeAmount"
-                    value={data.feeAmount || ''}
+                  name="guests"
+                    value={data.guests || ''}
                     onChange={handleChange}
                     className={inputClasses}
                   />
                 </FullWidthField>
-              )}
-            </FormSection>
+
+                <div>
+                  <label htmlFor="capacity" className={labelClasses}>
+                    Capacity (0 for unlimited)
+                  </label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    value={data.capacity || 0}
+                    onChange={handleChange}
+                    className={inputClasses}
+                  />
+                </div>
+
+                <div className="flex items-center mt-6">
+                  <input
+                    type="checkbox"
+                    id="isFeeRequired"
+                    name="isFeeRequired"
+                    checked={data.isFeeRequired || false}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                  />
+                  <label
+                    htmlFor="isFeeRequired"
+                    className="ml-2 text-sm font-medium dark:text-slate-300"
+                  >
+                    Fee Required?
+                  </label>
+                </div>
+
+                {data.isFeeRequired && (
+                  <FullWidthField>
+                    <label htmlFor="feeAmount" className={labelClasses}>
+                      Fee Amount/Details
+                    </label>
+                    <input
+                      type="text"
+                      name="feeAmount"
+                      value={data.feeAmount || ''}
+                      onChange={handleChange}
+                      className={inputClasses}
+                    />
+                  </FullWidthField>
+                )}
+              </FormSection>
+            )}
 
             <FormSection title="Contact & Registration">
               <div>

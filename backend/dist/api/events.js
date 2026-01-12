@@ -11,6 +11,18 @@ const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
+const normalizeStringArray = (value) => {
+    if (Array.isArray(value)) {
+        return value.map(String).map((entry) => entry.trim()).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean);
+    }
+    return [];
+};
 // Helper to shape data for frontend, assuming frontend types.ts expects 'comments' array
 const shapeEventForFrontend = (event) => {
     return {
@@ -20,6 +32,9 @@ const shapeEventForFrontend = (event) => {
         date: event.date ? new Date(event.date).toISOString() : null,
         createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : null,
         updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : null,
+        locations: Array.isArray(event.locations) ? event.locations : [],
+        conductedBy: Array.isArray(event.conductedBy) ? event.conductedBy : [],
+        speakers: Array.isArray(event.speakers) ? event.speakers : [],
     };
 };
 // GET all events
@@ -62,13 +77,25 @@ router.get('/:id', async (req, res) => {
 // POST a new event
 router.post('/', async (req, res) => {
     // Note: In a real app, validate req.body against a schema
-    const { title, description, imageUrl, linkPath: requestLinkPath, category, date, location, time, expectations, guests, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, } = req.body;
+    const { title, description, imageUrl, linkPath: requestLinkPath, category, date, location, time, expectations, guests, eventType, scheduleType, scheduleNotes, locations, conductedBy, speakers, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, postedByAdminId, postedByAdminName, } = req.body;
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto_1.default.randomUUID();
     const linkPath = requestLinkPath || `/events/${id}`;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.eventitem_category);
+    const normalizedEventType = (0, enumNormalization_1.normalizeEnumValue)(eventType || 'REGULAR', client_1.eventitem_type);
+    const normalizedScheduleType = scheduleType ? (0, enumNormalization_1.normalizeEnumValue)(scheduleType, client_1.eventitem_schedule_type) : undefined;
+    const normalizedLocations = normalizeStringArray(locations);
+    const normalizedConductedBy = normalizeStringArray(conductedBy);
+    const normalizedSpeakers = normalizeStringArray(speakers);
+    const primaryLocation = location || normalizedLocations[0] || null;
     if (category && !normalizedCategory) {
         return res.status(400).json({ error: 'Invalid event category.' });
+    }
+    if (eventType && !normalizedEventType) {
+        return res.status(400).json({ error: 'Invalid event type.' });
+    }
+    if (scheduleType && !normalizedScheduleType) {
+        return res.status(400).json({ error: 'Invalid event schedule type.' });
     }
     try {
         const newEvent = await db_1.prisma.eventitem.create({
@@ -80,10 +107,16 @@ router.post('/', async (req, res) => {
                 linkPath,
                 category: normalizedCategory,
                 date: eventDate,
-                location,
+                location: primaryLocation,
                 time,
                 expectations,
                 guests,
+                eventType: normalizedEventType,
+                scheduleType: normalizedScheduleType,
+                scheduleNotes,
+                locations: normalizedLocations.length ? normalizedLocations : undefined,
+                conductedBy: normalizedConductedBy.length ? normalizedConductedBy : undefined,
+                speakers: normalizedSpeakers.length ? normalizedSpeakers : undefined,
                 contactPerson,
                 contactEmail,
                 contactPhone,
@@ -93,6 +126,8 @@ router.post('/', async (req, res) => {
                 videoUrl,
                 audioUrl,
                 updatedAt: new Date(),
+                postedByAdminId,
+                postedByAdminName,
                 // Ensure optional numeric fields are handled
                 capacity: capacity ? parseInt(capacity, 10) : undefined,
             }
@@ -111,11 +146,23 @@ router.post('/', async (req, res) => {
 // PUT (update) an event
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, imageUrl, linkPath, category, date, location, time, expectations, guests, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, } = req.body;
+    const { title, description, imageUrl, linkPath, category, date, location, time, expectations, guests, eventType, scheduleType, scheduleNotes, locations, conductedBy, speakers, contactPerson, contactEmail, contactPhone, registrationLink, capacity, isFeeRequired, feeAmount, videoUrl, audioUrl, postedByAdminId, postedByAdminName, } = req.body;
     const eventDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.eventitem_category);
+    const normalizedEventType = eventType ? (0, enumNormalization_1.normalizeEnumValue)(eventType, client_1.eventitem_type) : undefined;
+    const normalizedScheduleType = scheduleType ? (0, enumNormalization_1.normalizeEnumValue)(scheduleType, client_1.eventitem_schedule_type) : undefined;
+    const normalizedLocations = normalizeStringArray(locations);
+    const normalizedConductedBy = normalizeStringArray(conductedBy);
+    const normalizedSpeakers = normalizeStringArray(speakers);
+    const primaryLocation = location !== undefined ? location || normalizedLocations[0] || null : normalizedLocations[0];
     if (category && !normalizedCategory) {
         return res.status(400).json({ error: 'Invalid event category.' });
+    }
+    if (eventType && !normalizedEventType) {
+        return res.status(400).json({ error: 'Invalid event type.' });
+    }
+    if (scheduleType && !normalizedScheduleType) {
+        return res.status(400).json({ error: 'Invalid event schedule type.' });
     }
     try {
         const updatedEvent = await db_1.prisma.eventitem.update({
@@ -127,10 +174,16 @@ router.put('/:id', async (req, res) => {
                 linkPath,
                 category: normalizedCategory,
                 date: eventDate,
-                location,
+                location: primaryLocation,
                 time,
                 expectations,
                 guests,
+                eventType: normalizedEventType,
+                scheduleType: normalizedScheduleType,
+                scheduleNotes,
+                locations: normalizedLocations.length ? normalizedLocations : undefined,
+                conductedBy: normalizedConductedBy.length ? normalizedConductedBy : undefined,
+                speakers: normalizedSpeakers.length ? normalizedSpeakers : undefined,
                 contactPerson,
                 contactEmail,
                 contactPhone,
@@ -142,6 +195,8 @@ router.put('/:id', async (req, res) => {
                 // Ensure optional numeric fields are handled
                 capacity: capacity ? parseInt(capacity, 10) : undefined,
                 updatedAt: new Date(),
+                postedByAdminId,
+                postedByAdminName,
             }
         });
         (0, contentUpdates_1.publishContentUpdate)({ type: 'event', action: 'updated', id: updatedEvent.id, timestamp: new Date().toISOString() });

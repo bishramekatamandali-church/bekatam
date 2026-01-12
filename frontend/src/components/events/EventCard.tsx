@@ -78,6 +78,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
   const [currentEventData, setCurrentEventData] = useState(event);
   const [likeCount, setLikeCount] = useState(currentEventData.likes || 0);
   const [isLiked, setIsLiked] = useState(false); 
+  const locationDisplay =
+    currentEventData.location ||
+    (currentEventData.locations && currentEventData.locations.length > 0
+      ? currentEventData.locations.join(', ')
+      : '');
 
   const handleLike = () => {
     if (!isAuthenticated) {
@@ -169,10 +174,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
             <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
             <span>{formatDateADBS(currentEventData.date)} {currentEventData.time ? `at ${currentEventData.time}`: ''}</span>
           </div>
-          {currentEventData.location && (
+          {locationDisplay && (
             <div className="flex items-center text-sm text-slate-500 mb-3">
               <MapPinIcon className="mr-2 text-slate-400 flex-shrink-0" />
-              <span>{currentEventData.location}</span>
+              <span>{locationDisplay}</span>
             </div>
           )}
           <p className={`text-sm text-slate-600 leading-relaxed line-clamp-3`}>

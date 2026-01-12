@@ -353,6 +353,7 @@ useEffect(() => {
       }
       case 'event': {
         const formData = data as EventFormData;
+        const normalizedLocations = (formData.locations || []).filter(Boolean);
         const newEvent: EventItem = {
           id: newItemId,
           title: formData.title,
@@ -361,7 +362,13 @@ useEffect(() => {
           linkPath: formData.linkPath || `/events/${newItemId}`,
           category: formData.category,
           date: formData.date,
-          location: formData.location,
+          eventType: formData.eventType || 'REGULAR',
+          scheduleType: formData.scheduleType,
+          scheduleNotes: formData.scheduleNotes,
+          locations: normalizedLocations,
+          conductedBy: (formData.conductedBy || []).filter(Boolean),
+          speakers: (formData.speakers || []).filter(Boolean),
+          location: formData.location || normalizedLocations[0],
           mapEmbedUrl: formData.mapEmbedUrl,
           time: formData.time,
           expectations: formData.expectations,

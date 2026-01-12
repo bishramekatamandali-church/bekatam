@@ -105,6 +105,52 @@ const SingleEventPage: React.FC = () => {
   const currentCommentCount = event.comments?.length || 0;
   const youtubeEmbedUrl = getYouTubeEmbedUrl(event.videoUrl);
   const hasVideo = !!youtubeEmbedUrl || !!event.videoUrl;
+  const resolvedEventType = event.eventType || 'REGULAR';
+  const locationDisplay =
+    event.location || (event.locations && event.locations.length > 0 ? event.locations.join(', ') : '');
+  const conductedByDisplay =
+    event.conductedBy && event.conductedBy.length > 0 ? event.conductedBy.join(', ') : '';
+  const speakersDisplay =
+    event.speakers && event.speakers.length > 0 ? event.speakers.join(', ') : '';
+  const scheduleTypeLabels: Record<string, string> = {
+    ONE_TIME: 'One-time (single date)',
+    SATURDAY_SERVICE: 'Saturday Service',
+    WEDNESDAY_SERVICE: 'Wednesday Service',
+    MONTHLY_15TH: '15th Day of Each Month',
+    FIRST_WEEKEND_LORDS_SUPPER: "First Weekend: Lord's Supper",
+    SECOND_WEEKEND_BIBLE_STUDY: 'Second Weekend: Bible Study',
+    FOURTH_WEEKEND_LEADERS_MEETING: 'Fourth Weekend: Leaders Meeting',
+    LAST_SUNDAY_PRAYER_TEAM_VISIT: 'Last Sunday: Prayer Team Visit',
+    OTHER: 'Other / Custom',
+  };
+  const scheduleTypeLabel = event.scheduleType
+    ? scheduleTypeLabels[event.scheduleType] || event.scheduleType
+    : '';
+
+  const renderDetailRow = (
+    label: string,
+    value?: React.ReactNode,
+    iconElement?: React.ReactElement<{ className?: string }>
+  ) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
+    const iconWithClass = iconElement
+      ? React.cloneElement(iconElement, {
+          className: 'w-5 h-5 mr-2 text-slate-400 dark:text-slate-500 flex-shrink-0',
+        })
+      : null;
+    return (
+      <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 items-start">
+        <dt className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center">
+          {iconWithClass}
+          <span>{label}</span>
+        </dt>
+        <dd className="mt-1 text-sm text-slate-900 dark:text-slate-100 sm:mt-0 sm:col-span-2 whitespace-pre-line break-words">
+          {value}
+        </dd>
+      </div>
+    );
+  };
 
 
   return (
@@ -117,24 +163,98 @@ const SingleEventPage: React.FC = () => {
           <CardHeader className={`dark:border-slate-700 ${!(hasVideo || event.imageUrl) ? 'rounded-t-xl' : ''}`}>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-slate-100 mb-2">{event.title}</h1>
             <p className="text-md text-gray-500 dark:text-slate-400"><CalendarDaysIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{formatDateADBS(event.date)} {event.time ? `at ${event.time}` : ''}</p>
-            {event.location && (<p className="text-md text-gray-500 dark:text-slate-400 mt-1"><MapPinIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{event.location}</p>)}
+            {locationDisplay && (<p className="text-md text-gray-500 dark:text-slate-400 mt-1"><MapPinIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{locationDisplay}</p>)}
             {event.category && <p className="mt-2 text-sm font-medium uppercase tracking-wider text-purple-600 dark:text-purple-400">{event.category}</p>}
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {resolvedEventType === 'REGULAR' ? 'Regular Event' : 'Special Event'}
+            </p>
             {event.postedByAdminName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />Posted by: {event.postedByAdminName}</p>)}
           </CardHeader>
           <CardContent>
              {event.audioUrl && (<div className="mb-6"><h3 className="text-lg font-semibold text-gray-700 dark:text-slate-200 mb-2">Listen to Audio:</h3><audio controls src={event.audioUrl} className="w-full">Your browser does not support the audio element.</audio></div>)}
             <div className="prose dark:prose-invert max-w-none text-gray-700 dark:text-slate-300 leading-relaxed">
-              <h3 className="text-xl font-semibold text-gray-700 dark:text-slate-200 mb-2 border-b dark:border-slate-700 pb-2">Event Details</h3>
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-slate-200 mb-2 border-b dark:border-slate-700 pb-2">
+                {resolvedEventType === 'REGULAR' ? 'Event Overview' : 'Event Summary'}
+              </h3>
               <div dangerouslySetInnerHTML={{ __html: event.description }} />
             </div>
-            <div className="mt-6 space-y-3 text-sm">
-                {event.expectations && (<div className="flex items-start"><LightBulbIcon className="w-5 h-5 mr-2 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5"/><strong className="text-gray-700 dark:text-slate-200">What to Expect:</strong><span className="ml-1.5 text-gray-600 dark:text-slate-300">{event.expectations}</span></div>)}
-                {event.guests && (<div className="flex items-start"><UsersIconSolid className="w-5 h-5 mr-2 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5"/><strong className="text-gray-700 dark:text-slate-200">Special Guests:</strong><span className="ml-1.5 text-gray-600 dark:text-slate-300">{event.guests}</span></div>)}
-                {event.isFeeRequired && event.feeAmount && (<div className="flex items-start"><TicketIcon className="w-5 h-5 mr-2 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5"/><strong className="text-gray-700 dark:text-slate-200">Fee:</strong><span className="ml-1.5 text-gray-600 dark:text-slate-300">{event.feeAmount}</span></div>)}
-                {event.capacity && event.capacity > 0 && (<p className="text-gray-600 dark:text-slate-300">Capacity: {event.capacity} attendees</p>)}
-                 {(event.contactPerson || event.contactEmail || event.contactPhone) && (<div className="pt-3 mt-3 border-t dark:border-slate-700"><h4 className="font-semibold text-gray-700 dark:text-slate-200 mb-1">Contact Information:</h4>{event.contactPerson && <p className="text-gray-600 dark:text-slate-300">Person: {event.contactPerson}</p>}{event.contactEmail && <p className="text-gray-600 dark:text-slate-300">Email: <a href={`mailto:${event.contactEmail}`} className="text-purple-600 dark:text-purple-400 hover:underline">{event.contactEmail}</a></p>}{event.contactPhone && <p className="text-gray-600 dark:text-slate-300">Phone: <a href={`tel:${event.contactPhone}`} className="text-purple-600 dark:text-purple-400 hover:underline">{event.contactPhone}</a></p>}</div>)}
-                {event.registrationLink && event.registrationLink !== '#' && (<div className="mt-5"><Button asLink to={event.registrationLink} target="_blank" rel="noopener noreferrer" variant="primary" size="lg">Register for this Event</Button></div>)}
-            </div>
+            {resolvedEventType === 'REGULAR' ? (
+              <div className="mt-6 divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                {renderDetailRow('Schedule Type', scheduleTypeLabel, <CalendarDaysIconSolid />)}
+                {renderDetailRow('Schedule Notes', event.scheduleNotes, <LightBulbIcon />)}
+                {renderDetailRow('Locations', locationDisplay, <MapPinIconSolid />)}
+                {renderDetailRow('Conducted By', conductedByDisplay, <UsersIconSolid />)}
+                {renderDetailRow('Speakers', speakersDisplay, <UsersIconSolid />)}
+                {renderDetailRow('What to Expect', event.expectations, <LightBulbIcon />)}
+                {renderDetailRow('Special Guests', event.guests, <UsersIconSolid />)}
+                {event.isFeeRequired && renderDetailRow('Fee', event.feeAmount || 'Details in link', <TicketIcon />)}
+                {event.capacity && event.capacity > 0 && renderDetailRow('Capacity', `${event.capacity} attendees`, <UsersIconSolid />)}
+                {renderDetailRow(
+                  'Contact',
+                  event.contactPerson || event.contactEmail || event.contactPhone ? (
+                    <div className="space-y-1">
+                      {event.contactPerson && <p>Person: {event.contactPerson}</p>}
+                      {event.contactEmail && (
+                        <p>
+                          Email:{' '}
+                          <a href={`mailto:${event.contactEmail}`} className="text-purple-600 dark:text-purple-400 hover:underline">
+                            {event.contactEmail}
+                          </a>
+                        </p>
+                      )}
+                      {event.contactPhone && (
+                        <p>
+                          Phone:{' '}
+                          <a href={`tel:${event.contactPhone}`} className="text-purple-600 dark:text-purple-400 hover:underline">
+                            {event.contactPhone}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  ) : null,
+                  <UserCircleIcon />
+                )}
+              </div>
+            ) : (
+              <div className="mt-6 divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                {renderDetailRow('Date & Time', `${formatDateADBS(event.date)}${event.time ? ` at ${event.time}` : ''}`, <CalendarDaysIconSolid />)}
+                {renderDetailRow('Location', locationDisplay, <MapPinIconSolid />)}
+                {event.isFeeRequired && renderDetailRow('Fee', event.feeAmount || 'Details in link', <TicketIcon />)}
+                {renderDetailRow(
+                  'Contact',
+                  event.contactPerson || event.contactEmail || event.contactPhone ? (
+                    <div className="space-y-1">
+                      {event.contactPerson && <p>Person: {event.contactPerson}</p>}
+                      {event.contactEmail && (
+                        <p>
+                          Email:{' '}
+                          <a href={`mailto:${event.contactEmail}`} className="text-purple-600 dark:text-purple-400 hover:underline">
+                            {event.contactEmail}
+                          </a>
+                        </p>
+                      )}
+                      {event.contactPhone && (
+                        <p>
+                          Phone:{' '}
+                          <a href={`tel:${event.contactPhone}`} className="text-purple-600 dark:text-purple-400 hover:underline">
+                            {event.contactPhone}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  ) : null,
+                  <UserCircleIcon />
+                )}
+              </div>
+            )}
+
+            {event.registrationLink && event.registrationLink !== '#' && (
+              <div className="mt-5">
+                <Button asLink to={event.registrationLink} target="_blank" rel="noopener noreferrer" variant="primary" size="lg">
+                  Register for this Event
+                </Button>
+              </div>
+            )}
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex justify-around items-center">
                 <Button variant="ghost" onClick={handleLike} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400" aria-pressed={isLiked}><HeartIcon className="w-5 h-5 mr-1.5" isFilled={isLiked} /> {likeCount} <span className="ml-1 hidden sm:inline">Like</span></Button>
                 <Button variant="ghost" onClick={handleAddCommentClick} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
