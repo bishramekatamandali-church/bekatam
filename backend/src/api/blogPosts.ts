@@ -51,7 +51,7 @@ router.post('/', async (req, res) => {
 
     const id = crypto.randomUUID();              // ✅ generate missing id
     const linkPath = `/blog/${id}`;              // ✅ generate missing linkPath
-    const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
+    const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = normalizeEnumValue(category, blogpost_category);
 
     if (category && !normalizedCategory) {
@@ -88,7 +88,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
-    const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
+    const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = normalizeEnumValue(category, blogpost_category);
 
     if (category && !normalizedCategory) {
