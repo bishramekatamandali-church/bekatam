@@ -73,9 +73,6 @@ import AdvancedMediaUploader from './AdvancedMediaUploader';
 import {
   XCircleIcon,
   PhotoIcon,
-  VideoCameraIcon,
-  MicrophoneIcon,
-  ArrowUpOnSquareIcon,
   CalendarIcon as CalendarOutlineIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
@@ -132,11 +129,11 @@ const UnifiedMediaInputs: React.FC<{
     isFieldUploading['audioUrl'];
 
   const unifiedMediaInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleUnifiedMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleUnifiedMediaUploadFile = async (file: File) => {
     if (!file) return;
-    
+
     const setPreview = (fieldName: string) => {
       if (file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')) {
         const previewUrl = URL.createObjectURL(file);
@@ -156,13 +153,19 @@ const UnifiedMediaInputs: React.FC<{
     } else {
       alert('Unsupported file type. Please upload an image, video, or audio file.');
     }
+  };
+
+  const handleUnifiedMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleUnifiedMediaUploadFile(file);
 
     if (event.target) event.target.value = '';
   };
 
   const MediaSlot = ({ type, url }: { type: 'image' | 'video' | 'audio'; url?: string }) => {
     const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
-    const Icon = type === 'image' ? PhotoIcon : type === 'video' ? VideoCameraIcon : MicrophoneIcon;
+    const Icon = PhotoIcon;
 
     return (
       <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 min-h-[120px] flex flex-col justify-center items-center text-center">
@@ -211,7 +214,7 @@ const UnifiedMediaInputs: React.FC<{
         <MediaSlot type="video" url={(formData as any).videoUrl} />
         <MediaSlot type="audio" url={(formData as any).audioUrl} />
       </div>
-      <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-slate-200 dark:border-slate-700">
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
         <input
           type="file"
           ref={unifiedMediaInputRef}
@@ -220,26 +223,49 @@ const UnifiedMediaInputs: React.FC<{
           accept="image/*,video/*,audio/*"
           capture="environment"
         />
-        <Button
-          type="button"
-          onClick={() => unifiedMediaInputRef.current?.click()}
-          disabled={anyMediaFieldUploading}
-          size="sm"
-          variant="outline"
-          className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+        <div
+          className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
+            isDragging
+              ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
+              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
+          }`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={async (event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            const file = event.dataTransfer.files?.[0];
+            if (!file) return;
+            await handleUnifiedMediaUploadFile(file);
+          }}
         >
-          <ArrowUpOnSquareIcon className="w-4 h-4 mr-1.5" /> Upload File (Auto-detects type)
-        </Button>
-        <Button
-          type="button"
-          onClick={() => handleImageFieldSelect('imageUrl')}
-          disabled={anyMediaFieldUploading}
-          size="sm"
-          variant="outline"
-          className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
-        >
-          <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
-        </Button>
+          <button
+            type="button"
+            onClick={() => unifiedMediaInputRef.current?.click()}
+            disabled={anyMediaFieldUploading}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <PhotoIcon className="h-5 w-5" /> Add Media
+          </button>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Upload images, videos, or audio from your device (drag & drop works too).
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => handleImageFieldSelect('imageUrl')}
+            disabled={anyMediaFieldUploading}
+            size="sm"
+            variant="outline"
+            className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+          >
+            <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -249,6 +275,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
   sermon: {
     title: '',
     description: '',
+    imageUrl: '',
     date: new Date().toISOString().split('T')[0],
     category: sermonCategoriesList[0],
     speaker: '',
@@ -297,6 +324,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
   blogPost: {
     title: '',
     description: '',
+    imageUrl: '',
     date: new Date().toISOString().split('T')[0],
     category: blogPostCategoriesList[0],
     enableAutoNarration: true,
@@ -307,6 +335,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
   news: {
     title: '',
     description: '',
+    imageUrl: '',
     date: new Date().toISOString().split('T')[0],
     category: newsCategoriesList[0],
     enableAutoNarration: true,
@@ -1132,6 +1161,27 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     </div>
   );
 
+  const renderEmbeddedVideoField = (idSuffix: string) => (
+    <FullWidthField>
+      <label htmlFor={`videoUrl-${idSuffix}`} className={labelClasses}>
+        Embedded Video URL (Optional)
+      </label>
+      <input
+        type="url"
+        id={`videoUrl-${idSuffix}`}
+        name="videoUrl"
+        value={(formData as any).videoUrl || ''}
+        onChange={handleChange}
+        placeholder="https://www.youtube.com/watch?v=..."
+        className={inputClasses}
+      />
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Use this only for embedded videos from YouTube, Facebook, X, Instagram, and similar sources. Leave it
+        blank to upload media directly above.
+      </p>
+    </FullWidthField>
+  );
+
   const renderSpecificFields = () => {
     switch (contentType) {
       case 'sermon': {
@@ -1244,6 +1294,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
               />
+              {renderEmbeddedVideoField('sermon')}
             </FormSection>
           </>
         );
@@ -2102,10 +2153,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     return `${action} ${formattedContentType}`;
   };
 
+  const useFullscreen = ['sermon', 'blogPost', 'news'].includes(contentType);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size="lg">
-      <form onSubmit={finalSubmit}>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-3 scrollbar-thin scrollbar-thumb-slate-400 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
+    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size={useFullscreen ? 'full' : 'lg'}>
+      <form onSubmit={finalSubmit} className="flex flex-col min-h-full">
+        <div className="space-y-4">
           {renderSpecificFields()}
         </div>
 
@@ -2775,6 +2828,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
               <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
             </FullWidthField>
             <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+            {renderEmbeddedVideoField('blog')}
           </FormSection>
         </>;
       }
@@ -2803,6 +2857,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
               <RichTextEditor value={data.description} onChange={(html) => setFormData(p => ({ ...p, description: html }))} />
             </FullWidthField>
             <UnifiedMediaInputs formData={data} setFormData={setFormData} handleCloudinaryUpload={handleCloudinaryUpload} handleImageFieldSelect={handleImageFieldSelect} isFieldUploading={isFieldUploading} uploadingStatus={uploadingStatus} />
+            {renderEmbeddedVideoField('news')}
           </FormSection>
         </>;
       }
