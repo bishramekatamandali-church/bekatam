@@ -10,7 +10,7 @@ interface RegisterFormProps {
   onRegisterSuccess: () => void;
 }
 
-const CLOUDINARY_CLOUD_NAME = 'dl94nfxom';
+const CLOUDINARY_CLOUD_NAME = 'dhqoftm46';
 const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
 
 const countryCodes = [
