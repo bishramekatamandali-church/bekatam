@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
 import { User, GroupFormData, GroupPermissionSetting } from '../../types';
 import AdvancedMediaUploader from '../admin/AdvancedMediaUploader';
+import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -49,6 +50,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose }) 
   });
 
   const [error, setError] = useState('');
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -76,6 +79,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose }) 
     setSelectedMemberIds(new Set());
     setPermissions({ editSettings: 'admins_only', sendMessage: 'all_members', addMembers: 'admins_only', approveMembers: 'admins_only' });
     setError('');
+    setUploadStatus(null);
+    setIsUploading(false);
     setIsSubmitting(false);
     setSearchTerm('');
   }
@@ -103,11 +108,55 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose }) 
   };
   
   const handleCloudinaryUpload = async (file: File) => {
-    // This is a placeholder for the actual upload logic.
-    // In a real implementation, you would use a service to upload the file and get a URL.
-    alert(`Simulating upload of ${file.name}. In a real app, this would upload to a cloud service.`);
-    const tempUrl = URL.createObjectURL(file); // Create a temporary local URL for preview
-    setGroupImageUrl(tempUrl);
+    setIsUploading(true);
+    setUploadStatus(`Uploading ${file.name}...`);
+    setError('');
+
+    const sizeError = getCloudinaryFileSizeError(file);
+    if (sizeError) {
+      setError(sizeError);
+      setUploadStatus(sizeError);
+      setIsUploading(false);
+      return;
+    }
+
+    const resourceType = getCloudinaryResourceType(file);
+    const uploadDetails = getCloudinaryUploadDetails(resourceType);
+    if ('error' in uploadDetails) {
+      setError(uploadDetails.error);
+      setUploadStatus(uploadDetails.error);
+      setIsUploading(false);
+      return;
+    }
+
+    const uploadFormDataBody = new FormData();
+    uploadFormDataBody.append('file', file);
+    uploadFormDataBody.append('upload_preset', uploadDetails.uploadPreset);
+
+    try {
+      const response = await fetch(uploadDetails.uploadUrl, {
+        method: 'POST',
+        body: uploadFormDataBody,
+        mode: 'cors',
+      });
+      const data = await response.json();
+
+      if (response.ok && data.secure_url) {
+        setGroupImageUrl(data.secure_url);
+        setUploadStatus('Upload successful!');
+        setTimeout(() => setUploadStatus(null), 2000);
+      } else {
+        const errorMessage = data.error?.message || 'Upload failed.';
+        setError(errorMessage);
+        setUploadStatus(errorMessage);
+      }
+    } catch (uploadError: any) {
+      const errorMessage = uploadError?.message || 'Upload failed.';
+      setError(errorMessage);
+      setUploadStatus(errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,6 +197,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose }) 
             currentUrl={groupImageUrl}
             onUrlChange={setGroupImageUrl}
             onFileUpload={handleCloudinaryUpload}
+            isUploading={isUploading}
+            uploadStatus={uploadStatus}
           />
 
           <div>

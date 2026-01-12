@@ -81,6 +81,7 @@ import {
 } from '@heroicons/react/24/outline';
 import RichTextEditor from '../ui/RichTextEditor';
 import BSCalendarPicker from './BSCalendarPicker';
+import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 const DEFAULT_BS_YEAR = adToBs(new Date()).year
 
@@ -530,8 +531,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [bsDateDisplays, setBsDateDisplays] = useState<Record<string, string>>({});
   const [pickerVisibleFor, setPickerVisibleFor] = useState<string | null>(null);
 
-  const CLOUDINARY_CLOUD_NAME = 'dl94nfxom';
-  const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
   const [uploadingStatus, setUploadingStatus] = useState<Record<string, string | null>>({});
   const [isFieldUploading, setIsFieldUploading] = useState<Record<string, boolean>>({});
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
@@ -677,18 +676,33 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       [fieldName]: `Uploading ${file.name}...`,
     }));
 
+    const sizeError = getCloudinaryFileSizeError(file);
+    if (sizeError) {
+      setUploadingStatus((prev) => ({
+        ...prev,
+        [fieldName]: sizeError,
+      }));
+      setIsFieldUploading((prev) => ({ ...prev, [fieldName]: false }));
+      return;
+    }
+
+    const resourceType = getCloudinaryResourceType(file);
+    const uploadDetails = getCloudinaryUploadDetails(resourceType);
+    if ('error' in uploadDetails) {
+      setUploadingStatus((prev) => ({
+        ...prev,
+        [fieldName]: uploadDetails.error,
+      }));
+      setIsFieldUploading((prev) => ({ ...prev, [fieldName]: false }));
+      return;
+    }
+
     const uploadFormDataBody = new FormData();
     uploadFormDataBody.append('file', file);
-    uploadFormDataBody.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-    let resourceType: 'image' | 'video' | 'raw' = 'image';
-    if (file.type.startsWith('video/')) resourceType = 'video';
-    else if (file.type.startsWith('audio/')) resourceType = 'raw';
-
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+    uploadFormDataBody.append('upload_preset', uploadDetails.uploadPreset);
 
     try {
-      const response = await fetch(uploadUrl, {
+      const response = await fetch(uploadDetails.uploadUrl, {
         method: 'POST',
         body: uploadFormDataBody,
         mode: 'cors',
@@ -2297,8 +2311,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
   const [bsDateDisplays, setBsDateDisplays] = useState<Record<string, string>>({});
   const [pickerVisibleFor, setPickerVisibleFor] = useState<string | null>(null);
 
-  const CLOUDINARY_CLOUD_NAME = 'dl94nfxom';
-  const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
   const [uploadingStatus, setUploadingStatus] = useState<Record<string, string | null>>({});
   const [isFieldUploading, setIsFieldUploading] = useState<Record<string, boolean>>({});
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
@@ -2364,12 +2376,26 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({ isOpen, onClose, on
         if (!(file instanceof File)) { setUploadingStatus(prev => ({ ...prev, [fieldName]: "Upload error: Invalid file data."})); return; }
         setIsFieldUploading(prev => ({ ...prev, [fieldName]: true }));
         setUploadingStatus(prev => ({ ...prev, [fieldName]: `Uploading ${file.name}...` }));
+        const sizeError = getCloudinaryFileSizeError(file);
+        if (sizeError) {
+          setUploadingStatus(prev => ({ ...prev, [fieldName]: sizeError }));
+          setIsFieldUploading(prev => ({ ...prev, [fieldName]: false }));
+          return;
+        }
+
+        const resourceType = getCloudinaryResourceType(file);
+        const uploadDetails = getCloudinaryUploadDetails(resourceType);
+        if ('error' in uploadDetails) {
+          setUploadingStatus(prev => ({ ...prev, [fieldName]: uploadDetails.error }));
+          setIsFieldUploading(prev => ({ ...prev, [fieldName]: false }));
+          return;
+        }
+
         const uploadFormDataBody = new FormData();
-        uploadFormDataBody.append('file', file); uploadFormDataBody.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-        let resourceType = 'image'; if (file.type.startsWith('video/')) resourceType = 'video'; else if (file.type.startsWith('audio/')) resourceType = 'raw'; 
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+        uploadFormDataBody.append('file', file);
+        uploadFormDataBody.append('upload_preset', uploadDetails.uploadPreset);
         try {
-          const response = await fetch(uploadUrl, { method: 'POST', body: uploadFormDataBody, mode: 'cors' });
+          const response = await fetch(uploadDetails.uploadUrl, { method: 'POST', body: uploadFormDataBody, mode: 'cors' });
           const data = await response.json();
           if (response.ok && data.secure_url) {
             setFormData(prev => ({ ...prev, [fieldName]: data.secure_url }));
