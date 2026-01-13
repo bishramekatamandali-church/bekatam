@@ -38,11 +38,24 @@ export const getDaysInBsMonth = (bsMonth: number, bsYear: number): number => {
 
 
 const normalizeToUtcDate = (dateInput: string | Date): Date => {
-  const parsed = typeof dateInput === 'string' ? new Date(dateInput) : new Date(dateInput);
+  const parsed = (() => {
+    if (typeof dateInput !== 'string') {
+      return new Date(dateInput);
+    }
+    if (dateInput.includes('T')) {
+      return new Date(dateInput);
+    }
+    return new Date(`${dateInput}T00:00:00`);
+  })();
   if (isNaN(parsed.getTime())) {
     throw new Error(`Invalid date input: ${dateInput}`);
   }
-  return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
+  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+};
+
+export const getLocalToday = (): Date => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
 export const adToBs = (adDateInput: string | Date): BSDate => {

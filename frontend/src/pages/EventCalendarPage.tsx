@@ -4,7 +4,7 @@ import InteractiveCalendar, { CalendarEntry } from '../components/calendar/Inter
 import { generateYearlyCalendarPDF } from '../components/calendar/PrintableCalendarPDF';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
-import { adToBs, formatDateADBS } from '../dateConverter';
+import { adToBs, formatDateADBS, getLocalToday } from '../dateConverter';
 import { Link } from "react-router-dom";
 import DateConverterPanel from '../components/calendar/DateConverterPanel';
 
@@ -33,7 +33,7 @@ const BS_MONTH_NAMES_EN_CAL = [
 const EventCalendarPage: React.FC = () => {
   const { events, loadingContent, newsItems, sermons, blogPosts } = useContent();
   
-  const currentADDate = new Date();
+  const currentADDate = getLocalToday();
   const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
 
   const [selectedPdfBsYear, setSelectedPdfBsYear] = useState<number>(initialBsDate.year);

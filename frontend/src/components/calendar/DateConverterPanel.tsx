@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BS_MONTH_NAMES_EN, convertDate } from '../../dateConverter';
+import { BS_MONTH_NAMES_EN, convertDate, getLocalToday } from '../../dateConverter';
 import Button from '../ui/Button';
 
 const NumberInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
@@ -18,10 +18,11 @@ const TextInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props)
 );
 
 const DateConverterPanel: React.FC = () => {
-  const todayAd = useMemo(() => new Date(), []);
+  const todayAd = useMemo(() => getLocalToday(), []);
   const todayBs = useMemo(() => convertDate({ direction: 'AD_TO_BS', adDate: todayAd }).bsDate!, [todayAd]);
 
-  const [adInput, setAdInput] = useState<string>(todayAd.toISOString().slice(0, 10));
+  const formatDateInput = (date: Date) => date.toLocaleDateString('en-CA');
+  const [adInput, setAdInput] = useState<string>(formatDateInput(todayAd));
   const [adToBsResult, setAdToBsResult] = useState<string>('');
 
   const [bsYear, setBsYear] = useState<number>(todayBs.year);
@@ -55,7 +56,7 @@ const DateConverterPanel: React.FC = () => {
 
   const handleOffsetCalc = () => {
     try {
-      const adDate = new Date(adInput);
+      const adDate = new Date(`${adInput}T00:00:00`);
       const shifted = new Date(adDate.getTime());
       shifted.setUTCDate(shifted.getUTCDate() + dayOffset);
       const { bsDate } = convertDate({ direction: 'AD_TO_BS', adDate: shifted });
@@ -147,7 +148,7 @@ const DateConverterPanel: React.FC = () => {
 
       <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
         Today: <strong>{todayBs.day} {BS_MONTH_NAMES_EN[todayBs.month - 1]} {todayBs.year} BS</strong> •{' '}
-        <strong>{todayAd.toISOString().slice(0, 10)} AD</strong>
+        <strong>{formatDateInput(todayAd)} AD</strong>
       </div>
     </div>
   );
