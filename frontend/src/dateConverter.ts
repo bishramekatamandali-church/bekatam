@@ -1,4 +1,4 @@
-import { adToBs as libAdToBs, bsToAd as libBsToAd } from 'nepali-date-converter';
+import * as nepaliDateConverter from 'nepali-date-converter';
 import { BSDate } from './types';
 
 const NEPAL_TIME_ZONE = 'Asia/Kathmandu';
@@ -17,7 +17,21 @@ export const BS_MONTH_NAMES_EN = [
 
 export const BS_YEAR_RANGE = { start: 2000, end: 2090 } as const;
 
+type DateParts = { year: number; month: number; day: number };
+
 const padNumber = (value: number): string => value.toString().padStart(2, '0');
+
+const getDateConverter = (): { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts } => {
+  if ('adToBs' in nepaliDateConverter && 'bsToAd' in nepaliDateConverter) {
+    return nepaliDateConverter as unknown as { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts };
+  }
+  if ('default' in nepaliDateConverter && nepaliDateConverter.default) {
+    return nepaliDateConverter.default as { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts };
+  }
+  throw new Error('Unable to resolve nepali-date-converter exports.');
+};
+
+const { adToBs: libAdToBs, bsToAd: libBsToAd } = getDateConverter();
 
 const getDatePartsInTimeZone = (date: Date, timeZone: string): { year: number; month: number; day: number } => {
   const formatter = new Intl.DateTimeFormat('en-US', {
