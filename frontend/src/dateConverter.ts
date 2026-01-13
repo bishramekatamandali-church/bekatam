@@ -21,17 +21,71 @@ type DateParts = { year: number; month: number; day: number };
 
 const padNumber = (value: number): string => value.toString().padStart(2, '0');
 
-const getDateConverter = (): { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts } => {
-  if ('adToBs' in nepaliDateConverter && 'bsToAd' in nepaliDateConverter) {
-    return nepaliDateConverter as unknown as { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts };
+type DateConverter = {
+  adToBs: (date: string) => DateParts;
+  bsToAd: (year: number, month: number, day: number) => DateParts;
+};
+
+let cachedConverter: DateConverter | null = null;
+let hasLoggedConverterError = false;
+
+const fallbackConverter: DateConverter = {
+  adToBs: (date: string) => {
+    const parsed = date.includes('T') ? new Date(date) : new Date(`${date}T00:00:00`);
+    if (isNaN(parsed.getTime())) {
+      return { year: 0, month: 0, day: 0 };
+    }
+    return getDatePartsInTimeZone(parsed, NEPAL_TIME_ZONE);
+  },
+  bsToAd: (year: number, month: number, day: number) => ({ year, month, day }),
+};
+
+const resolveDateConverter = (): DateConverter => {
+  if (cachedConverter) return cachedConverter;
+
+  const candidates: unknown[] = [
+    nepaliDateConverter,
+    (nepaliDateConverter as { default?: unknown }).default,
+    (nepaliDateConverter as { default?: { default?: unknown } }).default?.default,
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      candidate &&
+      typeof (candidate as DateConverter).adToBs === 'function' &&
+      typeof (candidate as DateConverter).bsToAd === 'function'
+    ) {
+      cachedConverter = candidate as DateConverter;
+      return cachedConverter;
+    }
   }
-  if ('default' in nepaliDateConverter && nepaliDateConverter.default) {
-    return nepaliDateConverter.default as { adToBs: (date: string) => DateParts; bsToAd: (year: number, month: number, day: number) => DateParts };
+
+  const defaultExport = (nepaliDateConverter as { default?: unknown }).default;
+  if (
+    typeof defaultExport === 'function' &&
+    typeof (defaultExport as { bsToAd?: unknown }).bsToAd === 'function'
+  ) {
+    cachedConverter = {
+      adToBs: defaultExport as DateConverter['adToBs'],
+      bsToAd: (defaultExport as { bsToAd: DateConverter['bsToAd'] }).bsToAd,
+    };
+    return cachedConverter;
   }
+
   throw new Error('Unable to resolve nepali-date-converter exports.');
 };
 
-const { adToBs: libAdToBs, bsToAd: libBsToAd } = getDateConverter();
+const getDateConverter = (): DateConverter => {
+  try {
+    return resolveDateConverter();
+  } catch (error) {
+    if (!hasLoggedConverterError) {
+      console.error('Falling back to AD-only date conversion.', error);
+      hasLoggedConverterError = true;
+    }
+    return fallbackConverter;
+  }
+};
 
 const getDatePartsInTimeZone = (date: Date, timeZone: string): { year: number; month: number; day: number } => {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -101,6 +155,7 @@ export const getLocalToday = (): Date => {
 export const adToBs = (adDateInput: string | Date): BSDate => {
   const parts = toNepalDateParts(adDateInput);
   const isoDate = formatIsoDate(parts.year, parts.month, parts.day);
+  const { adToBs: libAdToBs } = getDateConverter();
   const bs = libAdToBs(isoDate);
 
   return {
@@ -118,6 +173,7 @@ export const bsToAd = (bsDay: number, bsMonth: number, bsYear: number): Date => 
   }
   if (bsMonth < 1 || bsMonth > 12) throw new Error('BS month must be between 1 and 12.');
 
+  const { bsToAd: libBsToAd } = getDateConverter();
   const ad = libBsToAd(bsYear, bsMonth, bsDay);
   return new Date(Date.UTC(ad.year, ad.month - 1, ad.day));
 };
