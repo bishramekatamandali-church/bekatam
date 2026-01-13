@@ -6,6 +6,9 @@ const BS_START_YEAR = BS_CALENDAR_DATA[0][0];
 const BS_END_YEAR = BS_CALENDAR_DATA[BS_CALENDAR_DATA.length - 1][0];
 const BS_START_MONTH = 1;
 const BS_START_DAY = 1;
+const NEPAL_TIME_ZONE = 'Asia/Kathmandu';
+// Calibration offset so the normalized calendar data matches the current reference date.
+const BS_CALENDAR_DAY_OFFSET = 2;
 
 export const BS_MONTH_NAMES_EN = [
   'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra',
@@ -51,6 +54,26 @@ const getBikramFormatter = (() => {
 const bsMonthDaysMap = new Map<number, number[]>(
   BS_CALENDAR_DATA.map(row => [row[0], row.slice(1)])
 );
+
+const isGregorianLeapYear = (year: number): boolean =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+const isLikelyBsLeapYear = (bsYear: number): boolean => {
+  const adYear = bsYear - AD_BS_YEAR_DIFF;
+  return isGregorianLeapYear(adYear);
+};
+
+const getNormalizedBsMonthDays = (bsYear: number): number[] | null => {
+  const months = bsMonthDaysMap.get(bsYear);
+  if (!months) return null;
+
+  const normalized = [...months];
+  const total = normalized.reduce((sum, days) => sum + days, 0);
+  const missingDays = total < 365 ? 365 - total : 0;
+  const leapAdjustment = isLikelyBsLeapYear(bsYear) ? 1 : 0;
+  normalized[normalized.length - 1] += missingDays + leapAdjustment;
+  return normalized;
+};
 
 const getBsPartsFromIntl = (adDate: Date): { year: number; month: number; day: number } | null => {
   const formatter = getBikramFormatter();
@@ -105,13 +128,37 @@ const getBsToAdCache = (() => {
 })();
 
 export const getDaysInBsMonth = (bsMonth: number, bsYear: number): number => {
-  const months = bsMonthDaysMap.get(bsYear);
+  const months = getNormalizedBsMonthDays(bsYear);
   if (!months || bsMonth < 1 || bsMonth > 12) {
     throw new Error(`Invalid BS date (${bsYear}-${bsMonth}). Supported years: ${BS_START_YEAR}-${BS_END_YEAR}`);
   }
   return months[bsMonth - 1];
 };
 
+const getDatePartsInTimeZone = (date: Date, timeZone: string): { year: number; month: number; day: number } => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+
+  let year: number | null = null;
+  let month: number | null = null;
+  let day: number | null = null;
+
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type === 'year') year = Number(part.value);
+    if (part.type === 'month') month = Number(part.value);
+    if (part.type === 'day') day = Number(part.value);
+  }
+
+  if (year === null || month === null || day === null) {
+    throw new Error('Unable to resolve date parts for timezone conversion.');
+  }
+
+  return { year, month, day };
+};
 
 const normalizeToUtcDate = (dateInput: string | Date): Date => {
   const parsed = (() => {
@@ -126,12 +173,13 @@ const normalizeToUtcDate = (dateInput: string | Date): Date => {
   if (isNaN(parsed.getTime())) {
     throw new Error(`Invalid date input: ${dateInput}`);
   }
-  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+  const parts = getDatePartsInTimeZone(parsed, NEPAL_TIME_ZONE);
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
 };
 
 export const getLocalToday = (): Date => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const parts = getDatePartsInTimeZone(new Date(), NEPAL_TIME_ZONE);
+  return new Date(parts.year, parts.month - 1, parts.day);
 };
 
 export const adToBs = (adDateInput: string | Date): BSDate => {
@@ -147,7 +195,7 @@ export const adToBs = (adDateInput: string | Date): BSDate => {
     };
   }
 
-  const diffDays = Math.floor((adDate.getTime() - AD_EPOCH_DATE.getTime()) / DAY_IN_MS);
+  const diffDays = Math.floor((adDate.getTime() - AD_EPOCH_DATE.getTime()) / DAY_IN_MS) + BS_CALENDAR_DAY_OFFSET;
 
   if (diffDays < 0) {
     throw new Error('AD date is before supported BS calendar range.');
@@ -205,16 +253,23 @@ export const bsToAd = (bsDay: number, bsMonth: number, bsYear: number): Date => 
   let totalDays = 0;
 
   for (let year = BS_START_YEAR; year < bsYear; year++) {
-    const months = bsMonthDaysMap.get(year)!;
+    const months = getNormalizedBsMonthDays(year);
+    if (!months) {
+      throw new Error(`Missing BS calendar data for year ${year}.`);
+    }
     totalDays += months.reduce((sum, days) => sum + days, 0);
   }
 
-  const monthsForYear = bsMonthDaysMap.get(bsYear)!;
+  const monthsForYear = getNormalizedBsMonthDays(bsYear);
+  if (!monthsForYear) {
+    throw new Error(`Missing BS calendar data for year ${bsYear}.`);
+  }
   for (let monthIndex = 0; monthIndex < bsMonth - 1; monthIndex++) {
     totalDays += monthsForYear[monthIndex];
   }
 
   totalDays += bsDay - 1;
+  totalDays = Math.max(0, totalDays - BS_CALENDAR_DAY_OFFSET);
 
   // Use midday UTC to avoid timezone rollbacks that can shift the displayed AD date.
   const utcMillis = AD_EPOCH_DATE.getTime() + totalDays * DAY_IN_MS;

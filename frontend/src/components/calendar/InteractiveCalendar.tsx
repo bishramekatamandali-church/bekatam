@@ -36,6 +36,9 @@ const AD_MONTH_NAMES_SHORT = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
+const getAdDateKey = (date: Date): string =>
+  `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
 const DAY_LABELS = [
   { en: "Sun", np: "आइत" },
   { en: "Mon", np: "सोम" },
@@ -144,6 +147,19 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
 
   const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
 
+  const itemsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    items.forEach(item => {
+      if (!item.date) return;
+      const adDate = new Date(item.date);
+      if (isNaN(adDate.getTime())) return;
+      const key = getAdDateKey(adDate);
+      const existing = map.get(key) ?? [];
+      existing.push(item);
+      map.set(key, existing);
+    });
+    return map;
+  }, [items]);
   
   const calendarGrid = useMemo(() => {
     const numDaysInMonth = getDaysInBsMonth(currentBsMonth, currentBsYear);
@@ -166,13 +182,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
       const isToday = adDateForBsDay.toDateString() === defaultInitialAdDate.toDateString();
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsMonth && selectedBsDate?.year === currentBsYear;
 
-      const entriesOnDay = items.filter(item => {
-        if (!item.date) return false;
-        const itemAdDate = new Date(item.date);
-        return itemAdDate.getFullYear() === adDateForBsDay.getFullYear() &&
-               itemAdDate.getMonth() === adDateForBsDay.getMonth() &&
-               itemAdDate.getDate() === adDateForBsDay.getDate();
-      });
+      const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
 
       const isSaturday = adDateForBsDay.getDay() === 6;
 
@@ -216,7 +226,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
                   <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
-                  <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 w-max max-w-[200px] px-2 py-1 bg-slate-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" role="tooltip">
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[200px] px-2 py-1 bg-slate-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 transform-gpu text-center" role="tooltip">
                     {entry.title}
                   </div>
                 </div>
@@ -235,7 +245,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     }
 
     return days;
-  }, [currentBsMonth, currentBsYear, items, defaultInitialAdDate, selectedBsDate]);
+  }, [currentBsMonth, currentBsYear, itemsByDate, defaultInitialAdDate, selectedBsDate]);
   
   const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsMonth - 1];
 
@@ -258,7 +268,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
               id="calendar-year"
               value={currentBsYear}
               onChange={handleYearChange}
-              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500"
+              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[150px] text-center"
               aria-label="Select Year"
             >
               {yearOptions.map(year => <option key={year} value={year}>{formatBsYearLabel(year)}</option>)}
