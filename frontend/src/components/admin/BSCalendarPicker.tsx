@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { adToBs, bsToAd, getDaysInBsMonth, AD_BS_YEAR_DIFF } from '../../dateConverter';
+import { adToBs, bsToAd, getDaysInBsMonth } from '../../dateConverter';
 import Button from '../ui/Button';
 
 interface BSCalendarPickerProps {
@@ -82,8 +82,7 @@ const BSCalendarPicker: React.FC<BSCalendarPickerProps> = ({ initialAdDate, onDa
   
   const yearOptions = useMemo(() => {
     const years = [];
-    const currentAdYear = new Date().getFullYear();
-    const currentBsEquivalentYear = currentAdYear + AD_BS_YEAR_DIFF;
+    const currentBsEquivalentYear = adToBs(new Date()).year;
     for (let i = -5; i <= 5; i++) { 
       years.push(currentBsEquivalentYear + i);
     }
