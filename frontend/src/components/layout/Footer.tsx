@@ -4,9 +4,9 @@ import SocialIcons from '../ui/SocialIcons';
 import AdSlot from '../ads/AdSlot';
 
 const footerSocialLinks = [
-    { platform: 'facebook', url: 'https://facebook.com/yourchurchpage', label: 'BEM Church on Facebook' },
-    { platform: 'youtube', url: 'https://youtube.com/yourchurchchannel', label: 'BEM Church on YouTube' },
-    { platform: 'instagram', url: 'https://instagram.com/yourchurchprofile', label: 'BEM Church on Instagram' },
+    { platform: 'facebook', url: 'https://www.facebook.com/share/1FxsWwpPfM/
+', label: 'BEM Church on Facebook' },
+    { platform: 'youtube', url: 'https://youtube.com/@bishramtv7102', label: 'BEM Church on YouTube' },
 ];
 
 
@@ -35,9 +35,10 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold text-white mb-3">Connect With Us</h3>
             <div className="space-y-2 text-sm">
-              <p>Gauri Marg, Sinamangal, Kathmandu</p>
-              <p><span className="font-semibold">Email:</span> <a href="mailto:shahidsingh1432@gmail.com" className="hover:text-teal-300 transition-colors">shahidsingh1432@gmail.com</a></p>
-              <p><span className="font-semibold">Phone:</span> <a href="tel:+9779865272258" className="hover:text-teal-300 transition-colors">+977-9865272258</a></p>
+              <p>Sinamangal, Kathmandu</p>
+              <p><span className="font-semibold">Email:</span> <a href="mailto:bishramekatamandali@gmail.com" className="hover:text-teal-300 transition-colors">bishramekatamandali@gmail.com</a></p>
+              <p><span className="font-semibold">Phone:</span> <a href="tel:+9779841568637" className="hover:text-teal-300 transition-colors">+977-9841568637</a></p>
+                <p><span className="font-semibold">Phone:</span> <a href="tel:+9779818191942" className="hover:text-teal-300 transition-colors">+977-9818191942</a></p>
               <p>Sabbath Fellowship (Saturday): 10:00 AM - 2:00 PM</p>
             </div>
           </div>
@@ -51,7 +52,7 @@ const Footer: React.FC = () => {
         
         <div className="border-t border-indigo-700 pt-6 text-center text-xs">
           <p>© {currentYear} Bishram Ekata Mandali. All rights reserved.</p>
-          <p className="mt-0.5">Website by : Bishram Ekata Mandali</p>
+          <p className="mt-0.5">Website by : Markush Singh</p>
         </div>
       </div>
     </footer>
