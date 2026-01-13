@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { adToBs, bsToAd, getDaysInBsMonth } from '../../dateConverter';
+import { adToBs, bsToAd, getDaysInBsMonth, getLocalToday } from '../../dateConverter';
 import Button from '../ui/Button';
 
 interface BSCalendarPickerProps {
@@ -22,7 +22,7 @@ const BS_MONTH_NAMES_EN = [
 ];
 
 const BSCalendarPicker: React.FC<BSCalendarPickerProps> = ({ initialAdDate, onDateSelect }) => {
-  const defaultInitialBsDate = adToBs(new Date());
+  const defaultInitialBsDate = adToBs(getLocalToday());
 
   const [currentBsMonth, setCurrentBsMonth] = useState<number>(defaultInitialBsDate.month);
   const [currentBsYear, setCurrentBsYear] = useState<number>(defaultInitialBsDate.year);
@@ -39,20 +39,20 @@ const BSCalendarPicker: React.FC<BSCalendarPickerProps> = ({ initialAdDate, onDa
           setSelectedBsDate({ day: bsDate.day, month: bsDate.month, year: bsDate.year });
         } else {
           // If initialAdDate is invalid, reset to current date based selection state
-          const todayBs = adToBs(new Date());
+          const todayBs = adToBs(getLocalToday());
           setCurrentBsMonth(todayBs.month);
           setCurrentBsYear(todayBs.year);
           setSelectedBsDate(null); // No day selected if initialAdDate was invalid
         }
       } catch (e) {
         console.error("Error parsing initialAdDate for BSCalendarPicker:", e);
-        const todayBs = adToBs(new Date());
+        const todayBs = adToBs(getLocalToday());
         setCurrentBsMonth(todayBs.month);
         setCurrentBsYear(todayBs.year);
         setSelectedBsDate(null);
       }
     } else {
-        const todayBs = adToBs(new Date());
+        const todayBs = adToBs(getLocalToday());
         setCurrentBsMonth(todayBs.month);
         setCurrentBsYear(todayBs.year);
         setSelectedBsDate(null); // No specific day selected if no initial date provided
@@ -82,7 +82,7 @@ const BSCalendarPicker: React.FC<BSCalendarPickerProps> = ({ initialAdDate, onDa
   
   const yearOptions = useMemo(() => {
     const years = [];
-    const currentBsEquivalentYear = adToBs(new Date()).year;
+    const currentBsEquivalentYear = adToBs(getLocalToday()).year;
     for (let i = -5; i <= 5; i++) { 
       years.push(currentBsEquivalentYear + i);
     }
@@ -103,7 +103,7 @@ const BSCalendarPicker: React.FC<BSCalendarPickerProps> = ({ initialAdDate, onDa
       const isSelected = selectedBsDate && selectedBsDate.day === day && selectedBsDate.month === currentBsMonth && selectedBsDate.year === currentBsYear;
       const adDateForBsDay = bsToAd(day, currentBsMonth, currentBsYear);
       const isSaturday = adDateForBsDay.getDay() === 6;
-      const todayAd = new Date();
+      const todayAd = getLocalToday();
       const isToday = adDateForBsDay.toDateString() === todayAd.toDateString();
 
       daysArray.push(

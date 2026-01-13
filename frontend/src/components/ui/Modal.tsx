@@ -30,7 +30,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow flex flex-col ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'}`}
+        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 opacity-0 animate-modalShow flex flex-col transform-gpu ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'}`}
         onClick={(e) => e.stopPropagation()} // Prevent click inside modal from closing it
       >
         {/* Header Section (Non-scrollable) */}
@@ -62,11 +62,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         @keyframes modalShow {
           to {
             opacity: 1;
-            transform: scale(1);
           }
         }
         .animate-modalShow {
-          animation: modalShow 0.3s forwards;
+          animation: modalShow 0.2s ease-out forwards;
         }
       `}</style>
     </div>
