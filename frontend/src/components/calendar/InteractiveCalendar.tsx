@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { BSDate } from '../../types';
-import { adToBs, bsToAd, getDaysInBsMonth, BS_YEAR_RANGE } from '../../dateConverter';
+import { adToBs, bsToAd, getDaysInBsMonth, BS_YEAR_RANGE, getLocalToday } from '../../dateConverter';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
@@ -62,7 +62,7 @@ interface InteractiveCalendarProps {
 }
 
 const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMonthChange, initialBsMonth, initialBsYear }) => {
-  const defaultInitialAdDate = useMemo(() => new Date(), []);
+  const defaultInitialAdDate = useMemo(() => getLocalToday(), []);
   const defaultInitialBsDate = useMemo(() => adToBs(defaultInitialAdDate), [defaultInitialAdDate]);
 
   const [currentBsMonth, setCurrentBsMonth] = useState<number>(initialBsMonth || defaultInitialBsDate.month);
@@ -119,7 +119,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   };
 
   const goToToday = () => {
-    const todayAd = new Date();
+    const todayAd = getLocalToday();
     const todayBs = adToBs(todayAd);
     setCurrentBsMonth(todayBs.month);
     setCurrentBsYear(todayBs.year);
@@ -221,7 +221,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
                   </div>
                 </div>
               ))}
-              {eventsOnDay.length > 4 && <div className="text-xs text-teal-600">+</div>}
+              {entriesOnDay.length > 4 && <div className="text-xs text-teal-600">+</div>}
             </div>
           )}
         </div>
