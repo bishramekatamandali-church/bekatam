@@ -3,8 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { GeneratedScheduleItem, Responsibility } from '../../types';
-import BSCalendarPicker from './BSCalendarPicker';
-import { formatDateADBS, adToBs, BS_MONTH_NAMES_EN, bsToAd } from '../../dateConverter';
+import DualNepaliCalendar from '../calendar/DualNepaliCalendar';
+import { formatBSDate, formatDateADBS, adToBs } from '../../dateConverter';
 import { PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface EditScheduleDraftModalProps {
@@ -58,8 +58,7 @@ export const EditScheduleDraftModal: React.FC<EditScheduleDraftModalProps> = ({
       });
       if (initialData.scheduledDate) {
         const bs = adToBs(new Date(initialData.scheduledDate));
-        const monthName = BS_MONTH_NAMES_EN[bs.month - 1] || 'Unknown';
-        setBsDateDisplay(`${monthName} ${bs.day}, ${bs.year} BS`);
+        setBsDateDisplay(formatBSDate(bs));
       }
     }
   }, [initialData]);
@@ -85,12 +84,9 @@ export const EditScheduleDraftModal: React.FC<EditScheduleDraftModalProps> = ({
     setFormData(prev => ({...prev, responsibilities: updatedResponsibilities}));
   };
 
-  const handleBsDateSelect = (bsDay: number, bsMonth: number, bsYear: number) => {
-    const adDate = bsToAd(bsDay, bsMonth, bsYear);
-    const adDateString = adDate.toLocaleDateString('en-CA');
-    setFormData(prev => ({ ...prev, scheduledDate: adDateString }));
-    const monthName = BS_MONTH_NAMES_EN[bsMonth - 1] || 'Unknown';
-    setBsDateDisplay(`${monthName} ${bsDay}, ${bsYear} BS`);
+  const handleBsDateSelect = (payload: { bs: { year: number; month: number; day: number }; ad: { iso: string } }) => {
+    setFormData(prev => ({ ...prev, scheduledDate: payload.ad.iso }));
+    setBsDateDisplay(formatBSDate({ year: payload.bs.year, month: payload.bs.month, day: payload.bs.day, monthName: '' }));
   };
 
   const getFormattedAdDatePart = (dateString?: string): string => {
@@ -119,7 +115,7 @@ export const EditScheduleDraftModal: React.FC<EditScheduleDraftModalProps> = ({
             <label htmlFor="scheduledDate" className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Scheduled Date (AD: {getFormattedAdDatePart(formData.scheduledDate)} | BS: {bsDateDisplay})
             </label>
-            <BSCalendarPicker initialAdDate={formData.scheduledDate} onDateSelect={handleBsDateSelect} />
+            <DualNepaliCalendar initialAdDate={formData.scheduledDate} onDateSelect={handleBsDateSelect} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

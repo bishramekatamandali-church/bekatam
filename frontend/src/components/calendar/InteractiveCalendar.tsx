@@ -1,7 +1,18 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { BSDate } from '../../types';
-import { adToBs, bsToAd, getDaysInBsMonth, BS_YEAR_RANGE, getLocalToday } from '../../dateConverter';
+import {
+  adToBs,
+  bsToAd,
+  BS_MONTH_NAMES_NP,
+  BS_YEAR_RANGE,
+  formatADDate,
+  getDaysInBsMonth,
+  getLocalToday,
+  getNepalDateParts,
+  getNepalDayOfWeek,
+  isSameNepalDay,
+} from '../../dateConverter';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
@@ -22,22 +33,14 @@ export interface CalendarEntry {
   link?: string;
 }
 
-const BS_MONTH_NAMES_EN = [
-  "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
-  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh",
-  "Falgun", "Chaitra"
-];
 const BS_MONTH_NAMES_SHORT = [
-  "Bai", "Jes", "Ash", "Shr", "Bha", "Ashw", "Kar", "Man", "Pou", "Mag", "Fal", "Chai"
+  "बै", "जे", "अस", "श्र", "भ", "आ", "का", "मं", "पौ", "मा", "फा", "चै"
 ];
 
-const AD_MONTH_NAMES_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-];
-
-const getAdDateKey = (date: Date): string =>
-  `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+const getAdDateKey = (date: Date): string => {
+  const parts = getNepalDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
 
 const DAY_LABELS = [
   { en: "Sun", np: "आइत" },
@@ -139,9 +142,9 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   }, []);
 
   const formatBsYearLabel = useCallback((bsYear: number) => {
-    const startAdYear = bsToAd(1, 1, bsYear).getFullYear();
+    const startAdYear = getNepalDateParts(bsToAd(1, 1, bsYear)).year;
     const lastDayInYear = getDaysInBsMonth(12, bsYear);
-    const endAdYear = bsToAd(lastDayInYear, 12, bsYear).getFullYear();
+    const endAdYear = getNepalDateParts(bsToAd(lastDayInYear, 12, bsYear)).year;
     return startAdYear === endAdYear ? `${startAdYear} AD` : `${startAdYear}-${endAdYear} AD`;
   }, []);
 
@@ -164,7 +167,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   const calendarGrid = useMemo(() => {
     const numDaysInMonth = getDaysInBsMonth(currentBsMonth, currentBsYear);
     const firstAdDateOfMonth = bsToAd(1, currentBsMonth, currentBsYear);
-    const firstDayOfWeek = firstAdDateOfMonth.getDay();
+    const firstDayOfWeek = getNepalDayOfWeek(firstAdDateOfMonth);
 
     // FIX: Changed JSX.Element[] to React.ReactElement[] to resolve "Cannot find namespace 'JSX'" error.
     const days: React.ReactElement[] = [];
@@ -179,12 +182,12 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     // Actual days
     for (let day = 1; day <= numDaysInMonth; day++) {
       const adDateForBsDay = bsToAd(day, currentBsMonth, currentBsYear);
-      const isToday = adDateForBsDay.toDateString() === defaultInitialAdDate.toDateString();
+      const isToday = isSameNepalDay(adDateForBsDay, defaultInitialAdDate);
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsMonth && selectedBsDate?.year === currentBsYear;
 
       const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
 
-      const isSaturday = adDateForBsDay.getDay() === 6;
+      const isSaturday = getNepalDayOfWeek(adDateForBsDay) === 6;
 
       days.push(
         <div
@@ -193,10 +196,10 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
             ${isSaturday ? 'bg-green-50' : 'bg-white'} 
             ${isSelectedDay ? 'bg-purple-200 ring-2 ring-purple-500' : isToday ? 'ring-2 ring-amber-500' : ''}`}
           onClick={() => {
-            const bsDate = { day, month: currentBsMonth, year: currentBsYear, monthName: BS_MONTH_NAMES_EN[currentBsMonth-1] };
+            const bsDate = { day, month: currentBsMonth, year: currentBsYear, monthName: BS_MONTH_NAMES_NP[currentBsMonth - 1] };
             setSelectedBsDate(bsDate);
             if (entriesOnDay.length > 0) {
-              const adLabel = `${AD_MONTH_NAMES_SHORT[adDateForBsDay.getMonth()]} ${adDateForBsDay.getDate()}, ${adDateForBsDay.getFullYear()} AD`;
+              const adLabel = `${formatADDate(adDateForBsDay)} AD`;
               setModalDateLabel(`${bsDate.monthName} ${bsDate.day}, ${bsDate.year} BS • ${adLabel}`);
               setSelectedEntries(entriesOnDay);
               setIsModalOpen(true);
@@ -206,11 +209,11 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
             }
           }}
           role="button" tabIndex={0}
-          aria-label={`View events for BS ${day}, ${BS_MONTH_NAMES_EN[currentBsMonth-1]} ${currentBsYear}`}
+          aria-label={`View events for BS ${day}, ${BS_MONTH_NAMES_NP[currentBsMonth - 1]} ${currentBsYear}`}
         >
           {/* AD small number */}
           <span className={`absolute top-1 right-1 text-[9px] sm:text-[10px] md:text-xs ${isSelectedDay ? 'text-purple-600' : (isSaturday ? 'text-green-500' : 'text-slate-400')}`}>
-            {adDateForBsDay.getDate()}
+            {getNepalDateParts(adDateForBsDay).day}
           </span>
           
           {/* BS big number */}
@@ -247,7 +250,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     return days;
   }, [currentBsMonth, currentBsYear, itemsByDate, defaultInitialAdDate, selectedBsDate]);
   
-  const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsMonth - 1];
+  const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsMonth - 1] || BS_MONTH_NAMES_NP[currentBsMonth - 1];
 
   return (
     <div className="bg-white rounded-t-lg">

@@ -62,11 +62,7 @@ import {
   expenseStatusList,
 } from '../../types';
 
-import {
-  adToBs,
-  BS_MONTH_NAMES_EN,
-  bsToAd,
-} from '../../dateConverter';
+import { adToBs, formatBSDate } from '../../dateConverter';
 
 import SelectMediaModal from './SelectMediaModal';
 import AdvancedMediaUploader from './AdvancedMediaUploader';
@@ -77,7 +73,7 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline';
 import RichTextEditor from '../ui/RichTextEditor';
-import BSCalendarPicker from './BSCalendarPicker';
+import DualNepaliCalendar from '../calendar/DualNepaliCalendar';
 import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 const DEFAULT_BS_YEAR = adToBs(new Date()).year
@@ -645,9 +641,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             if (!isNaN(adDateObj.getTime())) {
               (dataToSet as any)[fieldName] = adDateObj.toISOString().split('T')[0];
               const bs = adToBs(adDateObj);
-              newBsDateDisplays[fieldName] = `${
-                BS_MONTH_NAMES_EN[bs.month - 1]
-              } ${bs.day}, ${bs.year} BS`;
+              newBsDateDisplays[fieldName] = formatBSDate(bs);
             } else {
               (dataToSet as any)[fieldName] = '';
               newBsDateDisplays[fieldName] = 'N/A';
@@ -849,7 +843,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         const bs = adToBs(new Date(value));
         setBsDateDisplays((prev) => ({
           ...prev,
-          [name]: `${BS_MONTH_NAMES_EN[bs.month - 1]} ${bs.day}, ${bs.year} BS`,
+          [name]: formatBSDate(bs),
         }));
       } else {
         setBsDateDisplays((prev) => ({
@@ -865,18 +859,23 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     }
   };
 
-  const handleBsDateSelect = (fieldName: string, bsDay: number, bsMonth: number, bsYear: number) => {
-    const adDate = bsToAd(bsDay, bsMonth, bsYear);
-    const adDateString = adDate.toISOString().split('T')[0];
-
+  const handleBsDateSelect = (
+    fieldName: string,
+    payload: { bs: { year: number; month: number; day: number }; ad: { iso: string } }
+  ) => {
     setFormData((prev) => ({
       ...prev,
-      [fieldName]: adDateString,
+      [fieldName]: payload.ad.iso,
     }));
 
     setBsDateDisplays((prev) => ({
       ...prev,
-      [fieldName]: `${BS_MONTH_NAMES_EN[bsMonth - 1]} ${bsDay}, ${bsYear} BS`,
+      [fieldName]: formatBSDate({
+        year: payload.bs.year,
+        month: payload.bs.month,
+        day: payload.bs.day,
+        monthName: '',
+      }),
     }));
 
     setPickerVisibleFor(null);
@@ -1188,9 +1187,9 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       </div>
       {pickerVisibleFor === fieldName && (
         <div className="absolute z-10 mt-1 bg-white dark:bg-slate-800 shadow-lg rounded-lg border dark:border-slate-600">
-          <BSCalendarPicker
+          <DualNepaliCalendar
             initialAdDate={(formData as any)[fieldName]}
-            onDateSelect={(d, m, y) => handleBsDateSelect(fieldName, d, m, y)}
+            onDateSelect={(payload) => handleBsDateSelect(fieldName, payload)}
           />
         </div>
       )}
