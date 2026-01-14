@@ -22,8 +22,6 @@ const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 type PaperSizeType = 'a4' | 'a3' | 'a2' | 'a1';
 
-const isLikelyAdYear = (year: number) => year > 1000 && year < 2070;
-
 const EventCalendarPage: React.FC = () => {
   const { events, loadingContent, newsItems, sermons, blogPosts } = useContent();
 
@@ -38,24 +36,7 @@ const EventCalendarPage: React.FC = () => {
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
   const [currentCalendarBsYear, setCurrentCalendarBsYear] = useState<number>(initialBsDate.year);
 
-  /**
-   * IMPORTANT FIX:
-   * InteractiveCalendar currently sends (month, year) as AD (e.g. 1, 2026) in your UI,
-   * but this page was treating them as BS.
-   *
-   * So:
-   * - if year looks like AD (e.g. 2026), convert that AD month start to BS and store BS month/year
-   * - otherwise treat as real BS.
-   */
   const handleCalendarMonthChange = useCallback((month: number, year: number) => {
-    if (isLikelyAdYear(year)) {
-      const adMonthStart = new Date(Date.UTC(year, month - 1, 1));
-      const bsStart = adToBs(adMonthStart);
-      setCurrentCalendarBsMonth(bsStart.month);
-      setCurrentCalendarBsYear(bsStart.year);
-      return;
-    }
-
     setCurrentCalendarBsMonth(month);
     setCurrentCalendarBsYear(year);
   }, []);

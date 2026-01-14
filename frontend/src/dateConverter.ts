@@ -100,11 +100,12 @@ const resolveDateConverter = (): DateConverter => {
   bsToAd: (year: number, month: number, day: number) => {
     const bs = new NepaliDate(year, month - 1, day); // month is 0-based
     const ad = bs.toJsDate(); // ✅ confirmed method
+    const adParts = getDatePartsInTimeZone(ad, NEPAL_TIME_ZONE);
 
     return {
-      year: ad.getUTCFullYear(),
-      month: ad.getUTCMonth() + 1,
-      day: ad.getUTCDate(),
+      year: adParts.year,
+      month: adParts.month,
+      day: adParts.day,
     };
   },
 };
