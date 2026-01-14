@@ -12,6 +12,7 @@ import {
   getNepalDateParts,
   getNepalDayOfWeek,
   isSameNepalDay,
+  toAdIsoString,
 } from '../../dateConverter';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -154,15 +155,21 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     return startAdYear === endAdYear ? `${startAdYear} AD` : `${startAdYear}-${endAdYear} AD`;
   }, []);
 
+  const formatBsYearOptionLabel = useCallback((bsYear: number) => {
+    return `${bsYear} BS (${formatBsYearLabel(bsYear)})`;
+  }, [formatBsYearLabel]);
+
   const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
   const currentBsMonthAdRangeLabel = useMemo(() => {
     try {
       const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
       const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
       const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
+      const startAdDateNormalized = new Date(`${toAdIsoString(startAdDate)}T00:00:00Z`);
+      const endAdDateNormalized = new Date(`${toAdIsoString(endAdDate)}T00:00:00Z`);
 
-      const startRoundTrip = adToBs(startAdDate);
-      const endRoundTrip = adToBs(endAdDate);
+      const startRoundTrip = adToBs(startAdDateNormalized);
+      const endRoundTrip = adToBs(endAdDateNormalized);
       const isStartValid = startRoundTrip.year === currentBsYear && startRoundTrip.month === currentBsMonth && startRoundTrip.day === 1;
       const isEndValid = endRoundTrip.year === currentBsYear && endRoundTrip.month === currentBsMonth && endRoundTrip.day === endAdDay;
 
@@ -170,14 +177,14 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
         throw new Error('BS/AD conversion mismatch detected.');
       }
 
-      const startParts = getNepalDateParts(startAdDate);
-      const endParts = getNepalDateParts(endAdDate);
-      const startLabel = formatADDate(startAdDate, {
+      const startParts = getNepalDateParts(startAdDateNormalized);
+      const endParts = getNepalDateParts(endAdDateNormalized);
+      const startLabel = formatADDate(startAdDateNormalized, {
         month: 'short',
         day: 'numeric',
         ...(startParts.year !== endParts.year ? { year: 'numeric' } : {}),
       });
-      const endLabel = formatADDate(endAdDate, {
+      const endLabel = formatADDate(endAdDateNormalized, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -313,7 +320,11 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
               className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[150px] text-center"
               aria-label="Select Year"
             >
-              {yearOptions.map(year => <option key={year} value={year}>{formatBsYearLabel(year)}</option>)}
+              {yearOptions.map(year => (
+                <option key={year} value={year}>
+                  {formatBsYearOptionLabel(year)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -322,6 +333,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
             {currentMonthNameShort} {currentBsYear} BS
           </h2>
           <p className="text-xs text-blue-100">{currentBsMonthAdRangeLabel}</p>
+          <p className="text-[11px] text-blue-200">{currentBsYearAdLabel}</p>
           
         </div>
       </header>

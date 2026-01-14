@@ -29,9 +29,19 @@ type DateConverter = {
 let cachedConverter: DateConverter | null = null;
 let hasLoggedConverterError = false;
 
+const parseDateInput = (dateInput: string | Date): Date => {
+  if (typeof dateInput !== 'string') {
+    return new Date(dateInput);
+  }
+  if (dateInput.includes('T')) {
+    return new Date(dateInput);
+  }
+  return new Date(`${dateInput}T00:00:00Z`);
+};
+
 const fallbackConverter: DateConverter = {
   adToBs: (date: string) => {
-    const parsed = date.includes('T') ? new Date(date) : new Date(`${date}T00:00:00`);
+    const parsed = parseDateInput(date);
     if (isNaN(parsed.getTime())) {
       return { year: 0, month: 0, day: 0 };
     }
@@ -124,15 +134,7 @@ const getDatePartsInTimeZone = (date: Date, timeZone: string): { year: number; m
 };
 
 const toNepalDateParts = (dateInput: string | Date): { year: number; month: number; day: number } => {
-  const parsed = (() => {
-    if (typeof dateInput !== 'string') {
-      return new Date(dateInput);
-    }
-    if (dateInput.includes('T')) {
-      return new Date(dateInput);
-    }
-    return new Date(`${dateInput}T00:00:00`);
-  })();
+  const parsed = parseDateInput(dateInput);
 
   if (isNaN(parsed.getTime())) {
     throw new Error(`Invalid date input: ${dateInput}`);
