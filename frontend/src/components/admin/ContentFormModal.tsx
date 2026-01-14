@@ -309,6 +309,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     imageUrl: '',
     date: new Date().toISOString().split('T')[0],
+    incidentAt: new Date().toISOString().split('T')[0],
     category: sermonCategoriesList[0],
     speaker: '',
     scripture: '',
@@ -321,6 +322,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     title: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+    incidentAt: new Date().toISOString().split('T')[0],
     category: eventCategoriesList[0],
     eventType: 'REGULAR',
     scheduleType: 'ONE_TIME',
@@ -358,6 +360,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     imageUrl: '',
     date: new Date().toISOString().split('T')[0],
+    incidentAt: new Date().toISOString().split('T')[0],
     category: blogPostCategoriesList[0],
     enableAutoNarration: true,
     videoUrl: '',
@@ -369,6 +372,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     description: '',
     imageUrl: '',
     date: new Date().toISOString().split('T')[0],
+    incidentAt: new Date().toISOString().split('T')[0],
     category: newsCategoriesList[0],
     enableAutoNarration: true,
     videoUrl: '',
@@ -597,10 +601,10 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
 
   const dateFieldsConfig: Record<string, string[]> = {
-    sermon: ['date'],
-    event: ['date'],
-    blogPost: ['date'],
-    news: ['date'],
+    sermon: ['incidentAt'],
+    event: ['incidentAt'],
+    blogPost: ['incidentAt'],
+    news: ['incidentAt'],
     branchChurch: ['establishedDate'],
     churchMember: ['memberSince', 'dateOfBirth', 'baptismDate'],
     meetingLog: ['meetingDate'],
@@ -628,6 +632,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       let dataToSet: GenericContentFormData = initialData
         ? ({ ...defaultFormValues[contentType], ...initialData } as GenericContentFormData)
         : ({ ...mergedDefaults } as GenericContentFormData);
+
+      if ((dataToSet as any).date && !(dataToSet as any).incidentAt) {
+        (dataToSet as any).incidentAt = (dataToSet as any).date;
+      }
+      if ((dataToSet as any).incidentAt && !(dataToSet as any).date) {
+        (dataToSet as any).date = (dataToSet as any).incidentAt;
+      }
 
       const newBsDateDisplays: Record<string, string> = {};
       const fieldsForType = dateFieldsConfig[contentType] || [];
@@ -834,10 +845,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         [name]: value === '' ? '' : Number(value),
       }));
     } else if (type === 'date') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => {
+        const next: any = {
+          ...prev,
+          [name]: value,
+        };
+        if (name === 'incidentAt') {
+          next.date = value;
+        }
+        if (name === 'date') {
+          next.incidentAt = value;
+        }
+        return next;
+      });
 
       if (value) {
         const bs = adToBs(new Date(value));
@@ -864,10 +884,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     payload: { bs: { year: number; month: number; day: number }; ad: { iso: string } }
   ) => {
 
-    setFormData((prev) => ({
-      ...prev,
-      [fieldName]: payload.ad.iso,
-    }));
+    setFormData((prev) => {
+      const next: any = {
+        ...prev,
+        [fieldName]: payload.ad.iso,
+      };
+      if (fieldName === 'incidentAt') {
+        next.date = payload.ad.iso;
+      }
+      if (fieldName === 'date') {
+        next.incidentAt = payload.ad.iso;
+      }
+      return next;
+    });
 
     setBsDateDisplays((prev) => ({
       ...prev,
@@ -1141,6 +1170,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       }));
     }
 
+    if (dataToSubmit.incidentAt && !dataToSubmit.date) {
+      dataToSubmit.date = dataToSubmit.incidentAt;
+    }
+    if (dataToSubmit.date && !dataToSubmit.incidentAt) {
+      dataToSubmit.incidentAt = dataToSubmit.date;
+    }
+
   if (contentType === 'event') {
       const eventData = dataToSubmit as EventFormData;
       eventData.eventType = eventData.eventType || eventFormVariant || 'REGULAR';
@@ -1274,7 +1310,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
 
-              {renderDateFieldWithBSPicker('date', 'Sermon Date')}
+              {renderDateFieldWithBSPicker('incidentAt', 'Sermon Date')}
 
               <div>
                 <label htmlFor="scripture" className={labelClasses}>
@@ -1499,7 +1535,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             )}
 
             <FormSection title="Date, Time & Location">
-              {renderDateFieldWithBSPicker('date', 'Event Date')}
+              {renderDateFieldWithBSPicker('incidentAt', 'Event Date')}
 
               <div>
                 <label htmlFor="time" className={labelClasses}>
@@ -2155,22 +2191,39 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       }
 
       default:
+        const dateFields = new Set(dateFieldsConfig[contentType] || []);
         return (
           <>
-            {Object.keys(formData).map((key) => (
-              <div key={key}>
-                <label htmlFor={key} className={labelClasses}>
-                  {key}
-                </label>
-                <input
-                  type="text"
-                  name={key}
-                  value={(formData as any)[key] ?? ''}
-                  onChange={handleChange}
-                  className={inputClasses}
-                />
-              </div>
-            ))}
+            {Object.keys(formData).map((key) => {
+              const label = key === 'incidentAt' ? 'Incident Date' : key.replace(/([A-Z])/g, ' $1');
+              if (key === 'publishedAt') {
+                return null;
+              }
+              if (key === 'date' && dateFields.has('incidentAt')) {
+                return null;
+              }
+              if (dateFields.has(key)) {
+                return (
+                  <React.Fragment key={key}>
+                    {renderDateFieldWithBSPicker(key, label)}
+                  </React.Fragment>
+                );
+              }
+              return (
+                <div key={key}>
+                  <label htmlFor={key} className={labelClasses}>
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    name={key}
+                    value={(formData as any)[key] ?? ''}
+                    onChange={handleChange}
+                    className={inputClasses}
+                  />
+                </div>
+              );
+            })}
           </>
         );
     }
@@ -2236,4 +2289,3 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 };
 
 export default ContentFormModal;
-

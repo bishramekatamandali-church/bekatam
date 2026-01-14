@@ -35,6 +35,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
     const [title, setTitle] = useState('');
     const [mediaUrls, setMediaUrls] = useState<string[]>([]);
     const [location, setLocation] = useState('');
+    const [incidentAt, setIncidentAt] = useState('');
     
     // Specific States
     const [prayerVisibility, setPrayerVisibility] = useState<PrayerRequestVisibility>('public');
@@ -54,7 +55,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
     const resetFormState = () => {
         setContent(''); setTitle(''); setMediaUrls([]);
-        setLocation('');
+        setLocation(''); setIncidentAt('');
         setPrayerVisibility('public'); setPrayerCategory(undefined);
         setTestimonialVisibility('public');
         setError(''); setIsSubmitting(false); setShowExtraInputs(null);
@@ -153,6 +154,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
         const commonData = {
             location: location || undefined,
             mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+            incidentAt: incidentAt || undefined,
         };
 
         let formData: any;
@@ -236,6 +238,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
                             onChange={e => setTitle(e.target.value)}
                             className="w-full text-lg font-semibold p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 dark:text-slate-200"
                         />
+                        <div>
+                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                                Incident date (optional)
+                            </label>
+                            <input
+                                type="date"
+                                value={incidentAt}
+                                onChange={(e) => setIncidentAt(e.target.value)}
+                                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 dark:text-slate-200"
+                            />
+                        </div>
                         <div className="relative">
                             <textarea
                                 ref={contentTextareaRef}
