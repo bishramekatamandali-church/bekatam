@@ -70,8 +70,10 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   const defaultInitialAdDate = useMemo(() => getLocalToday(), []);
   const defaultInitialBsDate = useMemo(() => adToBs(defaultInitialAdDate), [defaultInitialAdDate]);
 
-  const [currentBsMonth, setCurrentBsMonth] = useState<number>(initialBsMonth || defaultInitialBsDate.month);
-  const [currentBsYear, setCurrentBsYear] = useState<number>(initialBsYear || defaultInitialBsDate.year);
+  const [currentBsDate, setCurrentBsDate] = useState<{ month: number; year: number }>(() => ({
+    month: initialBsMonth ?? defaultInitialBsDate.month,
+    year: initialBsYear ?? defaultInitialBsDate.year,
+  }));
   
   const [selectedBsDate, setSelectedBsDate] = useState<BSDate | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<CalendarEntry[]>([]);
@@ -79,61 +81,82 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   const [modalDateLabel, setModalDateLabel] = useState('');
 
   useEffect(() => {
-    if (initialBsMonth !== undefined && initialBsMonth !== currentBsMonth) {
-      setCurrentBsMonth(initialBsMonth);
+    if (initialBsMonth === undefined && initialBsYear === undefined) {
+      return;
     }
-    if (initialBsYear !== undefined && initialBsYear !== currentBsYear) {
-      setCurrentBsYear(initialBsYear);
-    }
-  }, [initialBsMonth, initialBsYear, currentBsMonth, currentBsYear]);
+    setCurrentBsDate(prev => {
+      const nextMonth = initialBsMonth ?? prev.month;
+      const nextYear = initialBsYear ?? prev.year;
+      if (nextMonth === prev.month && nextYear === prev.year) {
+        return prev;
+      }
+      return { month: nextMonth, year: nextYear };
+    });
+  }, [initialBsMonth, initialBsYear]);
 
   useEffect(() => {
     if (onMonthChange) {
-      onMonthChange(currentBsMonth, currentBsYear);
+      onMonthChange(currentBsDate.month, currentBsDate.year);
     }
-  }, [currentBsMonth, currentBsYear, onMonthChange]);
+  }, [currentBsDate.month, currentBsDate.year, onMonthChange]);
   
   useEffect(() => {
     setSelectedBsDate(null);
     setSelectedEntries([]);
     setIsModalOpen(false);
-  }, [currentBsMonth, currentBsYear]);
+  }, [currentBsDate.month, currentBsDate.year]);
 
   const handlePrevMonth = () => {
-    if (currentBsMonth === 1 && currentBsYear === BS_YEAR_RANGE.start) return;
+    setCurrentBsDate(prev => {
+      if (prev.month === 1 && prev.year === BS_YEAR_RANGE.start) {
+        return prev;
+      }
 
-    let newMonth = currentBsMonth - 1;
-    let newYear = currentBsYear;
+      let newMonth = prev.month - 1;
+      let newYear = prev.year;
 
-    if (newMonth < 1) { newMonth = 12; newYear--; }
-    if (newYear < BS_YEAR_RANGE.start) { newYear = BS_YEAR_RANGE.start; newMonth = 1; }
+      if (newMonth < 1) {
+        newMonth = 12;
+        newYear--;
+      }
+      if (newYear < BS_YEAR_RANGE.start) {
+        return prev;
+      }
 
-    setCurrentBsMonth(newMonth);
-    setCurrentBsYear(newYear);
+      return { month: newMonth, year: newYear };
+    });
   };
 
   const handleNextMonth = () => {
-    if (currentBsMonth === 12 && currentBsYear === BS_YEAR_RANGE.end) return;
+    setCurrentBsDate(prev => {
+      if (prev.month === 12 && prev.year === BS_YEAR_RANGE.end) {
+        return prev;
+      }
 
-    let newMonth = currentBsMonth + 1;
-    let newYear = currentBsYear;
+      let newMonth = prev.month + 1;
+      let newYear = prev.year;
 
-    if (newMonth > 12) { newMonth = 1; newYear++; }
-    if (newYear > BS_YEAR_RANGE.end) { newYear = BS_YEAR_RANGE.end; newMonth = 12; }
+      if (newMonth > 12) {
+        newMonth = 1;
+        newYear++;
+      }
+      if (newYear > BS_YEAR_RANGE.end) {
+        return prev;
+      }
 
-    setCurrentBsMonth(newMonth);
-    setCurrentBsYear(newYear);
+      return { month: newMonth, year: newYear };
+    });
   };
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCurrentBsYear(parseInt(e.target.value, 10));
+    const nextYear = parseInt(e.target.value, 10);
+    setCurrentBsDate(prev => ({ ...prev, year: nextYear }));
   };
 
   const goToToday = () => {
     const todayAd = getLocalToday();
     const todayBs = adToBs(todayAd);
-    setCurrentBsMonth(todayBs.month);
-    setCurrentBsYear(todayBs.year);
+    setCurrentBsDate({ month: todayBs.month, year: todayBs.year });
     setSelectedBsDate(todayBs);
     setIsModalOpen(false);
   };
@@ -158,9 +181,9 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
   }, [formatBsYearLabel]);
 
   const currentBsMonthAdRangeLabel = useMemo(() => {
-    const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
-    const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
-    const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
+    const endAdDay = getDaysInBsMonth(currentBsDate.month, currentBsDate.year);
+    const startAdDate = bsToAd(1, currentBsDate.month, currentBsDate.year);
+    const endAdDate = bsToAd(endAdDay, currentBsDate.month, currentBsDate.year);
     const startParts = getNepalDateParts(startAdDate);
     const endParts = getNepalDateParts(endAdDate);
     const startMonthLabel = formatADDate(startAdDate, { month: 'short' });
@@ -173,7 +196,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
       return `${startMonthLabel}/${endMonthLabel} ${startParts.year}`;
     }
     return `${startMonthLabel}/${endMonthLabel} ${startParts.year}-${endParts.year}`;
-  }, [currentBsMonth, currentBsYear]);
+  }, [currentBsDate.month, currentBsDate.year]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
@@ -190,8 +213,8 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
   }, [items]);
   
   const calendarGrid = useMemo(() => {
-    const numDaysInMonth = getDaysInBsMonth(currentBsMonth, currentBsYear);
-    const firstAdDateOfMonth = bsToAd(1, currentBsMonth, currentBsYear);
+    const numDaysInMonth = getDaysInBsMonth(currentBsDate.month, currentBsDate.year);
+    const firstAdDateOfMonth = bsToAd(1, currentBsDate.month, currentBsDate.year);
     const firstDayOfWeek = getNepalDayOfWeek(firstAdDateOfMonth);
 
     // FIX: Changed JSX.Element[] to React.ReactElement[] to resolve "Cannot find namespace 'JSX'" error.
@@ -206,12 +229,12 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
 
     // Actual days
     for (let day = 1; day <= numDaysInMonth; day++) {
-      const adDateForBsDay = bsToAd(day, currentBsMonth, currentBsYear);
+      const adDateForBsDay = bsToAd(day, currentBsDate.month, currentBsDate.year);
       const adParts = getNepalDateParts(adDateForBsDay);
       const adMonthLabel = formatADDate(adDateForBsDay, { month: 'short' });
       const adOverlayLabel = adParts.day === 1 ? `${adMonthLabel} ${adParts.day}` : `${adParts.day}`;
       const isToday = isSameNepalDay(adDateForBsDay, defaultInitialAdDate);
-      const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsMonth && selectedBsDate?.year === currentBsYear;
+      const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsDate.month && selectedBsDate?.year === currentBsDate.year;
       
       const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
 
@@ -224,7 +247,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
             ${isSaturday ? 'bg-green-50' : 'bg-white'} 
             ${isSelectedDay ? 'bg-purple-200 ring-2 ring-purple-500' : isToday ? 'ring-2 ring-amber-500' : ''}`}
           onClick={() => {
-            const bsDate = { day, month: currentBsMonth, year: currentBsYear, monthName: BS_MONTH_NAMES_NP[currentBsMonth - 1] };
+            const bsDate = { day, month: currentBsDate.month, year: currentBsDate.year, monthName: BS_MONTH_NAMES_NP[currentBsDate.month - 1] };
             setSelectedBsDate(bsDate);
             if (entriesOnDay.length > 0) {
               const adLabel = `${formatADDate(adDateForBsDay)} AD`;
@@ -237,7 +260,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
             }
           }}
           role="button" tabIndex={0}
-          aria-label={`View events for BS ${day}, ${BS_MONTH_NAMES_NP[currentBsMonth - 1]} ${currentBsYear}`}
+          aria-label={`View events for BS ${day}, ${BS_MONTH_NAMES_NP[currentBsDate.month - 1]} ${currentBsDate.year}`}
         >
           {/* AD small number */}
           <span className={`absolute top-1 right-1 text-[9px] sm:text-[10px] md:text-xs ${isSelectedDay ? 'text-purple-600' : (isSaturday ? 'text-green-500' : 'text-slate-400')}`}>
@@ -276,59 +299,66 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
     }
 
     return days;
-  }, [currentBsMonth, currentBsYear, itemsByDate, defaultInitialAdDate, selectedBsDate]);
+  }, [currentBsDate.month, currentBsDate.year, itemsByDate, defaultInitialAdDate, selectedBsDate]);
   
-  const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsMonth - 1] || BS_MONTH_NAMES_NP[currentBsMonth - 1];
+  const currentMonthNameShort = BS_MONTH_NAMES_SHORT[currentBsDate.month - 1] || BS_MONTH_NAMES_NP[currentBsDate.month - 1];
 
   return (
     <div className="bg-white rounded-t-lg">
-      <header className="bg-blue-600 text-white p-3 flex flex-col gap-3 rounded-t-lg sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <Button onClick={handlePrevMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Previous Month">
-            <ChevronLeftIcon className="w-5 h-5" />
-          </Button>
-          <Button onClick={goToToday} variant="ghost" size="sm" className="!px-2.5 !py-0.5 text-xs font-semibold !text-white hover:!bg-blue-500 border border-white/50 rounded-full" aria-label="Jump to today">
-            Today
-          </Button>
-          <Button onClick={handleNextMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Next Month">
-            <ChevronRightIcon className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2 bg-blue-500/40 px-2.5 py-1 rounded-md flex-wrap">
-            <label htmlFor="calendar-year" className="text-xs uppercase tracking-wide text-blue-100">Year</label>
-            <select
-              id="calendar-year"
-              value={currentBsYear}
-              onChange={handleYearChange}
-              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[150px] text-center"
-              aria-label="Select Year"
-            >
-              {yearOptions.map(year => (
-                <option key={year} value={year}>
-                  {formatBsYearOptionLabel(year)}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="calendar-month" className="text-xs uppercase tracking-wide text-blue-100">Month</label>
-            <select
-              id="calendar-month"
-              value={currentBsMonth}
-              onChange={(event) => setCurrentBsMonth(parseInt(event.target.value, 10))}
-              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[130px] text-center"
-              aria-label="Select Month"
-            >
-              {BS_MONTH_NAMES_NP.map((name, index) => (
-                <option key={name} value={index + 1}>
-                  {name}
-                </option>
-              ))}
-            </select>
+      <header className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-3 py-4 rounded-t-lg">
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[auto,1fr,auto] lg:items-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+            <Button onClick={handlePrevMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Previous Month">
+              <ChevronLeftIcon className="w-5 h-5" />
+            </Button>
+            <Button onClick={goToToday} variant="ghost" size="sm" className="!px-3 !py-1 text-xs font-semibold !text-white hover:!bg-blue-500 border border-white/50 rounded-full" aria-label="Jump to today">
+              Today
+            </Button>
+            <Button onClick={handleNextMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Next Month">
+              <ChevronRightIcon className="w-5 h-5" />
+            </Button>
           </div>
-        </div>
-        <div className="flex-1 text-center space-y-1">
-          <h2 className="text-lg sm:text-xl font-semibold tracking-wide">
-            {currentMonthNameShort} {currentBsYear} BS
-          </h2>
-          <p className="text-xs text-blue-100">{currentBsMonthAdRangeLabel}</p>
+          <div className="text-center space-y-1">
+            <p className="text-xs uppercase tracking-wide text-blue-100">Calendar</p>
+            <h2 className="text-lg sm:text-xl font-semibold tracking-wide">
+              {currentMonthNameShort} {currentBsDate.year} BS
+            </h2>
+            <p className="text-xs text-blue-100">AD Range: {currentBsMonthAdRangeLabel}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 bg-blue-500/35 px-3 py-2 rounded-lg lg:justify-end">
+            <div className="flex items-center gap-2">
+              <label htmlFor="calendar-year" className="text-[11px] uppercase tracking-wide text-blue-100">Year</label>
+              <select
+                id="calendar-year"
+                value={currentBsDate.year}
+                onChange={handleYearChange}
+                className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[150px] text-center"
+                aria-label="Select Year"
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>
+                    {formatBsYearOptionLabel(year)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="calendar-month" className="text-[11px] uppercase tracking-wide text-blue-100">Month</label>
+              <select
+                id="calendar-month"
+                value={currentBsDate.month}
+                onChange={(event) => setCurrentBsDate(prev => ({ ...prev, month: parseInt(event.target.value, 10) }))}
+                className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[130px] text-center"
+                aria-label="Select Month"
+              >
+                {BS_MONTH_NAMES_NP.map((name, index) => (
+                  <option key={name} value={index + 1}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </header>
       <div className="overflow-x-auto">
