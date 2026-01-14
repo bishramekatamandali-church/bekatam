@@ -149,6 +149,24 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
   }, []);
 
   const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
+  const currentBsMonthAdRangeLabel = useMemo(() => {
+    const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
+    const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
+    const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
+    const startParts = getNepalDateParts(startAdDate);
+    const endParts = getNepalDateParts(endAdDate);
+    const startLabel = formatADDate(startAdDate, {
+      month: 'short',
+      day: 'numeric',
+      ...(startParts.year !== endParts.year ? { year: 'numeric' } : {}),
+    });
+    const endLabel = formatADDate(endAdDate, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    return `${startLabel} - ${endLabel} AD`;
+  }, [currentBsMonth, currentBsYear]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
@@ -282,7 +300,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
           <h2 className="text-lg sm:text-xl font-semibold tracking-wide">
             {currentMonthNameShort} {currentBsYear} BS
           </h2>
-          <p className="text-xs text-blue-100">{currentBsYearAdLabel}</p>
+          <p className="text-xs text-blue-100">{currentBsMonthAdRangeLabel}</p>
           
         </div>
       </header>
