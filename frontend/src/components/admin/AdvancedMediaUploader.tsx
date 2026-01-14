@@ -2,6 +2,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import Button from '../ui/Button';
 import { CameraIcon, FolderIcon, MicrophoneIcon, XCircleIcon, StopCircleIcon, ArrowUpOnSquareIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { getCloudinaryFileSizeError, getCloudinaryLimitLabel } from '../../utils/cloudinary';
 
 interface AdvancedMediaUploaderProps {
   label: string;
@@ -43,6 +44,15 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
     const file = event.target.files?.[0];
     const target = event.target;
     if (!file) return;
+  
+    const sizeError = getCloudinaryFileSizeError(file);
+    if (sizeError) {
+      setLocalError(sizeError);
+      if (target) {
+        target.value = '';
+      }
+      return;
+    }
 
     setLocalError(null);
     onFileUpload(file);
@@ -117,6 +127,11 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
     setIsDragOver(false);
     const file = event.dataTransfer.files?.[0];
     if (file) {
+      const sizeError = getCloudinaryFileSizeError(file);
+      if (sizeError) {
+        setLocalError(sizeError);
+        return;
+      }
       onFileUpload(file);
     }
   }, [onFileUpload]);
@@ -207,7 +222,7 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
       </div>
 
       <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-        Max file size is determined by the server.
+        {getCloudinaryLimitLabel(mediaType)}
       </p>
 
       {isRecording && <p className="text-xs text-red-500 dark:text-red-400 mt-2 animate-pulse">Recording audio...</p>}

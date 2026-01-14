@@ -7,7 +7,7 @@ import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { ArrowDownTrayIcon, BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ScaleIcon } from '@heroicons/react/24/outline';
-import { adToBs, bsToAd, BS_MONTH_NAMES_EN, getDaysInBsMonth, formatDateADBS } from '../../dateConverter';
+import { adToBs, bsToAd, BS_MONTH_NAMES_NP, getDaysInBsMonth, formatDateADBS, getLocalToday, toAdIsoString } from '../../dateConverter';
 
 interface TransactionLogItem {
   id: string;
@@ -33,9 +33,9 @@ const getCurrentFont = (text: string): string => {
 const FinancialSummaryPage: React.FC = () => {
   const { collectionRecords, donationRecords, expenseRecords, loadingContent } = useContent();
   
-  const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const today = getLocalToday();
+  const todayString = toAdIsoString(today);
+  const firstDayOfMonth = toAdIsoString(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)));
 
   const [startDate, setStartDate] = useState(firstDayOfMonth);
   const [endDate, setEndDate] = useState(todayString);
@@ -158,7 +158,7 @@ const FinancialSummaryPage: React.FC = () => {
 
     try {
       const newAdDate = bsToAd(currentBs.day, currentBs.month, currentBs.year);
-      const newAdDateString = newAdDate.toISOString().split('T')[0];
+      const newAdDateString = toAdIsoString(newAdDate);
 
       if (type === 'start') {
         setStartDate(newAdDateString);
@@ -188,7 +188,7 @@ const FinancialSummaryPage: React.FC = () => {
                     {bsYearOptions.map(year => <option key={year} value={year}>{year}</option>)}
                 </select>
                 <select value={bsState.month} onChange={(e) => handleBsChange(type, 'month', e.target.value)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 dark:text-slate-200" aria-label={`${label} Month`}>
-                    {BS_MONTH_NAMES_EN.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+                    {BS_MONTH_NAMES_NP.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
                 </select>
                 <select value={bsState.day} onChange={(e) => handleBsChange(type, 'day', e.target.value)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 dark:text-slate-200" aria-label={`${label} Day`}>
                     {Array.from({ length: getDaysInBsMonth(bsState.month, bsState.year) }, (_, i) => i + 1).map(day => (

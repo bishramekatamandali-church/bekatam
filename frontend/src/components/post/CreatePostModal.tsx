@@ -7,6 +7,7 @@ import { PrayerRequestFormData, PrayerRequestVisibility, TestimonialFormData, pr
 import AdvancedMediaUploader from '../admin/AdvancedMediaUploader';
 import { PencilSquareIcon, CalendarDaysIcon, SpeakerWaveIcon, PhotoIcon, MapPinIcon, XCircleIcon, PaperClipIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
 import { PrayerHandsIcon, TestimonyIcon } from '../icons/GenericIcons';
+import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 type PostType = 'prayer' | 'testimonial';
 
@@ -23,9 +24,6 @@ const emojiCategories = {
   'Objects & Symbols': ['💡', '🎵', '✝️', '⛪', '📖', '💯', '✅', '❓', '❗', '💔', '🕊️'],
 };
 
-
-const CLOUDINARY_CLOUD_NAME = 'dhqoftm46';
-const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
 
 const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, initialPostType }) => {
     const { currentUser } = useAuth();
@@ -95,15 +93,29 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
         setUploadStatus(`Uploading ${file.name}...`);
         setError('');
 
+        const sizeError = getCloudinaryFileSizeError(file);
+        if (sizeError) {
+            setError(sizeError);
+            setUploadStatus(sizeError);
+            setIsUploading(false);
+            return;
+        }
+
+        const resourceType = getCloudinaryResourceType(file);
+        const uploadDetails = getCloudinaryUploadDetails(resourceType);
+        if ('error' in uploadDetails) {
+            setError(uploadDetails.error);
+            setUploadStatus(uploadDetails.error);
+            setIsUploading(false);
+            return;
+        }
+
         const uploadFormData = new FormData();
         uploadFormData.append('file', file);
-        uploadFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-        const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+        uploadFormData.append('upload_preset', uploadDetails.uploadPreset);
 
         try {
-            const response = await fetch(uploadUrl, { method: 'POST', body: uploadFormData, mode: 'cors' });
+            const response = await fetch(uploadDetails.uploadUrl, { method: 'POST', body: uploadFormData, mode: 'cors' });
             const data = await response.json();
 
             if (response.ok && data.secure_url) {
@@ -282,7 +294,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
                 {/* Action Tray */}
                 <div className="border rounded-lg p-2 mt-2 flex flex-wrap justify-around items-center dark:border-slate-600">
-                    <AdvancedMediaUploader label="Photo/Video" mediaType="image" onUrlChange={handleFileAdd} onFileUpload={handleCloudinaryUpload} isUploading={isUploading} uploadStatus={uploadStatus} className="!p-0" childrenAsTrigger>
+                    <AdvancedMediaUploader label="Photo/Video" mediaType="any" onUrlChange={handleFileAdd} onFileUpload={handleCloudinaryUpload} isUploading={isUploading} uploadStatus={uploadStatus} className="!p-0" childrenAsTrigger>
                          <button className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><PhotoIcon className="w-5 h-5 text-green-500"/> <span className="ml-1.5 hidden sm:inline">Photo/Video</span></button>
                     </AdvancedMediaUploader>
                     <button onClick={() => setShowExtraInputs(showExtraInputs === 'location' ? null : 'location')} className="flex items-center text-sm p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"><MapPinIcon className="w-5 h-5 text-red-500"/> <span className="ml-1.5 hidden sm:inline">Location</span></button>

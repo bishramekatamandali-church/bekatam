@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 // POST a new news item
 router.post('/', async (req, res) => {
     const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
-    const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
+    const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto_1.default.randomUUID();
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.newsitem_category);
     if (category && !normalizedCategory) {
@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
-    const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : undefined;
+    const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.newsitem_category);
     if (category && !normalizedCategory) {
         return res.status(400).json({ error: 'Invalid news category.' });

@@ -426,6 +426,7 @@ useEffect(() => {
           category: formData.category,
           date: formData.date,
           audioUrl: formData.audioUrl,
+          videoUrl: formData.videoUrl,
           mediaUrls: formData.mediaUrls,
           location: formData.location,
           postedByAdminId: currentUser?.id,

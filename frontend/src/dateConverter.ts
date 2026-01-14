@@ -1,11 +1,25 @@
-// dateConverter.ts
 import { BSDate } from './types';
-import { BS_CALENDAR_DATA } from './utils/bsCalendarData';
+import nepaliDateConverter from "nepali-date-converter";
 
-const BS_START_YEAR = BS_CALENDAR_DATA[0][0];
-const BS_END_YEAR = BS_CALENDAR_DATA[BS_CALENDAR_DATA.length - 1][0];
-const BS_START_MONTH = 1;
-const BS_START_DAY = 1;
+const NepaliDate = (nepaliDateConverter as any).default;
+
+export function adToBsParts(ad: Date) {
+  const bs = NepaliDate.fromAD(ad);
+
+  return {
+    year: bs.getYear(),
+    month: bs.getMonth() + 1,
+    day: bs.getDate(),
+  };
+}
+
+const NEPAL_TIME_ZONE = 'Asia/Kathmandu';
+
+export const BS_MONTH_NAMES_NP = [
+  'बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ',
+  'आश्विन', 'कार्तिक', 'मंसिर', 'पौष', 'माघ',
+  'फाल्गुण', 'चैत्र'
+];
 
 export const BS_MONTH_NAMES_EN = [
   'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra',
@@ -13,106 +27,234 @@ export const BS_MONTH_NAMES_EN = [
   'Falgun', 'Chaitra'
 ];
 
-export const BS_YEAR_RANGE = { start: BS_START_YEAR, end: BS_END_YEAR } as const;
+export const BS_YEAR_RANGE = { start: 2000, end: 2090 } as const;
 
-// Useful reference for UI logic that still relies on the rough year gap.
-export const AD_BS_YEAR_DIFF = 56;
+type DateParts = { year: number; month: number; day: number };
 
+const padNumber = (value: number): string => value.toString().padStart(2, '0');
 
-// BS 2000-01-01 corresponds to 1943-04-14 AD.
-const AD_EPOCH_DATE = new Date(Date.UTC(1943, 3, 14));
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-const bsMonthDaysMap = new Map<number, number[]>(
-  BS_CALENDAR_DATA.map(row => [row[0], row.slice(1)])
-);
-
-export const getDaysInBsMonth = (bsMonth: number, bsYear: number): number => {
-  const months = bsMonthDaysMap.get(bsYear);
-  if (!months || bsMonth < 1 || bsMonth > 12) {
-    throw new Error(`Invalid BS date (${bsYear}-${bsMonth}). Supported years: ${BS_START_YEAR}-${BS_END_YEAR}`);
-  }
-  return months[bsMonth - 1];
+type DateConverter = {
+  adToBs: (date: string) => DateParts;
+  bsToAd: (year: number, month: number, day: number) => DateParts;
 };
 
+let cachedConverter: DateConverter | null = null;
+let hasLoggedConverterError = false;
 
-const normalizeToUtcDate = (dateInput: string | Date): Date => {
-  const parsed = typeof dateInput === 'string' ? new Date(dateInput) : new Date(dateInput);
+const parseDateInput = (dateInput: string | Date): Date => {
+  if (typeof dateInput !== 'string') {
+    return new Date(dateInput);
+  }
+  if (dateInput.includes('T')) {
+    return new Date(dateInput);
+  }
+  return new Date(`${dateInput}T00:00:00Z`);
+};
+
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
+
+const getLocalDateParts = (date: Date): DateParts => ({
+  year: date.getFullYear(),
+  month: date.getMonth() + 1,
+  day: date.getDate(),
+});
+
+const fallbackConverter: DateConverter = {
+  adToBs: (date: string) => {
+     const parsed = parseDateInput(date);
+    if (isNaN(parsed.getTime())) {
+      return { year: 0, month: 0, day: 0 };
+    }
+    return getDatePartsInTimeZone(parsed, NEPAL_TIME_ZONE);
+  },
+  bsToAd: (year: number, month: number, day: number) => ({ year, month, day }),
+};
+
+const resolveDateConverter = (): DateConverter => {
+  if (cachedConverter) return cachedConverter;
+  
+  const pickConverter = (candidate: unknown): DateConverter | null => {
+    if (!candidate || typeof candidate !== 'object' && typeof candidate !== 'function') return null;
+
+    const maybeConverter = candidate as {
+      adToBs?: unknown;
+      bsToAd?: unknown;
+    };
+
+    if (typeof maybeConverter.adToBs === 'function' && typeof maybeConverter.bsToAd === 'function') {
+      return {
+        adToBs: maybeConverter.adToBs as DateConverter['adToBs'],
+        bsToAd: maybeConverter.bsToAd as DateConverter['bsToAd'],
+      };
+    }
+return null;
+  };
+
+  const namespace = nepaliDateConverter as {
+    adToBs?: unknown;
+    bsToAd?: unknown;
+    default?: unknown;
+  };
+
+  const candidates = [
+    nepaliDateConverterDefault,
+    namespace,
+    namespace.default,
+    (nepaliDateConverterDefault as { default?: unknown } | undefined)?.default,
+    (namespace.default as { default?: unknown } | undefined)?.default,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = pickConverter(candidate);
+    if (resolved) {
+      cachedConverter = resolved;
+      return cachedConverter;
+    }
+  }
+
+  throw new Error('Unable to resolve nepali-date-converter exports.');
+};
+
+const getDateConverter = (): DateConverter => {
+  try {
+    return resolveDateConverter();
+  } catch (error) {
+    if (!hasLoggedConverterError) {
+      console.error('Falling back to AD-only date conversion.', error);
+      hasLoggedConverterError = true;
+    }
+    return fallbackConverter;
+  }
+};
+
+const getDatePartsInTimeZone = (date: Date, timeZone: string): { year: number; month: number; day: number } => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+
+  let year: number | null = null;
+  let month: number | null = null;
+  let day: number | null = null;
+
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type === 'year') year = Number(part.value);
+    if (part.type === 'month') month = Number(part.value);
+    if (part.type === 'day') day = Number(part.value);
+  }
+
+  if (year === null || month === null || day === null) {
+    throw new Error('Unable to resolve date parts for timezone conversion.');
+  }
+
+  return { year, month, day };
+};
+
+const getAdDateParts = (dateInput: string | Date, timeZone?: string): DateParts => {
+  if (typeof dateInput === 'string') {
+    const isoMatch = ISO_DATE_PATTERN.exec(dateInput);
+    if (isoMatch) {
+      return {
+        year: Number(isoMatch[1]),
+        month: Number(isoMatch[2]),
+        day: Number(isoMatch[3]),
+      };
+    }
+  }
+
+  const parsed = parseDateInput(dateInput);
+
   if (isNaN(parsed.getTime())) {
     throw new Error(`Invalid date input: ${dateInput}`);
   }
-  return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
+
+  if (timeZone) {
+    return getDatePartsInTimeZone(parsed, timeZone);
+  }
+
+  return getLocalDateParts(parsed);
 };
 
-export const adToBs = (adDateInput: string | Date): BSDate => {
-  const adDate = normalizeToUtcDate(adDateInput);
-  const diffDays = Math.floor((adDate.getTime() - AD_EPOCH_DATE.getTime()) / DAY_IN_MS);
+const formatIsoDate = (year: number, month: number, day: number): string =>
+  `${year}-${padNumber(month)}-${padNumber(day)}`;
 
-  if (diffDays < 0) {
-    throw new Error('AD date is before supported BS calendar range.');
-  }
+export const getNepalDateParts = (date: Date): { year: number; month: number; day: number } =>
+  getDatePartsInTimeZone(date, NEPAL_TIME_ZONE);
 
-  let remainingDays = diffDays;
-  let bsYear = BS_START_YEAR;
-  let bsMonth = BS_START_MONTH;
-  let bsDay = BS_START_DAY;
+export const getNepalDayOfWeek = (date: Date): number => {
+  const parts = getNepalDateParts(date);
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+};
 
-  while (remainingDays > 0) {
-    const daysInCurrentMonth = getDaysInBsMonth(bsMonth, bsYear);
-    bsDay++;
-    if (bsDay > daysInCurrentMonth) {
-      bsDay = 1;
-      bsMonth++;
-      if (bsMonth > 12) {
-        bsMonth = 1;
-        bsYear++;
-        if (bsYear > BS_END_YEAR) {
-          throw new Error('AD date exceeds supported BS calendar range.');
-        }
-      }
-    }
-    remainingDays--;
-  }
+export const isSameNepalDay = (a: Date, b: Date): boolean => {
+  const aParts = getNepalDateParts(a);
+  const bParts = getNepalDateParts(b);
+  return aParts.year === bParts.year && aParts.month === bParts.month && aParts.day === bParts.day;
+};
+
+export const getLocalToday = (): Date => {
+  const parts = getDatePartsInTimeZone(new Date(), NEPAL_TIME_ZONE);
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+};
+
+const adToBsWithTimeZone = (adDateInput: string | Date, timeZone?: string): BSDate => {
+  const parts = getAdDateParts(adDateInput, timeZone);
+  const isoDate = formatIsoDate(parts.year, parts.month, parts.day);
+  const { adToBs: libAdToBs } = getDateConverter();
+  const bs = libAdToBs(isoDate);
 
   return {
-    year: bsYear,
-    month: bsMonth,
-    day: bsDay,
-    monthName: BS_MONTH_NAMES_EN[bsMonth - 1],
-    dayOfWeek: adDate.getUTCDay(),
+    year: bs.year,
+    month: bs.month,
+    day: bs.day,
+    monthName: BS_MONTH_NAMES_NP[bs.month - 1] ?? BS_MONTH_NAMES_EN[bs.month - 1],
+    dayOfWeek: new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay(),
   };
 };
 
+export const adToBs = (adDateInput: string | Date): BSDate => adToBsWithTimeZone(adDateInput);
+
 export const bsToAd = (bsDay: number, bsMonth: number, bsYear: number): Date => {
-  if (bsYear < BS_START_YEAR || bsYear > BS_END_YEAR) {
-    throw new Error(`BS year ${bsYear} out of supported range (${BS_START_YEAR}-${BS_END_YEAR}).`);
+  if (bsYear < BS_YEAR_RANGE.start || bsYear > BS_YEAR_RANGE.end) {
+    throw new Error(`BS year ${bsYear} out of supported range (${BS_YEAR_RANGE.start}-${BS_YEAR_RANGE.end}).`);
   }
   if (bsMonth < 1 || bsMonth > 12) throw new Error('BS month must be between 1 and 12.');
-  if (bsDay < 1 || bsDay > getDaysInBsMonth(bsMonth, bsYear)) {
-    throw new Error('BS day is out of range for the provided month/year.');
-  }
 
-  let totalDays = 0;
-
-  for (let year = BS_START_YEAR; year < bsYear; year++) {
-    const months = bsMonthDaysMap.get(year)!;
-    totalDays += months.reduce((sum, days) => sum + days, 0);
-  }
-
-  const monthsForYear = bsMonthDaysMap.get(bsYear)!;
-  for (let monthIndex = 0; monthIndex < bsMonth - 1; monthIndex++) {
-    totalDays += monthsForYear[monthIndex];
-  }
-
-  totalDays += bsDay - 1;
-
-  // Use midday UTC to avoid timezone rollbacks that can shift the displayed AD date.
-  const utcMillis = AD_EPOCH_DATE.getTime() + totalDays * DAY_IN_MS;
-  return new Date(utcMillis + 12 * 60 * 60 * 1000);
+  const { bsToAd: libBsToAd } = getDateConverter();
+  const ad = libBsToAd(bsYear, bsMonth, bsDay);
+  return new Date(Date.UTC(ad.year, ad.month - 1, ad.day));
 };
 
-// Backwards-compatible exports for existing imports
+export const getDaysInBsMonth = (bsMonth: number, bsYear: number): number => {
+  if (bsMonth < 1 || bsMonth > 12) {
+    throw new Error('BS month must be between 1 and 12.');
+  }
+  if (bsYear < BS_YEAR_RANGE.start || bsYear > BS_YEAR_RANGE.end) {
+    throw new Error(`BS year ${bsYear} out of supported range (${BS_YEAR_RANGE.start}-${BS_YEAR_RANGE.end}).`);
+  }
+
+  if (bsMonth === 12 && bsYear === BS_YEAR_RANGE.end) {
+    for (let day = 32; day >= 28; day--) {
+      try {
+        bsToAd(day, bsMonth, bsYear);
+        return day;
+      } catch (error) {
+        continue;
+      }
+    }
+  }
+
+  const startDate = bsToAd(1, bsMonth, bsYear);
+  const nextMonth = bsMonth === 12 ? 1 : bsMonth + 1;
+  const nextYear = bsMonth === 12 ? bsYear + 1 : bsYear;
+  const endDate = bsToAd(1, nextMonth, nextYear);
+
+  const dayInMs = 24 * 60 * 60 * 1000;
+  return Math.round((endDate.getTime() - startDate.getTime()) / dayInMs);
+};
+
 export type DateConversionPayload =
   | { direction: 'AD_TO_BS'; adDate: string | Date }
   | { direction: 'BS_TO_AD'; bsDay: number; bsMonth: number; bsYear: number };
@@ -127,27 +269,42 @@ export const convertDate = (payload: DateConversionPayload): { bsDate?: BSDate; 
   };
 };
 
+export const formatBSDate = (bsDate: BSDate, withSuffix = true): string => {
+  const monthName = BS_MONTH_NAMES_NP[bsDate.month - 1] ?? BS_MONTH_NAMES_EN[bsDate.month - 1];
+  return `${monthName} ${bsDate.day}, ${bsDate.year}${withSuffix ? ' BS' : ''}`;
+};
+
+export const formatADDate = (
+  adDate: Date,
+  options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
+): string => new Intl.DateTimeFormat('en-US', { ...options, timeZone: NEPAL_TIME_ZONE }).format(adDate);
+
+export const toAdIsoString = (adDate: Date): string => {
+  const parts = getNepalDateParts(adDate);
+  return formatIsoDate(parts.year, parts.month, parts.day);
+};
+
 export const formatDateADBS = (dateInput?: string | Date, options?: Intl.DateTimeFormatOptions): string => {
   if (dateInput === undefined || dateInput === '') return 'N/A';
 
   let adDate: Date;
   try {
-    adDate = normalizeToUtcDate(dateInput);
+    const parts = getAdDateParts(dateInput);
+    adDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   } catch (error) {
     console.warn(error);
     return 'Invalid Date';
   }
 
-  const adOptions: Intl.DateTimeFormatOptions = options || {
+  const adFormatted = formatADDate(adDate, options || {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  };
-  const adFormatted = adDate.toLocaleDateString('en-US', adOptions);
+  });
 
   try {
     const bs = adToBs(adDate);
-    const bsFormatted = `${bs.monthName} ${bs.day}, ${bs.year} BS`;
+    const bsFormatted = formatBSDate(bs);
     return `${bsFormatted} (${adFormatted})`;
   } catch (error) {
     console.warn('BS date conversion failed:', error);
@@ -160,14 +317,21 @@ export const formatTimestampADBS = (timestampInput?: string | Date): string => {
 
   let adDate: Date;
   try {
-    adDate = normalizeToUtcDate(timestampInput);
+    const parsed = typeof timestampInput === 'string' ? new Date(timestampInput) : new Date(timestampInput);
+    if (isNaN(parsed.getTime())) throw new Error('Invalid timestamp');
+    adDate = parsed;
   } catch (error) {
     console.warn(error);
     return 'Invalid Timestamp';
   }
 
-  const adTimePart = adDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const adDatePart = adDate.toLocaleDateString('en-US', {
+  const adTimePart = new Intl.DateTimeFormat('en-US', {
+    timeZone: NEPAL_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(adDate);
+  const adDatePart = formatADDate(adDate, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -175,11 +339,30 @@ export const formatTimestampADBS = (timestampInput?: string | Date): string => {
   const adFormatted = `${adDatePart} ${adTimePart}`;
 
   try {
-    const bs = adToBs(adDate);
-    const bsDateFormatted = `${bs.monthName} ${bs.day}, ${bs.year} BS`;
+    const bs = adToBsWithTimeZone(adDate, NEPAL_TIME_ZONE);
+    const bsDateFormatted = formatBSDate(bs);
     return `${bsDateFormatted}, ${adTimePart} (${adFormatted})`;
   } catch (error) {
     console.warn('BS date conversion for timestamp failed:', error);
     return `${adFormatted} (AD)`;
   }
+};
+
+export const toBS = (adDateInput: Date | string): BSDate => adToBs(adDateInput);
+
+export const toAD = (bsDate: BSDate): { year: number; month: number; day: number; iso: string } => {
+  const adDate = bsToAd(bsDate.day, bsDate.month, bsDate.year);
+  const parts = getNepalDateParts(adDate);
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    iso: formatIsoDate(parts.year, parts.month, parts.day),
+  };
+};
+
+export const formatBS = (bsDate: BSDate): string => formatBSDate(bsDate);
+export const formatAD = (adDate: Date | string): string => {
+  const parsed = typeof adDate === 'string' ? new Date(adDate) : adDate;
+  return formatADDate(parsed, { year: 'numeric', month: 'short', day: 'numeric' });
 };

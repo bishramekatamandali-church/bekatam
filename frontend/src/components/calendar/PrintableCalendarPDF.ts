@@ -2,13 +2,16 @@
 // components/calendar/PrintableCalendarPDF.ts
 import { jsPDF } from 'jspdf';
 import { EventItem } from '../../types';
-import { adToBs, bsToAd, getDaysInBsMonth, formatDateADBS } from '../../dateConverter';
+import {
+  adToBs,
+  bsToAd,
+  BS_MONTH_NAMES_NP,
+  formatDateADBS,
+  getDaysInBsMonth,
+  getNepalDateParts,
+  getNepalDayOfWeek,
+} from '../../dateConverter';
 
-const BS_MONTH_NAMES_EN_PDF = [
-  "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
-  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh",
-  "Falgun", "Chaitra"
-];
 const AD_MONTH_NAMES_EN_PDF = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
@@ -70,17 +73,20 @@ const getCurrentFontForPdf = (text: string): string => {
 
 
 const getAdMonthNameForPdf = (monthIndex: number, year: number): string => {
-  const date = new Date(year, monthIndex, 1);
-  return AD_MONTH_NAMES_EN_PDF[date.getMonth()];
+  const date = new Date(Date.UTC(year, monthIndex, 1));
+  const parts = getNepalDateParts(date);
+  return AD_MONTH_NAMES_EN_PDF[parts.month - 1];
 };
 
 const getEventsForDay = (adDate: Date, allEvents: EventItem[]): EventItem[] => {
+   const targetParts = getNepalDateParts(adDate);
   return allEvents.filter(event => {
     if (!event.date) return false;
     const eventAdDate = new Date(event.date);
-    return eventAdDate.getFullYear() === adDate.getFullYear() &&
-           eventAdDate.getMonth() === adDate.getMonth() &&
-           eventAdDate.getDate() === adDate.getDate();
+    const eventParts = getNepalDateParts(eventAdDate);
+    return eventParts.year === targetParts.year &&
+           eventParts.month === targetParts.month &&
+           eventParts.day === targetParts.day;
   });
 };
 
@@ -90,7 +96,7 @@ const getEventsForMonthList = (bsMonth: number, bsYear: number, allEvents: Event
         const eventAdDate = new Date(event.date);
         const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === bsYear && eventBsDate.month === bsMonth;
-    }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
+    }).sort((a,b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
 };
 
 const fetchImageAsBase64 = async (imageUrl: string): Promise<string | null> => {
@@ -179,20 +185,22 @@ export const generateYearlyCalendarPDF = async (
     }
     let yPos: number = margin; 
 
-    const bsMonthNameKey = BS_MONTH_NAMES_EN_PDF[bsMonth - 1];
-    const bsMonthNameForDisplay = bsMonthNameKey;
+    const bsMonthNameForDisplay = BS_MONTH_NAMES_NP[bsMonth - 1];
 
     const numDaysInBsMonth = getDaysInBsMonth(bsMonth, bsYearToGenerate);
     const firstAdDateOfBsMonth = bsToAd(1, bsMonth, bsYearToGenerate);
     const lastAdDateOfBsMonth = bsToAd(numDaysInBsMonth, bsMonth, bsYearToGenerate);
 
-    let adMonthHeaderDisplay = getAdMonthNameForPdf(firstAdDateOfBsMonth.getMonth(), firstAdDateOfBsMonth.getFullYear());
-    if (firstAdDateOfBsMonth.getMonth() !== lastAdDateOfBsMonth.getMonth()) {
-      adMonthHeaderDisplay += ` / ${getAdMonthNameForPdf(lastAdDateOfBsMonth.getMonth(), lastAdDateOfBsMonth.getFullYear())}`;
+    const firstAdParts = getNepalDateParts(firstAdDateOfBsMonth);
+    const lastAdParts = getNepalDateParts(lastAdDateOfBsMonth);
+
+    let adMonthHeaderDisplay = getAdMonthNameForPdf(firstAdParts.month - 1, firstAdParts.year);
+    if (firstAdParts.month !== lastAdParts.month) {
+      adMonthHeaderDisplay += ` / ${getAdMonthNameForPdf(lastAdParts.month - 1, lastAdParts.year)}`;
     }
-    let adYearHeaderDisplay = `${firstAdDateOfBsMonth.getFullYear()}`;
-    if (firstAdDateOfBsMonth.getFullYear() !== lastAdDateOfBsMonth.getFullYear()) {
-      adYearHeaderDisplay += ` / ${lastAdDateOfBsMonth.getFullYear()}`;
+    let adYearHeaderDisplay = `${firstAdParts.year}`;
+    if (firstAdParts.year !== lastAdParts.year) {
+      adYearHeaderDisplay += ` / ${lastAdParts.year}`;
     }
 
     const fullBsMonthTitle = `${bsMonthNameForDisplay} - ${bsYearToGenerate} BS`;
@@ -218,7 +226,7 @@ export const generateYearlyCalendarPDF = async (
     const maxGridHeight = pageHeight - yPos - margin - footerHeight - 5;
     
     let numWeeks = 6;
-    const firstDayOfWeekOfBsMonth = firstAdDateOfBsMonth.getDay();
+    const firstDayOfWeekOfBsMonth = getNepalDayOfWeek(firstAdDateOfBsMonth);
     if ((firstDayOfWeekOfBsMonth + numDaysInBsMonth) <= 28) numWeeks = 4;
     else if ((firstDayOfWeekOfBsMonth + numDaysInBsMonth) <= 35) numWeeks = 5;
     
@@ -257,6 +265,7 @@ export const generateYearlyCalendarPDF = async (
           doc.rect(cellX, cellY, cellWidth, dayCellHeight, 'FD'); 
 
           const adDateForBsDay = bsToAd(currentBsDay, bsMonth, bsYearToGenerate);
+          const adDateParts = getNepalDateParts(adDateForBsDay);
           const bsDayString = String(currentBsDay);
           doc.setFont(getCurrentFontForPdf(bsDayString), 'bold');
           doc.setFontSize(baseFontSize * 1.1); 
@@ -266,7 +275,7 @@ export const generateYearlyCalendarPDF = async (
           doc.setFont(BASE_FONT_NAME, 'normal'); 
           doc.setFontSize(baseFontSize * 0.65); 
           doc.setTextColor(isSaturdayCell ? indigo600 : '#666666');
-          doc.text(String(adDateForBsDay.getDate()), cellX + 1.5, cellY + (baseFontSize * 0.3));
+          doc.text(String(adDateParts.day), cellX + 1.5, cellY + (baseFontSize * 0.3));
           
           const eventsOnThisDay = getEventsForDay(adDateForBsDay, allEvents);
           if (eventsOnThisDay.length > 0) {

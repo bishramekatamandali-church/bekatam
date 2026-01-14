@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BS_MONTH_NAMES_EN, convertDate } from '../../dateConverter';
+import { convertDate, formatADDate, formatBSDate, getLocalToday, toAdIsoString } from '../../dateConverter';
 import Button from '../ui/Button';
 
 const NumberInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
@@ -18,10 +18,11 @@ const TextInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props)
 );
 
 const DateConverterPanel: React.FC = () => {
-  const todayAd = useMemo(() => new Date(), []);
+  const todayAd = useMemo(() => getLocalToday(), []);
   const todayBs = useMemo(() => convertDate({ direction: 'AD_TO_BS', adDate: todayAd }).bsDate!, [todayAd]);
 
-  const [adInput, setAdInput] = useState<string>(todayAd.toISOString().slice(0, 10));
+  const formatDateInput = (date: Date) => toAdIsoString(date);
+  const [adInput, setAdInput] = useState<string>(formatDateInput(todayAd));
   const [adToBsResult, setAdToBsResult] = useState<string>('');
 
   const [bsYear, setBsYear] = useState<number>(todayBs.year);
@@ -37,13 +38,13 @@ const DateConverterPanel: React.FC = () => {
       if (direction === 'AD_TO_BS') {
         const { bsDate } = convertDate({ direction, adDate: adInput });
         if (!bsDate) throw new Error('Missing BS result');
-        setAdToBsResult(`${bsDate.day} ${BS_MONTH_NAMES_EN[bsDate.month - 1]} ${bsDate.year} BS`);
+        setAdToBsResult(formatBSDate(bsDate));
         return;
       }
 
   const { adDate } = convertDate({ direction, bsDay, bsMonth, bsYear });
       if (!adDate) throw new Error('Missing AD result');
-      setBsToAdResult(`${adDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} AD`);
+      setBsToAdResult(`${formatADDate(adDate)} AD`);
     } catch (error) {
       if (direction === 'AD_TO_BS') {
         setAdToBsResult('Invalid AD date.');
@@ -55,13 +56,13 @@ const DateConverterPanel: React.FC = () => {
 
   const handleOffsetCalc = () => {
     try {
-      const adDate = new Date(adInput);
+      const adDate = new Date(`${adInput}T00:00:00`);
       const shifted = new Date(adDate.getTime());
       shifted.setUTCDate(shifted.getUTCDate() + dayOffset);
       const { bsDate } = convertDate({ direction: 'AD_TO_BS', adDate: shifted });
       if (!bsDate) throw new Error('Missing BS result');
-      const adLabel = shifted.toISOString().slice(0, 10);
-      setOffsetResult(`${adLabel} AD → ${bsDate.day} ${BS_MONTH_NAMES_EN[bsDate.month - 1]} ${bsDate.year} BS`);
+      const adLabel = toAdIsoString(shifted);
+      setOffsetResult(`${adLabel} AD → ${formatBSDate(bsDate)}`);
     } catch (error) {
       setOffsetResult('Could not calculate offset.');
     }
@@ -146,8 +147,8 @@ const DateConverterPanel: React.FC = () => {
       </div>
 
       <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        Today: <strong>{todayBs.day} {BS_MONTH_NAMES_EN[todayBs.month - 1]} {todayBs.year} BS</strong> •{' '}
-        <strong>{todayAd.toISOString().slice(0, 10)} AD</strong>
+        Today: <strong>{formatBSDate(todayBs)}</strong> •{' '}
+        <strong>{formatDateInput(todayAd)} AD</strong>
       </div>
     </div>
   );

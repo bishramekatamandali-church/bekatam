@@ -8,26 +8,20 @@ import FeaturedEventDisplay from '../components/events/FeaturedEventDisplay';
 import AdSlot from '../components/ads/AdSlot';
 import { SearchIcon, FilterIcon } from '../components/icons/GenericIcons';
 import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
-import { adToBs, formatDateADBS } from '../dateConverter';
+import { adToBs, BS_MONTH_NAMES_NP, formatDateADBS, getLocalToday, getNepalDateParts } from '../dateConverter';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import { Link } from "react-router-dom";
 
 type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
 
-const BS_MONTH_NAMES_EN_CAL = [
-  "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
-  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh",
-  "Falgun", "Chaitra"
-];
-
-const EventsPage: React.FC = () => {
+ const EventsPage: React.FC = () => {
   const { events, loadingContent } = useContent();
   const [sortOption, setSortOption] = useState<SortOption>('date-newest');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<EventCategory | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
-  const currentADDate = useMemo(() => new Date(), []);
+  const currentADDate = useMemo(() => getLocalToday(), []);
   const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]); 
 
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
@@ -41,8 +35,7 @@ const EventsPage: React.FC = () => {
   const { featuredEvent, upcomingEventsSorted, pastEventsSorted, eventsForSelectedMonth } = useMemo(() => {
     if (loadingContent && !events.length) return { featuredEvent: null, upcomingEventsSorted: [], pastEventsSorted: [], eventsForSelectedMonth: [] };
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const today = getLocalToday();
 
     const filteredEvents = events.filter(event => {
       const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
@@ -97,7 +90,7 @@ const EventsPage: React.FC = () => {
         const eventAdDate = new Date(event.date);
         const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
-    }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
+    }).sort((a,b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
 
     return { 
         featuredEvent: currentFeaturedEvent, 
@@ -122,7 +115,7 @@ const EventsPage: React.FC = () => {
   }
   
   const hasActiveFilters = searchTerm || selectedCategory !== 'all';
-  const currentDisplayedBsMonthName = BS_MONTH_NAMES_EN_CAL[currentCalendarBsMonth - 1];
+  const currentDisplayedBsMonthName = BS_MONTH_NAMES_NP[currentCalendarBsMonth - 1];
 
 
   return (

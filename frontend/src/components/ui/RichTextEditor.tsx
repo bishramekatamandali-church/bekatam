@@ -1,9 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Button from './Button';
 import { PhotoIcon } from '@heroicons/react/24/outline';
-
-const CLOUDINARY_CLOUD_NAME = 'dl94nfxom';
-const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
+import { getCloudinaryFileSizeError, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 interface RichTextEditorProps {
   value: string;
@@ -40,13 +38,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const sizeError = getCloudinaryFileSizeError(file);
+    if (sizeError) {
+      alert(sizeError);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsUploading(true);
+    const uploadDetails = getCloudinaryUploadDetails('image');
+    if ('error' in uploadDetails) {
+      alert(uploadDetails.error);
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     const uploadFormData = new FormData();
     uploadFormData.append('file', file);
-    uploadFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    uploadFormData.append('upload_preset', uploadDetails.uploadPreset);
 
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      const response = await fetch(uploadDetails.uploadUrl, {
         method: 'POST',
         body: uploadFormData,
       });

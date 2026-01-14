@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { User, relationshipStatusList } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import AdvancedMediaUploader from '../admin/AdvancedMediaUploader';
+import { getCloudinaryFileSizeError, getCloudinaryUploadDetails } from '../../utils/cloudinary';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -21,9 +22,6 @@ interface CloudinaryResponse {
   secure_url?: string;
   error?: CloudinaryError;
 }
-
-const CLOUDINARY_CLOUD_NAME = 'dl94nfxom'; 
-const CLOUDINARY_UPLOAD_PRESET = 'bishram_ekata_mandali';
 
 const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   isOpen,
@@ -78,12 +76,30 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     setUploading(prev => ({ ...prev, [fieldName]: `Uploading ${file.name}...`}));
     setFormError(null);
 
+    const sizeError = getCloudinaryFileSizeError(file);
+    if (sizeError) {
+      setFormError(sizeError);
+      setUploading(prev => ({ ...prev, [fieldName]: sizeError }));
+      setIsUploading(prev => ({ ...prev, [fieldName]: false }));
+      setTimeout(() => setUploading(prev => ({...prev, [fieldName]: null})), 3000);
+      return;
+    }
+
+    const uploadDetails = getCloudinaryUploadDetails('image');
+    if ('error' in uploadDetails) {
+      setFormError(uploadDetails.error);
+      setUploading(prev => ({ ...prev, [fieldName]: uploadDetails.error }));
+      setIsUploading(prev => ({ ...prev, [fieldName]: false }));
+      setTimeout(() => setUploading(prev => ({...prev, [fieldName]: null})), 3000);
+      return;
+    }
+
     const uploadFormDataBody = new FormData();
     uploadFormDataBody.append('file', file);
-    uploadFormDataBody.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    uploadFormDataBody.append('upload_preset', uploadDetails.uploadPreset);
     
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      const response = await fetch(uploadDetails.uploadUrl, {
         method: 'POST', body: uploadFormDataBody, mode: 'cors'
       });
       const data = await response.json();

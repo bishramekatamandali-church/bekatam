@@ -4,7 +4,7 @@ import InteractiveCalendar, { CalendarEntry } from '../components/calendar/Inter
 import { generateYearlyCalendarPDF } from '../components/calendar/PrintableCalendarPDF';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
-import { adToBs, formatDateADBS } from '../dateConverter';
+import { adToBs, BS_MONTH_NAMES_NP, formatDateADBS, getLocalToday, getNepalDateParts } from '../dateConverter';
 import { Link } from "react-router-dom";
 import DateConverterPanel from '../components/calendar/DateConverterPanel';
 
@@ -23,17 +23,10 @@ const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 type PaperSizeType = 'a4' | 'a3' | 'a2' | 'a1';
 
-const BS_MONTH_NAMES_EN_CAL = [
-  "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
-  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh",
-  "Falgun", "Chaitra"
-];
-
-
 const EventCalendarPage: React.FC = () => {
   const { events, loadingContent, newsItems, sermons, blogPosts } = useContent();
   
-  const currentADDate = new Date();
+  const currentADDate = getLocalToday();
   const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
 
   const [selectedPdfBsYear, setSelectedPdfBsYear] = useState<number>(initialBsDate.year);
@@ -55,7 +48,7 @@ const EventCalendarPage: React.FC = () => {
         const eventAdDate = new Date(event.date);
         const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
-    }).sort((a,b) => new Date(a.date!).getDate() - new Date(b.date!).getDate());
+    }).sort((a,b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
   }, [events, currentCalendarBsMonth, currentCalendarBsYear]);
 
 
@@ -107,7 +100,7 @@ const calendarItems: CalendarEntry[] = useMemo(() => {
     return [...mappedEvents, ...mappedNews, ...mappedSermons, ...mappedBlogs];
   }, [blogPosts, events, newsItems, sermons]);
 
-  const currentDisplayedBsMonthName = BS_MONTH_NAMES_EN_CAL[currentCalendarBsMonth - 1];
+  const currentDisplayedBsMonthName = BS_MONTH_NAMES_NP[currentCalendarBsMonth - 1];
 
 
   return (
