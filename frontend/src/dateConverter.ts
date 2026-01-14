@@ -211,7 +211,8 @@ const adToBsWithTimeZone = (adDateInput: string | Date, timeZone?: string): BSDa
   };
 };
 
-export const adToBs = (adDateInput: string | Date): BSDate => adToBsWithTimeZone(adDateInput);
+export const adToBs = (adDateInput: string | Date): BSDate =>
+  adToBsWithTimeZone(adDateInput, NEPAL_TIME_ZONE);
 
 export const bsToAd = (bsDay: number, bsMonth: number, bsYear: number): Date => {
   if (bsYear < BS_YEAR_RANGE.start || bsYear > BS_YEAR_RANGE.end) {
