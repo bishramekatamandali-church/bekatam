@@ -1,7 +1,10 @@
 import { BSDate } from './types';
 import nepaliDateConverter from "nepali-date-converter";
 
-const NepaliDate = (nepaliDateConverter as any).default;
+const resolveNepaliDate = (): any =>
+  (nepaliDateConverter as any)?.default ?? nepaliDateConverter;
+
+const NepaliDate = resolveNepaliDate();
 
 export function adToBsParts(ad: Date) {
   const bs = NepaliDate.fromAD(ad);
@@ -75,7 +78,7 @@ const resolveDateConverter = (): DateConverter => {
 
   // ✅ nepali-date-converter exports:
   // { dateConfigMap, default: NepaliDate }
-  const NepaliDate = (nepaliDateConverter as any)?.default;
+  const NepaliDate = resolveNepaliDate();
 
   if (!NepaliDate) {
     throw new Error("NepaliDate default export not found in nepali-date-converter");
