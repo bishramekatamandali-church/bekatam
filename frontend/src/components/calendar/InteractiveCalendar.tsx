@@ -11,7 +11,6 @@ import {
   getNepalDateParts,
   getNepalDayOfWeek,
   isSameNepalDay,
-  toAdIsoString,
 } from '../../dateConverter';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -94,7 +93,7 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     }
   }, [currentBsMonth, currentBsYear, onMonthChange]);
   
-useEffect(() => {
+  useEffect(() => {
     setSelectedBsDate(null);
     setSelectedEntries([]);
     setIsModalOpen(false);
@@ -158,41 +157,22 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
     return `${bsYear} BS (${formatBsYearLabel(bsYear)})`;
   }, [formatBsYearLabel]);
 
-  const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
   const currentBsMonthAdRangeLabel = useMemo(() => {
-    try {
-      const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
-      const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
-      const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
-      const startAdDateNormalized = new Date(`${toAdIsoString(startAdDate)}T00:00:00Z`);
-      const endAdDateNormalized = new Date(`${toAdIsoString(endAdDate)}T00:00:00Z`);
+    const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
+    const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
+    const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
+    const startParts = getNepalDateParts(startAdDate);
+    const endParts = getNepalDateParts(endAdDate);
+    const startMonthLabel = formatADDate(startAdDate, { month: 'short' });
+    const endMonthLabel = formatADDate(endAdDate, { month: 'short' });
 
-      const startRoundTrip = adToBs(startAdDateNormalized);
-      const endRoundTrip = adToBs(endAdDateNormalized);
-      const isStartValid = startRoundTrip.year === currentBsYear && startRoundTrip.month === currentBsMonth && startRoundTrip.day === 1;
-      const isEndValid = endRoundTrip.year === currentBsYear && endRoundTrip.month === currentBsMonth && endRoundTrip.day === endAdDay;
-
-      if (!isStartValid || !isEndValid) {
-        throw new Error('BS/AD conversion mismatch detected.');
-      }
-
-      const startParts = getNepalDateParts(startAdDateNormalized);
-      const endParts = getNepalDateParts(endAdDateNormalized);
-      const startLabel = formatADDate(startAdDateNormalized, {
-        month: 'short',
-        day: 'numeric',
-        ...(startParts.year !== endParts.year ? { year: 'numeric' } : {}),
-      });
-      const endLabel = formatADDate(endAdDateNormalized, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-      return `${startLabel} - ${endLabel} AD`;
-    } catch (error) {
-      console.warn('Unable to resolve AD range for BS month:', error);
-      return 'AD range unavailable';
+    if (startParts.year === endParts.year && startParts.month === endParts.month) {
+      return `${startMonthLabel} ${startParts.year}`;
     }
+    if (startParts.year === endParts.year) {
+      return `${startMonthLabel}/${endMonthLabel} ${startParts.year}`;
+    }
+    return `${startMonthLabel}/${endMonthLabel} ${startParts.year}-${endParts.year}`;
   }, [currentBsMonth, currentBsYear]);
 
   const itemsByDate = useMemo(() => {
@@ -227,6 +207,9 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
     // Actual days
     for (let day = 1; day <= numDaysInMonth; day++) {
       const adDateForBsDay = bsToAd(day, currentBsMonth, currentBsYear);
+      const adParts = getNepalDateParts(adDateForBsDay);
+      const adMonthLabel = formatADDate(adDateForBsDay, { month: 'short' });
+      const adOverlayLabel = adParts.day === 1 ? `${adMonthLabel} ${adParts.day}` : `${adParts.day}`;
       const isToday = isSameNepalDay(adDateForBsDay, defaultInitialAdDate);
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsMonth && selectedBsDate?.year === currentBsYear;
       
@@ -258,7 +241,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
         >
           {/* AD small number */}
           <span className={`absolute top-1 right-1 text-[9px] sm:text-[10px] md:text-xs ${isSelectedDay ? 'text-purple-600' : (isSaturday ? 'text-green-500' : 'text-slate-400')}`}>
-            {getNepalDateParts(adDateForBsDay).day}
+            {adOverlayLabel}
           </span>
           
           {/* BS big number */}
@@ -310,7 +293,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
           <Button onClick={handleNextMonth} variant="ghost" size="sm" className="!p-2 !text-white hover:!bg-blue-500" aria-label="Next Month">
             <ChevronRightIcon className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-2 bg-blue-500/40 px-2.5 py-1 rounded-md">
+          <div className="flex items-center gap-2 bg-blue-500/40 px-2.5 py-1 rounded-md flex-wrap">
             <label htmlFor="calendar-year" className="text-xs uppercase tracking-wide text-blue-100">Year</label>
             <select
               id="calendar-year"
@@ -325,6 +308,20 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
                 </option>
               ))}
             </select>
+            <label htmlFor="calendar-month" className="text-xs uppercase tracking-wide text-blue-100">Month</label>
+            <select
+              id="calendar-month"
+              value={currentBsMonth}
+              onChange={(event) => setCurrentBsMonth(parseInt(event.target.value, 10))}
+              className="bg-blue-500 border border-blue-400 text-white text-xs rounded-md px-2 py-1 focus:ring-amber-500 focus:border-amber-500 min-w-[130px] text-center"
+              aria-label="Select Month"
+            >
+              {BS_MONTH_NAMES_NP.map((name, index) => (
+                <option key={name} value={index + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="flex-1 text-center space-y-1">
@@ -332,8 +329,6 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
             {currentMonthNameShort} {currentBsYear} BS
           </h2>
           <p className="text-xs text-blue-100">{currentBsMonthAdRangeLabel}</p>
-          <p className="text-[11px] text-blue-200">{currentBsYearAdLabel}</p>
-
         </div>
       </header>
       <div className="overflow-x-auto">
