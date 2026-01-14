@@ -1,10 +1,9 @@
-
 import React, { useMemo, useState, useCallback } from 'react';
 import { useContent } from '../contexts/ContentContext';
 import Button from '../components/ui/Button';
 import { EventItem, eventCategoriesList, EventCategory } from '../types';
 import EventCard from '../components/events/EventCard';
-import FeaturedEventDisplay from '../components/events/FeaturedEventDisplay'; 
+import FeaturedEventDisplay from '../components/events/FeaturedEventDisplay';
 import AdSlot from '../components/ads/AdSlot';
 import { SearchIcon, FilterIcon } from '../components/icons/GenericIcons';
 import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
@@ -14,7 +13,9 @@ import { Link } from "react-router-dom";
 
 type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
 
- const EventsPage: React.FC = () => {
+const isLikelyAdYear = (year: number) => year > 1000 && year < 2070;
+
+const EventsPage: React.FC = () => {
   const { events, loadingContent } = useContent();
   const [sortOption, setSortOption] = useState<SortOption>('date-newest');
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,18 +23,34 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const currentADDate = useMemo(() => getLocalToday(), []);
-  const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]); 
+  const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
 
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
   const [currentCalendarBsYear, setCurrentCalendarBsYear] = useState<number>(initialBsDate.year);
 
-  const handleCalendarMonthChange = useCallback((bsMonth: number, bsYear: number) => {
-    setCurrentCalendarBsMonth(bsMonth);
-    setCurrentCalendarBsYear(bsYear);
+  /**
+   * IMPORTANT FIX:
+   * InteractiveCalendar sends (month, year) as AD in your UI (e.g. 1, 2026),
+   * but this page was treating them as BS.
+   * Convert AD month start to BS month/year when the year looks like AD.
+   */
+  const handleCalendarMonthChange = useCallback((month: number, year: number) => {
+    if (isLikelyAdYear(year)) {
+      const adMonthStart = new Date(Date.UTC(year, month - 1, 1));
+      const bsStart = adToBs(adMonthStart);
+      setCurrentCalendarBsMonth(bsStart.month);
+      setCurrentCalendarBsYear(bsStart.year);
+      return;
+    }
+
+    setCurrentCalendarBsMonth(month);
+    setCurrentCalendarBsYear(year);
   }, []);
 
   const { featuredEvent, upcomingEventsSorted, pastEventsSorted, eventsForSelectedMonth } = useMemo(() => {
-    if (loadingContent && !events.length) return { featuredEvent: null, upcomingEventsSorted: [], pastEventsSorted: [], eventsForSelectedMonth: [] };
+    if (loadingContent && !events.length) {
+      return { featuredEvent: null, upcomingEventsSorted: [], pastEventsSorted: [], eventsForSelectedMonth: [] };
+    }
 
     const today = getLocalToday();
 
@@ -45,30 +62,19 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
       const locationsMatch = (event.locations || []).some((loc) => loc.toLowerCase().includes(term));
       const descriptionMatch = event.description.toLowerCase().includes(term);
       const guestsMatch = event.guests?.toLowerCase().includes(term) || false;
-      const speakersMatch = (event.speakers || []).some((speaker) =>
-        speaker.toLowerCase().includes(term)
-      );
-      const conductedByMatch = (event.conductedBy || []).some((host) =>
-        host.toLowerCase().includes(term)
-      );
-      const searchMatch =
-        titleMatch ||
-        locationMatch ||
-        locationsMatch ||
-        descriptionMatch ||
-        guestsMatch ||
-        speakersMatch ||
-        conductedByMatch;
+      const speakersMatch = (event.speakers || []).some((speaker) => speaker.toLowerCase().includes(term));
+      const conductedByMatch = (event.conductedBy || []).some((host) => host.toLowerCase().includes(term));
+      const searchMatch = titleMatch || locationMatch || locationsMatch || descriptionMatch || guestsMatch || speakersMatch || conductedByMatch;
       return categoryMatch && searchMatch;
     });
 
-    let upcoming = filteredEvents.filter(event => event.date && new Date(event.date) >= today);
-    let past = filteredEvents.filter(event => event.date && new Date(event.date) < today);
-    
+    const upcoming = filteredEvents.filter(event => event.date && new Date(event.date) >= today);
+    const past = filteredEvents.filter(event => event.date && new Date(event.date) < today);
+
     past.sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
     const currentFeaturedEvent = past.length > 0 ? past[0] : null;
-    
-    const sortEvents = (eventArray: EventItem[], option: SortOption) => { 
+
+    const sortEvents = (eventArray: EventItem[], option: SortOption) => {
       switch (option) {
         case 'date-newest':
           return eventArray.sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
@@ -77,7 +83,7 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
         case 'alphabetical':
           return eventArray.sort((a, b) => a.title.localeCompare(b.title));
         default:
-          return eventArray.sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime()); 
+          return eventArray.sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
       }
     };
 
@@ -85,22 +91,24 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
     const otherPast = currentFeaturedEvent ? past.filter(e => e.id !== currentFeaturedEvent.id) : past;
     const sortedPast = sortEvents([...otherPast], sortOption);
 
-    const monthEvents = events.filter(event => {
+    const monthEvents = events
+      .filter(event => {
         if (!event.date) return false;
         const eventAdDate = new Date(event.date);
         const eventBsDate = adToBs(eventAdDate);
         return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
-    }).sort((a,b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
+      })
+      .sort((a, b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
 
-    return { 
-        featuredEvent: currentFeaturedEvent, 
-        upcomingEventsSorted: sortedUpcoming, 
-        pastEventsSorted: sortedPast,
-        eventsForSelectedMonth: monthEvents
+    return {
+      featuredEvent: currentFeaturedEvent,
+      upcomingEventsSorted: sortedUpcoming,
+      pastEventsSorted: sortedPast,
+      eventsForSelectedMonth: monthEvents
     };
   }, [events, loadingContent, sortOption, searchTerm, selectedCategory, currentCalendarBsMonth, currentCalendarBsYear]);
 
-   const calendarItems: CalendarEntry[] = useMemo(() => (
+  const calendarItems: CalendarEntry[] = useMemo(() => (
     events
       .filter(event => !!event.date)
       .map(event => ({ id: event.id, title: event.title, date: event.date!, type: 'event', link: `/events/${event.id}` }))
@@ -113,10 +121,9 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
       </div>
     );
   }
-  
+
   const hasActiveFilters = searchTerm || selectedCategory !== 'all';
   const currentDisplayedBsMonthName = BS_MONTH_NAMES_NP[currentCalendarBsMonth - 1];
-
 
   return (
     <div className="min-h-screen">
@@ -187,16 +194,15 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
           </div>
         </div>
 
-
         <AdSlot placementKey="event_list_top" className="my-6" />
-        
+
         {viewMode === 'list' ? (
           <>
             {featuredEvent && (
               <section aria-labelledby="featured-event-title" className="mt-0">
-                 <h2 id="featured-event-title" className="text-2xl font-semibold text-slate-700 mb-4 sm:mb-6 text-center sm:text-left">
-                    Remember This? Our Latest Highlight!
-                 </h2>
+                <h2 id="featured-event-title" className="text-2xl font-semibold text-slate-700 mb-4 sm:mb-6 text-center sm:text-left">
+                  Remember This? Our Latest Highlight!
+                </h2>
                 <FeaturedEventDisplay event={featuredEvent} isPastEvent={true} />
               </section>
             )}
@@ -205,9 +211,9 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
               <h2 id="upcoming-events-title" className="text-2xl font-semibold text-slate-700 mb-6 sm:mb-8 text-center sm:text-left">Upcoming Events</h2>
               {upcomingEventsSorted.length === 0 && !loadingContent ? (
                 <div className="bg-purple-50 rounded-xl shadow-md p-8 text-center">
-                    <p className="text-slate-500 text-lg">
-                        {hasActiveFilters ? 'No upcoming events match your criteria.' : 'No upcoming events scheduled. Please check back soon!'}
-                    </p>
+                  <p className="text-slate-500 text-lg">
+                    {hasActiveFilters ? 'No upcoming events match your criteria.' : 'No upcoming events scheduled. Please check back soon!'}
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -228,57 +234,57 @@ type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
                 </div>
               </section>
             )}
-            
+
             {(upcomingEventsSorted.length === 0 && pastEventsSorted.length === 0 && !featuredEvent && !loadingContent) && (
-                <div className="bg-purple-50 rounded-xl shadow-md p-12 text-center">
-                    <p className="text-slate-500 text-xl">
-                        {hasActiveFilters ? 'No events found matching your criteria.' : 'No events to display at the moment.'}
-                    </p>
-                </div>
+              <div className="bg-purple-50 rounded-xl shadow-md p-12 text-center">
+                <p className="text-slate-500 text-xl">
+                  {hasActiveFilters ? 'No events found matching your criteria.' : 'No events to display at the moment.'}
+                </p>
+              </div>
             )}
           </>
         ) : (
           <div className="max-w-4xl mx-auto">
             <Card className="shadow-xl">
-                <InteractiveCalendar
-                  items={calendarItems}
-                  onMonthChange={handleCalendarMonthChange}
-                  initialBsMonth={currentCalendarBsMonth}
-                  initialBsYear={currentCalendarBsYear}
-                />
-                <div className="mt-4 border-t border-blue-200">
-                    <CardHeader className="bg-blue-100">
-                        <h2 className="text-xl font-semibold text-blue-800">
-                            Events in {currentDisplayedBsMonthName} {currentCalendarBsYear} BS
-                        </h2>
-                    </CardHeader>
-                    <CardContent className="max-h-96 overflow-y-auto custom-scrollbar p-3 sm:p-4">
-                        {loadingContent && !eventsForSelectedMonth.length ? (
-                            <p className="text-slate-500 text-center py-6">Loading events...</p>
-                        ) : eventsForSelectedMonth.length === 0 ? (
-                            <p className="text-slate-500 text-center py-6">No events scheduled for this month.</p>
-                        ) : (
-                            <ul className="space-y-3">
-                                {eventsForSelectedMonth.map(event => {
-                                    const eventBsDate = adToBs(new Date(event.date!));
-                                    const adDatePart = formatDateADBS(event.date!).split(' (')[1]?.replace(')', '');
-                                    return (
-                                        <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                                            <Link to={`/events/${event.id}`} className="block">
-                                                <h4 className="font-semibold text-blue-700">{event.title}</h4>
-                                                <div className="flex items-center text-sm text-slate-500 mt-1">
-                                                    <span className="font-bold w-6 text-center mr-2">{eventBsDate.day}</span>
-                                                    <span>({adDatePart})</span>
-                                                    {event.time && <span className="ml-2 text-slate-400">@ {event.time}</span>}
-                                                </div>
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </CardContent>
-                </div>
+              <InteractiveCalendar
+                items={calendarItems}
+                onMonthChange={handleCalendarMonthChange}
+                initialBsMonth={currentCalendarBsMonth}
+                initialBsYear={currentCalendarBsYear}
+              />
+              <div className="mt-4 border-t border-blue-200">
+                <CardHeader className="bg-blue-100">
+                  <h2 className="text-xl font-semibold text-blue-800">
+                    Events in {currentDisplayedBsMonthName} {currentCalendarBsYear} BS
+                  </h2>
+                </CardHeader>
+                <CardContent className="max-h-96 overflow-y-auto custom-scrollbar p-3 sm:p-4">
+                  {loadingContent && !eventsForSelectedMonth.length ? (
+                    <p className="text-slate-500 text-center py-6">Loading events...</p>
+                  ) : eventsForSelectedMonth.length === 0 ? (
+                    <p className="text-slate-500 text-center py-6">No events scheduled for this month.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {eventsForSelectedMonth.map(event => {
+                        const eventBsDate = adToBs(new Date(event.date!));
+                        const adDatePart = formatDateADBS(event.date!).split(' (')[1]?.replace(')', '');
+                        return (
+                          <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                            <Link to={`/events/${event.id}`} className="block">
+                              <h4 className="font-semibold text-blue-700">{event.title}</h4>
+                              <div className="flex items-center text-sm text-slate-500 mt-1">
+                                <span className="font-bold w-6 text-center mr-2">{eventBsDate.day}</span>
+                                <span>({adDatePart})</span>
+                                {event.time && <span className="ml-2 text-slate-400">@ {event.time}</span>}
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </CardContent>
+              </div>
             </Card>
           </div>
         )}

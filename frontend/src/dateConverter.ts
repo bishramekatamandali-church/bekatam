@@ -72,47 +72,41 @@ const fallbackConverter: DateConverter = {
 
 const resolveDateConverter = (): DateConverter => {
   if (cachedConverter) return cachedConverter;
-  
-  const pickConverter = (candidate: unknown): DateConverter | null => {
-    if (!candidate || typeof candidate !== 'object' && typeof candidate !== 'function') return null;
 
-    const maybeConverter = candidate as {
-      adToBs?: unknown;
-      bsToAd?: unknown;
-    };
+  // ✅ nepali-date-converter exports:
+  // { dateConfigMap, default: NepaliDate }
+  const NepaliDate = (nepaliDateConverter as any)?.default;
 
-    if (typeof maybeConverter.adToBs === 'function' && typeof maybeConverter.bsToAd === 'function') {
-      return {
-        adToBs: maybeConverter.adToBs as DateConverter['adToBs'],
-        bsToAd: maybeConverter.bsToAd as DateConverter['bsToAd'],
-      };
-    }
-return null;
-  };
-
-  const namespace = nepaliDateConverter as {
-    adToBs?: unknown;
-    bsToAd?: unknown;
-    default?: unknown;
-  };
-
-  const candidates = [
-    nepaliDateConverterDefault,
-    namespace,
-    namespace.default,
-    (nepaliDateConverterDefault as { default?: unknown } | undefined)?.default,
-    (namespace.default as { default?: unknown } | undefined)?.default,
-  ];
-
-  for (const candidate of candidates) {
-    const resolved = pickConverter(candidate);
-    if (resolved) {
-      cachedConverter = resolved;
-      return cachedConverter;
-    }
+  if (!NepaliDate) {
+    throw new Error("NepaliDate default export not found in nepali-date-converter");
   }
 
-  throw new Error('Unable to resolve nepali-date-converter exports.');
+  cachedConverter = {
+  adToBs: (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    const ad = new Date(Date.UTC(y, m - 1, d));
+    const bs = NepaliDate.fromAD(ad);
+
+    return {
+      year: bs.getYear(),
+      month: bs.getMonth() + 1,
+      day: bs.getDate(),
+    };
+  },
+
+  bsToAd: (year: number, month: number, day: number) => {
+    const bs = new NepaliDate(year, month - 1, day); // month is 0-based
+    const ad = bs.toJsDate(); // ✅ confirmed method
+
+    return {
+      year: ad.getUTCFullYear(),
+      month: ad.getUTCMonth() + 1,
+      day: ad.getUTCDate(),
+    };
+  },
+};
+
+return cachedConverter;
 };
 
 const getDateConverter = (): DateConverter => {
