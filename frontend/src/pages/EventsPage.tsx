@@ -13,8 +13,6 @@ import { Link } from "react-router-dom";
 
 type SortOption = 'date-newest' | 'date-oldest' | 'alphabetical';
 
-const isLikelyAdYear = (year: number) => year > 1000 && year < 2070;
-
 const EventsPage: React.FC = () => {
   const { events, loadingContent } = useContent();
   const [sortOption, setSortOption] = useState<SortOption>('date-newest');
@@ -28,21 +26,7 @@ const EventsPage: React.FC = () => {
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
   const [currentCalendarBsYear, setCurrentCalendarBsYear] = useState<number>(initialBsDate.year);
 
-  /**
-   * IMPORTANT FIX:
-   * InteractiveCalendar sends (month, year) as AD in your UI (e.g. 1, 2026),
-   * but this page was treating them as BS.
-   * Convert AD month start to BS month/year when the year looks like AD.
-   */
   const handleCalendarMonthChange = useCallback((month: number, year: number) => {
-    if (isLikelyAdYear(year)) {
-      const adMonthStart = new Date(Date.UTC(year, month - 1, 1));
-      const bsStart = adToBs(adMonthStart);
-      setCurrentCalendarBsMonth(bsStart.month);
-      setCurrentCalendarBsYear(bsStart.year);
-      return;
-    }
-
     setCurrentCalendarBsMonth(month);
     setCurrentCalendarBsYear(year);
   }, []);
