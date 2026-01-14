@@ -94,6 +94,12 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
     }
   }, [currentBsMonth, currentBsYear, onMonthChange]);
 
+  useEffect(() => {
+    setSelectedBsDate(null);
+    setSelectedEntries([]);
+    setIsModalOpen(false);
+  }, [currentBsMonth, currentBsYear]);
+
   const handlePrevMonth = () => {
     if (currentBsMonth === 1 && currentBsYear === BS_YEAR_RANGE.start) return;
 
@@ -150,22 +156,37 @@ const InteractiveCalendar: React.FC<InteractiveCalendarProps> = ({ items, onMont
 
   const currentBsYearAdLabel = useMemo(() => formatBsYearLabel(currentBsYear), [currentBsYear, formatBsYearLabel]);
   const currentBsMonthAdRangeLabel = useMemo(() => {
-    const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
-    const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
-    const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
-    const startParts = getNepalDateParts(startAdDate);
-    const endParts = getNepalDateParts(endAdDate);
-    const startLabel = formatADDate(startAdDate, {
-      month: 'short',
-      day: 'numeric',
-      ...(startParts.year !== endParts.year ? { year: 'numeric' } : {}),
-    });
-    const endLabel = formatADDate(endAdDate, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    return `${startLabel} - ${endLabel} AD`;
+    try {
+      const startAdDate = bsToAd(1, currentBsMonth, currentBsYear);
+      const endAdDay = getDaysInBsMonth(currentBsMonth, currentBsYear);
+      const endAdDate = bsToAd(endAdDay, currentBsMonth, currentBsYear);
+
+      const startRoundTrip = adToBs(startAdDate);
+      const endRoundTrip = adToBs(endAdDate);
+      const isStartValid = startRoundTrip.year === currentBsYear && startRoundTrip.month === currentBsMonth && startRoundTrip.day === 1;
+      const isEndValid = endRoundTrip.year === currentBsYear && endRoundTrip.month === currentBsMonth && endRoundTrip.day === endAdDay;
+
+      if (!isStartValid || !isEndValid) {
+        throw new Error('BS/AD conversion mismatch detected.');
+      }
+
+      const startParts = getNepalDateParts(startAdDate);
+      const endParts = getNepalDateParts(endAdDate);
+      const startLabel = formatADDate(startAdDate, {
+        month: 'short',
+        day: 'numeric',
+        ...(startParts.year !== endParts.year ? { year: 'numeric' } : {}),
+      });
+      const endLabel = formatADDate(endAdDate, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return `${startLabel} - ${endLabel} AD`;
+    } catch (error) {
+      console.warn('Unable to resolve AD range for BS month:', error);
+      return 'AD range unavailable';
+    }
   }, [currentBsMonth, currentBsYear]);
 
   const itemsByDate = useMemo(() => {

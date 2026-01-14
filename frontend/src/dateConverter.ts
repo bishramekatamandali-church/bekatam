@@ -1,4 +1,4 @@
-import * as nepaliDateConverter from 'nepali-date-converter';
+import nepaliDateConverterDefault, * as nepaliDateConverter from 'nepali-date-converter';
 import { BSDate } from './types';
 
 const NEPAL_TIME_ZONE = 'Asia/Kathmandu';
@@ -43,13 +43,21 @@ const fallbackConverter: DateConverter = {
 const resolveDateConverter = (): DateConverter => {
   if (cachedConverter) return cachedConverter;
 
-  const pickConverter = (adCandidate: unknown, bsCandidate: unknown): DateConverter | null => {
-    if (typeof adCandidate === 'function' && typeof bsCandidate === 'function') {
+  const pickConverter = (candidate: unknown): DateConverter | null => {
+    if (!candidate || typeof candidate !== 'object' && typeof candidate !== 'function') return null;
+
+    const maybeConverter = candidate as {
+      adToBs?: unknown;
+      bsToAd?: unknown;
+    };
+
+    if (typeof maybeConverter.adToBs === 'function' && typeof maybeConverter.bsToAd === 'function') {
       return {
-        adToBs: adCandidate as DateConverter['adToBs'],
-        bsToAd: bsCandidate as DateConverter['bsToAd'],
+        adToBs: maybeConverter.adToBs as DateConverter['adToBs'],
+        bsToAd: maybeConverter.bsToAd as DateConverter['bsToAd'],
       };
     }
+
     return null;
   };
 
@@ -59,50 +67,18 @@ const resolveDateConverter = (): DateConverter => {
     default?: unknown;
   };
 
-  const direct = pickConverter(namespace.adToBs, namespace.bsToAd);
-  if (direct) {
-    cachedConverter = direct;
-    return cachedConverter;
-  }
+  const candidates = [
+    nepaliDateConverterDefault,
+    namespace,
+    namespace.default,
+    (nepaliDateConverterDefault as { default?: unknown } | undefined)?.default,
+    (namespace.default as { default?: unknown } | undefined)?.default,
+  ];
 
-  const defaultExport = namespace.default as {
-    adToBs?: unknown;
-    bsToAd?: unknown;
-    default?: unknown;
-  } | undefined;
-
-  const defaultObject = defaultExport ? pickConverter(defaultExport.adToBs, defaultExport.bsToAd) : null;
-  if (defaultObject) {
-    cachedConverter = defaultObject;
-    return cachedConverter;
-  }
-
-  const defaultAdNamedBs = pickConverter(defaultExport, namespace.bsToAd);
-  if (defaultAdNamedBs) {
-    cachedConverter = defaultAdNamedBs;
-    return cachedConverter;
-  }
-
-  const namedAdDefaultBs = pickConverter(namespace.adToBs, defaultExport);
-  if (namedAdDefaultBs) {
-    cachedConverter = namedAdDefaultBs;
-    return cachedConverter;
-  }
-
-  const nestedDefault = defaultExport?.default;
-  if (nestedDefault) {
-    const nestedObject = pickConverter(
-      (nestedDefault as { adToBs?: unknown }).adToBs,
-      (nestedDefault as { bsToAd?: unknown }).bsToAd
-    );
-    if (nestedObject) {
-      cachedConverter = nestedObject;
-      return cachedConverter;
-    }
-
-    const nestedDefaultPair = pickConverter(nestedDefault, namespace.bsToAd);
-    if (nestedDefaultPair) {
-      cachedConverter = nestedDefaultPair;
+  for (const candidate of candidates) {
+    const resolved = pickConverter(candidate);
+    if (resolved) {
+      cachedConverter = resolved;
       return cachedConverter;
     }
   }
