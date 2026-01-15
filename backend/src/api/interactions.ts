@@ -1,4 +1,4 @@
-
+ 
 import express from 'express';
 import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
@@ -56,4 +56,4 @@ router.post('/toggle-like/:itemType/:itemId', async (req, res) => {
     }
 });
 
-export default router;
+export default router; 

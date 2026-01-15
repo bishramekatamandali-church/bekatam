@@ -1,4 +1,6 @@
 
+
+
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { EventItem } from '../../types';
@@ -191,4 +193,4 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
   );
 };
 
-export default FeaturedEventDisplay;
+export default FeaturedEventDisplay; 

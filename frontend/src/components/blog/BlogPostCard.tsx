@@ -1,4 +1,4 @@
-
+ 
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { BlogPost, Comment } from '../../types';
@@ -155,4 +155,4 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
   );
 };
 
-export default BlogPostCard;
+export default BlogPostCard; 

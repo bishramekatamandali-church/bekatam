@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react'; 
 import {
   Sermon, EventItem, Ministry, BlogPost, AboutSection, KeyPerson, HistoryMilestone, CoreAboutSectionId, coreAboutSectionIds,
   Comment, NewsItem, DonatePageContent,
@@ -66,6 +66,29 @@ const saveStoredData = <T,>(key: string, data: T) => {
   } catch (error) {
     console.error(`Error saving ${key} to localStorage:`, error);
   }
+};
+
+const normalizeHomepageDates = <T extends { publishedAt?: string; createdAt?: string; submittedAt?: string; date?: string; incidentAt?: string }>(
+  items: T[],
+  fallbackTimestamp: string
+): { items: T[]; updated: boolean } => {
+  let updated = false;
+  const normalized = items.map((item) => {
+    let next = item;
+    let mutated = false;
+    if (!item.incidentAt && item.date) {
+      next = { ...next, incidentAt: item.date };
+      mutated = true;
+    }
+    if (!item.publishedAt) {
+      const fallback = item.createdAt || item.submittedAt || item.date || item.incidentAt || fallbackTimestamp;
+      next = { ...next, publishedAt: fallback };
+      mutated = true;
+    }
+    if (mutated) updated = true;
+    return next;
+  });
+  return { items: normalized, updated };
 };
 
 
@@ -209,7 +232,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, [fetchContentBatch]);
   
-useEffect(() => {
+  useEffect(() => {
     if (typeof EventSource === 'undefined') return;
     const source = new EventSource(`${API_BASE_URL}/content-updates`);
 
@@ -237,6 +260,42 @@ useEffect(() => {
       source.close();
     };
   }, [fetchContentBatch]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(sermons, fallbackTimestamp);
+    if (updated) setSermons(items);
+  }, [sermons]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(events, fallbackTimestamp);
+    if (updated) setEvents(items);
+  }, [events]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(blogPosts, fallbackTimestamp);
+    if (updated) setBlogPosts(items);
+  }, [blogPosts]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(newsItems, fallbackTimestamp);
+    if (updated) setNewsItems(items);
+  }, [newsItems]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(prayerRequests, fallbackTimestamp);
+    if (updated) setPrayerRequests(items);
+  }, [prayerRequests]);
+
+  useEffect(() => {
+    const fallbackTimestamp = new Date().toISOString();
+    const { items, updated } = normalizeHomepageDates(testimonials, fallbackTimestamp);
+    if (updated) setTestimonials(items);
+  }, [testimonials]);
 
   useEffect(() => { contentRef.current.sermons = sermons; saveStoredData('bem_sermons', sermons); }, [sermons]);
   useEffect(() => { contentRef.current.events = events; saveStoredData('bem_events', events); }, [events]);
@@ -303,11 +362,22 @@ useEffect(() => {
 
     const newItemId = `${type}-${Date.now()}`;
     const timestamp = new Date().toISOString();
+    const normalizedData: any = { ...data };
+    const incidentAt = normalizedData.incidentAt || normalizedData.date;
+    if (incidentAt) {
+      normalizedData.incidentAt = incidentAt;
+      if (!normalizedData.date) {
+        normalizedData.date = incidentAt;
+      }
+    }
+    if (!normalizedData.publishedAt) {
+      normalizedData.publishedAt = timestamp;
+    }
 
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...data, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
+            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
@@ -325,7 +395,7 @@ useEffect(() => {
     let message = 'An unknown error occurred.';
     switch (type) {
       case 'sermon': {
-        const formData = data as SermonFormData;
+        const formData = normalizedData as SermonFormData;
         const newSermon: Sermon = {
           id: newItemId,
           title: formData.title,
@@ -334,6 +404,8 @@ useEffect(() => {
           linkPath: formData.linkPath || `/sermons/${newItemId}`,
           category: formData.category,
           date: formData.date,
+          incidentAt: formData.incidentAt || formData.date,
+          publishedAt: formData.publishedAt || timestamp,
           speaker: formData.speaker,
           scripture: formData.scripture,
           videoUrl: formData.videoUrl,
@@ -352,7 +424,7 @@ useEffect(() => {
         break;
       }
       case 'event': {
-        const formData = data as EventFormData;
+        const formData = normalizedData as EventFormData;
         const normalizedLocations = (formData.locations || []).filter(Boolean);
         const newEvent: EventItem = {
           id: newItemId,
@@ -362,6 +434,8 @@ useEffect(() => {
           linkPath: formData.linkPath || `/events/${newItemId}`,
           category: formData.category,
           date: formData.date,
+          incidentAt: formData.incidentAt || formData.date,
+          publishedAt: formData.publishedAt || timestamp,
           eventType: formData.eventType || 'REGULAR',
           scheduleType: formData.scheduleType,
           scheduleNotes: formData.scheduleNotes,
@@ -416,7 +490,7 @@ useEffect(() => {
         break;
       }
       case 'blogPost': {
-        const formData = data as BlogPostFormData;
+        const formData = normalizedData as BlogPostFormData;
         const newBlog: BlogPost = {
           id: newItemId,
           title: formData.title,
@@ -425,6 +499,8 @@ useEffect(() => {
           linkPath: formData.linkPath || `/blog/${newItemId}`,
           category: formData.category,
           date: formData.date,
+          incidentAt: formData.incidentAt || formData.date,
+          publishedAt: formData.publishedAt || timestamp,
           audioUrl: formData.audioUrl,
           videoUrl: formData.videoUrl,
           mediaUrls: formData.mediaUrls,
@@ -442,7 +518,7 @@ useEffect(() => {
         break;
       }
       case 'news': {
-        const formData = data as NewsItemFormData;
+        const formData = normalizedData as NewsItemFormData;
         const newNews: NewsItem = {
           id: newItemId,
           title: formData.title,
@@ -451,6 +527,8 @@ useEffect(() => {
           linkPath: formData.linkPath || `/news/${newItemId}`,
           category: formData.category,
           date: formData.date,
+          incidentAt: formData.incidentAt || formData.date,
+          publishedAt: formData.publishedAt || timestamp,
           videoUrl: formData.videoUrl,
           audioUrl: formData.audioUrl,
           postedByAdminId: currentUser?.id,
@@ -478,7 +556,12 @@ useEffect(() => {
   };
 
   const updateContent = async (type: ContentType, id: string, data: GenericContentFormData): Promise<{ success: boolean; updatedItem?: ContentItem; message?: string }> => {
-    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages', ministryJoinRequest: 'ministry-join-requests' };
+    const contentTypeToEndpoint: Partial<Record<ContentType, string>> =
+ { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections',
+ keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
+ directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'timonials',
+ donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
+ ministryJoinRequest: 'ministry-join-requests' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {

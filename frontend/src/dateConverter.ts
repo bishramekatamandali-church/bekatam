@@ -1,7 +1,10 @@
 import { BSDate } from './types';
 import nepaliDateConverter from "nepali-date-converter";
 
-const NepaliDate = (nepaliDateConverter as any).default;
+const resolveNepaliDate = (): any =>
+  (nepaliDateConverter as any)?.default ?? nepaliDateConverter;
+
+const NepaliDate = resolveNepaliDate();
 
 export function adToBsParts(ad: Date) {
   const bs = NepaliDate.fromAD(ad);
@@ -75,7 +78,7 @@ const resolveDateConverter = (): DateConverter => {
 
   // ✅ nepali-date-converter exports:
   // { dateConfigMap, default: NepaliDate }
-  const NepaliDate = (nepaliDateConverter as any)?.default;
+  const NepaliDate = resolveNepaliDate();
 
   if (!NepaliDate) {
     throw new Error("NepaliDate default export not found in nepali-date-converter");
@@ -97,11 +100,11 @@ const resolveDateConverter = (): DateConverter => {
   bsToAd: (year: number, month: number, day: number) => {
     const bs = new NepaliDate(year, month - 1, day); // month is 0-based
     const ad = bs.toJsDate(); // ✅ confirmed method
-
+    const adParts = getDatePartsInTimeZone(ad, NEPAL_TIME_ZONE);
     return {
-      year: ad.getUTCFullYear(),
-      month: ad.getUTCMonth() + 1,
-      day: ad.getUTCDate(),
+      year: adParts.year,
+      month: adParts.month,
+      day: adParts.day,
     };
   },
 };
@@ -208,7 +211,8 @@ const adToBsWithTimeZone = (adDateInput: string | Date, timeZone?: string): BSDa
   };
 };
 
-export const adToBs = (adDateInput: string | Date): BSDate => adToBsWithTimeZone(adDateInput);
+export const adToBs = (adDateInput: string | Date): BSDate =>
+  adToBsWithTimeZone(adDateInput, NEPAL_TIME_ZONE);
 
 export const bsToAd = (bsDay: number, bsMonth: number, bsYear: number): Date => {
   if (bsYear < BS_YEAR_RANGE.start || bsYear > BS_YEAR_RANGE.end) {

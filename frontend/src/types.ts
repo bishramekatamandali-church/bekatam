@@ -1,3 +1,13 @@
+
+
+
+
+
+
+
+
+
+
 // FIX: Import ComponentType to use it directly without the React namespace.
 import { ReactNode, ReactElement, ComponentType } from 'react';
 import { CalendarDaysIcon as HeroCalendarDaysIcon } from '@heroicons/react/24/solid'; // Example, adjust as needed
@@ -19,6 +29,8 @@ export interface FeatureInfo {
   linkPath: string;
   category?: string;
   date?: string; // Generally YYYY-MM-DD
+  incidentAt?: string; // ISO timestamp/date representing the incident/event date
+  publishedAt?: string; // ISO timestamp when content is published
   postedByAdminId?: string;
   postedByAdminName?: string;
   createdAt?: string; // ISO timestamp
@@ -78,6 +90,8 @@ export interface PrayerRequest {
   category?: PrayerRequestCategory; // Admin can set, or user can select from predefined
   status: PrayerRequestStatus; // Default to 'active'
   submittedAt: string; // ISO timestamp
+  incidentAt?: string; // ISO timestamp/date for the incident
+  publishedAt?: string; // ISO timestamp when request is published
   lastPrayedAt?: string; // ISO timestamp, updated when someone indicates they prayed for it
   prayers: Array<{ userId: string; userName: string; timestamp: string; }>; // Users who prayed
   adminNotes?: string; // Private notes by admins/pastors
@@ -110,6 +124,8 @@ export interface Testimonial {
   contentText: string;
   visibility: TestimonialVisibility;
   submittedAt: string; // ISO timestamp
+  incidentAt?: string; // ISO timestamp/date for the incident
+  publishedAt?: string; // ISO timestamp when testimonial is published
   postedByAdminId?: string;
   postedByAdminName?: string;
   createdAt?: string;
@@ -926,7 +942,9 @@ export interface BaseContentFormData {
   description: string;
   imageUrl?: string; // This might be deprecated for multi-image types like MonthlyThemeImage
   category?: AllContentCategories;
-  date?: string; 
+  date?: string;
+  incidentAt?: string;
+  publishedAt?: string;
 }
 
 export interface SermonFormData extends BaseContentFormData {
@@ -1059,6 +1077,8 @@ export interface PrayerRequestFormData {
   requestText: string;
   visibility: PrayerRequestVisibility;
   category?: PrayerRequestCategory;
+  incidentAt?: string;
+  publishedAt?: string;
   // New
   mediaUrls?: string[];
   location?: string;
@@ -1074,6 +1094,8 @@ export interface TestimonialFormData {
   title: string;
   contentText: string;
   visibility: TestimonialVisibility;
+  incidentAt?: string;
+  publishedAt?: string;
    // New
   mediaUrls?: string[];
   location?: string;
@@ -1460,4 +1482,4 @@ export interface RegistrationFormData {
   profileImageUrl?: string;
   coverPhotoUrl?: string;
 }
-// --- End Registration FormData ---
+// --- End Registration FormData --- 

@@ -148,4 +148,4 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
   );
 };
 
-export default NewsItemCard;
+export default NewsItemCard; 

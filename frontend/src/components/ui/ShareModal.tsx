@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Modal from './Modal';
 import Button from './Button';
@@ -110,4 +109,4 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, ev
   );
 };
 
-export default ShareModal;
+export default ShareModal; 

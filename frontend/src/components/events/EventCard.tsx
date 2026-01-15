@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { EventItem } from '../../types';
@@ -230,4 +231,4 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
   );
 };
 
-export default EventCard;
+export default EventCard; 

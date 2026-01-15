@@ -1,3 +1,4 @@
+ 
 import React from 'react';
 
 export const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -262,4 +263,4 @@ export const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 12A4.5 4.5 0 1112 16.5M12 7.5V16.5M12 7.5l3.75 3.75M12 7.5l-3.75 3.75" />
   </svg>
-);
+); 

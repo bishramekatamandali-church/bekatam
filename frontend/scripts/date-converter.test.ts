@@ -15,6 +15,7 @@ const anchorDates = [
   { bs: { year: 2080, month: 1, day: 1 }, ad: '2023-04-14' },
   { bs: { year: 2081, month: 1, day: 1 }, ad: '2024-04-13' },
   { bs: { year: 2079, month: 1, day: 1 }, ad: '2022-04-14' },
+  { bs: { year: 2082, month: 9, day: 1 }, ad: '2025-12-16' },
   { bs: { year: 2082, month: 9, day: 17 }, ad: '2026-01-01' },
 ];
 

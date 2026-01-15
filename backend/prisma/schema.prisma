@@ -137,9 +137,12 @@ model collectionrecord {
 
 model comment {
   id                  String          @id
-  userId              String
+  userId              String?
   userName            String
   userProfileImageUrl String?         @db.Text
+  guestEmail          String?
+  guestPhone          String?
+  isGuest             Boolean         @default(false)
   text                String          @db.Text
   timestamp           DateTime        @default(now())
   editedAt            DateTime?
@@ -155,7 +158,7 @@ model comment {
   newsitem            newsitem?       @relation(fields: [newsItemId], references: [id], onDelete: Cascade, map: "Comment_newsItemId_fkey")
   prayerrequest       prayerrequest?  @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Comment_prayerRequestId_fkey")
   sermon              sermon?         @relation(fields: [sermonId], references: [id], onDelete: Cascade, map: "Comment_sermonId_fkey")
-  user                user            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Comment_userId_fkey")
+  user                user?           @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Comment_userId_fkey")
 
   @@index([blogPostId], map: "Comment_blogPostId_fkey")
   @@index([eventId], map: "Comment_eventId_fkey")
@@ -164,6 +167,23 @@ model comment {
   @@index([prayerRequestId], map: "Comment_prayerRequestId_fkey")
   @@index([sermonId], map: "Comment_sermonId_fkey")
   @@index([userId], map: "Comment_userId_fkey")
+}
+
+model contentlike {
+  id       String @id @default(cuid())
+  itemType String
+  itemId   String
+
+  userId String?
+  user   user?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  guestName  String?
+  guestEmail String?
+  guestPhone String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([itemType, itemId, userId, guestEmail])
 }
 
 model contactmessage {
@@ -262,37 +282,37 @@ model donordetail {
 }
 
 model eventitem {
-  id                String              @id
+  id                String                   @id
   title             String
-  description       String              @db.Text
-  imageUrl          String?             @db.Text
+  description       String                   @db.Text
+  imageUrl          String?                  @db.Text
   linkPath          String
   category          eventitem_category?
   date              DateTime?
-  eventType         eventitem_type       @default(REGULAR)
+  eventType         eventitem_type           @default(REGULAR)
   scheduleType      eventitem_schedule_type?
-  scheduleNotes     String?             @db.Text
+  scheduleNotes     String?                  @db.Text
   locations         Json?
   conductedBy       Json?
   speakers          Json?
   postedByAdminId   String?
   postedByAdminName String?
-  createdAt         DateTime            @default(now())
+  createdAt         DateTime                 @default(now())
   updatedAt         DateTime
   location          String?
   time              String?
-  expectations      String?             @db.Text
+  expectations      String?                  @db.Text
   guests            String?
   contactPerson     String?
   contactEmail      String?
   contactPhone      String?
-  registrationLink  String?             @db.Text
+  registrationLink  String?                  @db.Text
   capacity          Int?
-  isFeeRequired     Boolean             @default(false)
+  isFeeRequired     Boolean                  @default(false)
   feeAmount         String?
-  videoUrl          String?             @db.Text
-  audioUrl          String?             @db.Text
-  likes             Int                 @default(0)
+  videoUrl          String?                  @db.Text
+  audioUrl          String?                  @db.Text
+  likes             Int                      @default(0)
   comment           comment[]
 }
 
@@ -639,40 +659,41 @@ model testimonial {
 }
 
 model user {
-  password                                String
-  passwordHash                            String?
-  id                                      String                    @id
-  username                                String                    @unique(map: "User_username_key")
-  fullName                                String
-  email                                   String                    @unique(map: "User_email_key")
-  countryCode                             String?
-  phone                                   String?
-  role                                    user_role                 @default(user)
-  profileImageUrl                         String?                   @db.Text
-  coverPhotoUrl                           String?                   @db.Text
-  bio                                     String?                   @db.Text
-  hometown                                String?
-  currentCity                             String?
-  work                                    String?
-  education                               String?
-  relationshipStatus                      user_relationshipStatus?
-  interests                               String?                   @db.Text
-  favoriteScripture                       String?
-  receiveContentUpdateNotifications       Boolean                   @default(true)
-  receivePrayerRequestNotifications       Boolean                   @default(true)
-  receiveTestimonialNotifications         Boolean                   @default(true)
-  profileInSearchPrivacy                  Boolean                   @default(true)
-  createdAt                               DateTime                  @default(now())
-  updatedAt                               DateTime @updatedAt
-  adminactionlog                          adminactionlog[]
-  churchmember                            churchmember?
-  comment                                 comment[]
-  frontendactivitylog                     frontendactivitylog[]
-  ministryjoinrequest                     ministryjoinrequest[]
-  notification                            notification[]
-  prayer                                  prayer[]
-  prayerrequest                           prayerrequest[]
-  testimonial                             testimonial[]
+  password                          String
+  passwordHash                      String?
+  id                                String                   @id
+  username                          String                   @unique(map: "User_username_key")
+  fullName                          String
+  email                             String                   @unique(map: "User_email_key")
+  countryCode                       String?
+  phone                             String?
+  role                              user_role                @default(user)
+  profileImageUrl                   String?                  @db.Text
+  coverPhotoUrl                     String?                  @db.Text
+  bio                               String?                  @db.Text
+  hometown                          String?
+  currentCity                       String?
+  work                              String?
+  education                         String?
+  relationshipStatus                user_relationshipStatus?
+  interests                         String?                  @db.Text
+  favoriteScripture                 String?
+  receiveContentUpdateNotifications Boolean                  @default(true)
+  receivePrayerRequestNotifications Boolean                  @default(true)
+  receiveTestimonialNotifications   Boolean                  @default(true)
+  profileInSearchPrivacy            Boolean                  @default(true)
+  createdAt                         DateTime                 @default(now())
+  updatedAt                         DateTime                 @updatedAt
+  adminactionlog                    adminactionlog[]
+  churchmember                      churchmember?
+  comment                           comment[]
+  frontendactivitylog               frontendactivitylog[]
+  ministryjoinrequest               ministryjoinrequest[]
+  notification                      notification[]
+  prayer                            prayer[]
+  prayerrequest                     prayerrequest[]
+  testimonial                       testimonial[]
+  contentlike                       contentlike[]
 }
 
 enum fellowshiprosteritem_rosterType {
@@ -882,16 +903,16 @@ enum notification_type {
 
 enum prayerrequest_visibility {
   public
-  }
+}
 
 enum testimonial_visibility {
   public
-  }
+}
 
 enum user_role {
   user
   admin
-  }
+}
 
 enum prayerrequest_category {
   Healing
