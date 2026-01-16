@@ -12,19 +12,31 @@ const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
 // Helper to ensure the sermon object sent to the frontend has the expected shape
-const shapeSermonForFrontend = (sermon) => {
-    return {
-        ...sermon,
-        comments: [], // Comments are handled separately on the frontend
-    };
+const shapeSermonForFrontend = (s) => {
+    const { comment, ...sermon } = s;
+    const comments = Array.isArray(comment) ? comment.map((c) => ({
+        id: c.id,
+        itemId: sermon.id,
+        itemType: 'sermon',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    return { ...sermon, comments };
 };
 // GET all sermons
 router.get('/', async (req, res) => {
     try {
         const sermons = await db_1.prisma.sermon.findMany({
-            orderBy: {
-                date: 'desc',
-            },
+            include: { comment: true },
+            orderBy: { date: 'desc' },
         });
         res.json(sermons.map(shapeSermonForFrontend));
     }
@@ -42,6 +54,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await db_1.prisma.sermon.findUnique({
             where: { id: id },
+            include: { comment: true },
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));

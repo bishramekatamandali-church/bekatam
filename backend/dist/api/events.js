@@ -24,23 +24,39 @@ const normalizeStringArray = (value) => {
     return [];
 };
 // Helper to shape data for frontend, assuming frontend types.ts expects 'comments' array
-const shapeEventForFrontend = (event) => {
+const shapeEventForFrontend = (item) => {
+    const { comment, ...rest } = item;
+    const comments = Array.isArray(comment) ? comment.map((c) => ({
+        id: c.id,
+        itemId: rest.id,
+        itemType: 'event',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
     return {
-        ...event,
-        comments: [], // Comments handled separately
-        // Prisma's DateTime can be an object, ensure it's ISO string for frontend
-        date: event.date ? new Date(event.date).toISOString() : null,
-        createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : null,
-        updatedAt: event.updatedAt ? new Date(event.updatedAt).toISOString() : null,
-        locations: Array.isArray(event.locations) ? event.locations : [],
-        conductedBy: Array.isArray(event.conductedBy) ? event.conductedBy : [],
-        speakers: Array.isArray(event.speakers) ? event.speakers : [],
+        ...rest,
+        comments,
+        locations: Array.isArray(rest.locations) ? rest.locations : [],
+        conductedBy: Array.isArray(rest.conductedBy) ? rest.conductedBy : [],
+        speakers: Array.isArray(rest.speakers) ? rest.speakers : [],
+        date: rest.date ? new Date(rest.date).toISOString() : null,
+        createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
+        updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
     };
 };
 // GET all events
 router.get('/', async (req, res) => {
     try {
         const events = await db_1.prisma.eventitem.findMany({
+            include: { comment: true },
             orderBy: {
                 date: 'desc',
             },
@@ -61,6 +77,7 @@ router.get('/:id', async (req, res) => {
     try {
         const event = await db_1.prisma.eventitem.findUnique({
             where: { id: id },
+            include: { comment: true },
         });
         if (event) {
             res.json(shapeEventForFrontend(event));

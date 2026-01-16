@@ -11,20 +11,39 @@ const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
-const shapeBlogPostForFrontend = (post) => ({
-    ...post,
-    comments: [], // Comments handled separately
-    linkPath: `/blog/${post.id}`,
-    date: post.date ? new Date(post.date).toISOString() : null,
-    createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : null,
-    updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : null,
-    likes: post.likes || 0,
-    mediaUrls: post.mediaUrls || [],
-});
+const shapeBlogPostForFrontend = (p) => {
+    const { comment, ...post } = p;
+    const comments = Array.isArray(comment) ? comment.map((c) => ({
+        id: c.id,
+        itemId: post.id,
+        itemType: 'blogPost',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    return {
+        ...post,
+        comments,
+        linkPath: `/blog/${post.id}`,
+        date: post.date ? new Date(post.date).toISOString() : null,
+        createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : null,
+        updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : null,
+        likes: post.likes || 0,
+        mediaUrls: post.mediaUrls || [],
+    };
+};
 // GET all blog posts
 router.get('/', async (req, res) => {
     try {
         const posts = await db_1.prisma.blogpost.findMany({
+            include: { comment: true },
             orderBy: { date: 'desc' },
         });
         res.json(posts.map(shapeBlogPostForFrontend));

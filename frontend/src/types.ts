@@ -101,6 +101,8 @@ export interface PrayerRequest {
   createdAt?: string; // Same as submittedAt effectively
   updatedAt?: string; // When status or notes change
   comments: Comment[];
+  likedByMe?: boolean;
+
   // New Facebook-like fields
   mediaUrls?: string[];
   location?: string;
@@ -130,6 +132,7 @@ export interface Testimonial {
   postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
+  likedByMe?: boolean;
   linkPath: string; // e.g., /prayer-requests#testimonial-id
   // New Facebook-like fields
   mediaUrls?: string[];
@@ -159,14 +162,17 @@ export interface Ministry extends FeatureInfo {
 
 export interface Comment {
   id: string;
-  itemId: string; // Generic ID for event, sermon, blog post, news item, or history chapter
-  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest'; // Added prayerRequest
-  userId: string; 
+  itemId: string; // Generic ID for event, sermon, blog post, news item, history chapter, or prayer request
+  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest';
+  userId?: string | null; 
   userName: string; 
-  userProfileImageUrl?: string;
+  userProfileImageUrl?: string | null;
+  isGuest?: boolean;
+  guestEmail?: string | null;
+  guestPhone?: string | null;
   text: string;
   timestamp: string; // ISO string
-  editedAt?: string;
+  editedAt?: string | null;
 }
 
 export interface EventItem extends FeatureInfo {
@@ -192,7 +198,9 @@ export interface EventItem extends FeatureInfo {
   videoUrl?: string; 
   audioUrl?: string;
   likes?: number; 
-  comments: Comment[]; 
+  comments: Comment[];
+  likedByMe?: boolean;
+ 
 }
 
 export interface Sermon extends FeatureInfo {
@@ -204,12 +212,15 @@ export interface Sermon extends FeatureInfo {
   fullContent?: string; 
   likes?: number; 
   comments: Comment[];
+  likedByMe?: boolean;
+
 }
 
 export interface BlogPost extends FeatureInfo {
   category?: BlogPostCategory;
   likes?: number; 
   comments: Comment[];
+  likedByMe?: boolean;
   audioUrl?: string;
   mediaUrls?: string[];
   location?: string;
@@ -222,6 +233,8 @@ export interface NewsItem extends FeatureInfo {
   audioUrl?: string;
   likes?: number;
   comments: Comment[];
+  likedByMe?: boolean;
+
 }
 
 export interface HomeSlide {
@@ -299,6 +312,7 @@ export interface HistoryChapter {
   postedByAdminName?: string;
   likes?: number;
   comments: Comment[];
+  likedByMe?: boolean;
   linkPath: string; // e.g., /church-history#chapter-1
 }
 // --- END: Church History "Book" Types ---

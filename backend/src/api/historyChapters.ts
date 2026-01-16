@@ -7,6 +7,32 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
@@ -15,19 +41,39 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
-const shapeChapterForFrontend = (chapter: historychapter): any => ({
-    ...chapter,
-    comments: [], // Comments handled separately
-    linkPath: `/church-history#${chapter.id}`,
-    createdAt: chapter.createdAt ? new Date(chapter.createdAt).toISOString() : null,
-    updatedAt: chapter.updatedAt ? new Date(chapter.updatedAt).toISOString() : null,
-    lastPublishedAt: chapter.lastPublishedAt ? new Date(chapter.lastPublishedAt).toISOString() : null,
-});
+const shapeChapterForFrontend = (h: any): any => {
+    const { comment, ...chapter } = h;
+    const comments = Array.isArray(comment) ? comment.map((c: any) => ({
+        id: c.id,
+        itemId: chapter.id,
+        itemType: 'historyChapter',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+    return {
+        ...chapter,
+        comments,
+        linkPath: `/church-history#${chapter.id}`,
+        createdAt: chapter.createdAt ? new Date(chapter.createdAt).toISOString() : null,
+        updatedAt: chapter.updatedAt ? new Date(chapter.updatedAt).toISOString() : null,
+        lastPublishedAt: chapter.lastPublishedAt ? new Date(chapter.lastPublishedAt).toISOString() : null,
+    };
+};
 
 // GET all chapters
 router.get('/', async (req, res) => {
     try {
         const chapters = await prisma.historychapter.findMany({
+            include: { comment: true },
             orderBy: { chapterNumber: 'asc' },
         });
         res.json(chapters.map(shapeChapterForFrontend));

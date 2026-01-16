@@ -1,6 +1,7 @@
 // Load environment variables first
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ override: true });
+
 
 // --- Environment Variable Validation ---
 const missingRequiredVars: string[] = [];

@@ -11,19 +11,38 @@ const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
-const shapeNewsItemForFrontend = (item) => ({
-    ...item,
-    comments: [], // Comments handled separately
-    linkPath: `/news/${item.id}`,
-    date: item.date ? new Date(item.date).toISOString() : null,
-    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : null,
-    updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : null,
-    likes: item.likes || 0,
-});
+const shapeNewsItemForFrontend = (n) => {
+    const { comment, ...item } = n;
+    const comments = Array.isArray(comment) ? comment.map((c) => ({
+        id: c.id,
+        itemId: item.id,
+        itemType: 'news',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    return {
+        ...item,
+        comments,
+        linkPath: `/news/${item.id}`,
+        date: item.date ? new Date(item.date).toISOString() : null,
+        createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : null,
+        updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : null,
+        likes: item.likes || 0,
+    };
+};
 // GET all news items
 router.get('/', async (req, res) => {
     try {
         const items = await db_1.prisma.newsitem.findMany({
+            include: { comment: true },
             orderBy: { date: 'desc' },
         });
         res.json(items.map(shapeNewsItemForFrontend));

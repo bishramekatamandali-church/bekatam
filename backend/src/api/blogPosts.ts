@@ -3,6 +3,21 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
@@ -13,21 +28,41 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
-const shapeBlogPostForFrontend = (post: blogpost): any => ({
-    ...post,
-    comments: [], // Comments handled separately
-    linkPath: `/blog/${post.id}`,
-    date: post.date ? new Date(post.date).toISOString() : null,
-    createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : null,
-    updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : null,
-    likes: post.likes || 0,
-    mediaUrls: post.mediaUrls || [],
-});
+const shapeBlogPostForFrontend = (p: any): any => {
+    const { comment, ...post } = p;
+    const comments = Array.isArray(comment) ? comment.map((c: any) => ({
+        id: c.id,
+        itemId: post.id,
+        itemType: 'blogPost',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+    return {
+        ...post,
+        comments,
+        linkPath: `/blog/${post.id}`,
+        date: post.date ? new Date(post.date).toISOString() : null,
+        createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : null,
+        updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : null,
+        likes: post.likes || 0,
+        mediaUrls: post.mediaUrls || [],
+    };
+};
 
 // GET all blog posts
 router.get('/', async (req, res) => {
     try {
         const posts = await prisma.blogpost.findMany({
+            include: { comment: true },
             orderBy: { date: 'desc' },
         });
         res.json(posts.map(shapeBlogPostForFrontend));

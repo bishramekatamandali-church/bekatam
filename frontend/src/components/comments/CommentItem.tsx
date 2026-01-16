@@ -1,4 +1,44 @@
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Comment } from '../../types';
 import { useContent } from '../../contexts/ContentContext';
@@ -22,9 +62,10 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, itemType, itemId }) 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const canEdit = currentUser && currentUser.id === comment.userId;
-    const canDelete = currentUser && (currentUser.id === comment.userId || isAdmin);
+    const canEdit = Boolean(comment.userId) && currentUser && currentUser.id === comment.userId;
+    const canDelete = Boolean(comment.userId) && currentUser && (currentUser.id === comment.userId || isAdmin);
     const canManage = canEdit || canDelete;
+    const hasProfile = Boolean(comment.userId) && !comment.isGuest;
     const menuRef = React.useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -61,18 +102,32 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, itemType, itemId }) 
 
     return (
         <div className="bg-white p-3 rounded-lg shadow-sm flex items-start space-x-3">
-            <Link to={`/profile/${comment.userId}`} className="flex-shrink-0">
-                {comment.userProfileImageUrl ? (
-                    <img src={comment.userProfileImageUrl} alt={comment.userName} className="w-8 h-8 rounded-full object-cover"/>
-                ) : (
-                    <UserCircleIcon className="w-8 h-8 text-slate-400"/>
-                )}
-            </Link>
+            {hasProfile ? (
+                <Link to={`/profile/${comment.userId}`} className="flex-shrink-0">
+                    {comment.userProfileImageUrl ? (
+                        <img src={comment.userProfileImageUrl} alt={comment.userName} className="w-8 h-8 rounded-full object-cover"/>
+                    ) : (
+                        <UserCircleIcon className="w-8 h-8 text-slate-400"/>
+                    )}
+                </Link>
+            ) : (
+                <div className="flex-shrink-0">
+                    {comment.userProfileImageUrl ? (
+                        <img src={comment.userProfileImageUrl} alt={comment.userName} className="w-8 h-8 rounded-full object-cover"/>
+                    ) : (
+                        <UserCircleIcon className="w-8 h-8 text-slate-400"/>
+                    )}
+                </div>
+            )}
             <div className="flex-grow">
                 <div className="flex items-start justify-between">
                     <div className="flex-grow">
                         <div className="flex items-center mb-1 flex-wrap">
-                            <Link to={`/profile/${comment.userId}`} className="font-semibold text-slate-800 text-sm hover:underline">{comment.userName}</Link>
+                            {hasProfile ? (
+                                <Link to={`/profile/${comment.userId}`} className="font-semibold text-slate-800 text-sm hover:underline">{comment.userName}</Link>
+                            ) : (
+                                <span className="font-semibold text-slate-800 text-sm">{comment.userName}{comment.isGuest ? ' (Guest)' : ''}</span>
+                            )}
                             <p className="text-xs text-slate-400 mx-2">&bull;</p>
                             <p className="text-xs text-slate-400">{formatTimestampADBS(comment.timestamp)}</p>
                             {comment.editedAt && <p className="text-xs text-slate-400 ml-2 italic">(edited)</p>}
@@ -124,4 +179,4 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, itemType, itemId }) 
     );
 };
 
-export default CommentItem;
+export default CommentItem; 

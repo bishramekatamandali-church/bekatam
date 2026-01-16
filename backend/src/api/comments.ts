@@ -2,6 +2,42 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
@@ -10,34 +46,76 @@ const router = express.Router();
 
 // POST a new comment
 router.post('/', async (req, res) => {
-    const { itemType, itemId, text, userId, userName, userProfileImageUrl } = req.body;
-
-    if (!itemType || !itemId || !text || !userId || !userName) {
-        return res.status(400).json({ error: 'Missing required fields for comment.' });
-    }
-
-    let data: any = {
+    const {
+        itemType,
+        itemId,
+        text,
+        // logged-in
         userId,
         userName,
         userProfileImageUrl,
-        text,
-        timestamp: new Date(),
-    };
+        // guest
+        isGuest,
+        guestEmail,
+        guestPhone,
+    } = req.body;
+
+    if (!itemType || !itemId || !text || !userName) {
+        return res.status(400).json({ error: 'Missing required fields for comment.' });
+    }
+
+    const isGuestComment = Boolean(isGuest) || (!userId && (guestEmail || guestPhone));
+
+    if (!isGuestComment && !userId) {
+        return res.status(400).json({ error: 'userId is required for non-guest comments.' });
+    }
+
+    if (isGuestComment && !(guestEmail || guestPhone)) {
+        return res.status(400).json({ error: 'Guest comments require guestEmail or guestPhone.' });
+    }
+
+    let data: any = {
+  id: crypto.randomUUID(),        // ✅ ADD THIS
+  userId: isGuestComment ? null : userId,
+  userName,
+  userProfileImageUrl: userProfileImageUrl || null,
+  isGuest: isGuestComment,
+  guestEmail: isGuestComment ? (guestEmail || null) : null,
+  guestPhone: isGuestComment ? (guestPhone || null) : null,
+  text,
+  timestamp: new Date(),
+};
 
     switch (itemType) {
-        case 'sermon': data.sermonId = itemId; break;
-        case 'event': data.eventId = itemId; break;
-        case 'blogPost': data.blogPostId = itemId; break;
-        case 'news': data.newsItemId = itemId; break;
-        case 'historyChapter': data.historyChapterId = itemId; break;
-        case 'prayerRequest': data.prayerRequestId = itemId; break;
-        default:
-            return res.status(400).json({ error: 'Invalid itemType for comment.' });
-    }
+  case 'sermon': data.sermonId = itemId; break;
+  case 'event': data.eventId = itemId; break;
+  case 'blogPost': data.blogPostId = itemId; break;
+  case 'news':
+  case 'newsItem': data.newsItemId = itemId; break;
+  case 'historyChapter': data.historyChapterId = itemId; break;
+  case 'prayerRequest': data.prayerRequestId = itemId; break;
+  default:
+    return res.status(400).json({ error: 'Invalid itemType for comment.' });
+}
+
 
     try {
         const newComment = await prisma.comment.create({ data });
-        res.status(201).json(newComment);
+        // Shape response to match frontend Comment type
+        res.status(201).json({
+            id: newComment.id,
+            itemId,
+            itemType,
+            userId: newComment.userId,
+            userName: newComment.userName,
+            userProfileImageUrl: newComment.userProfileImageUrl,
+            isGuest: newComment.isGuest,
+            guestEmail: newComment.guestEmail,
+            guestPhone: newComment.guestPhone,
+            text: newComment.text,
+            timestamp: new Date(newComment.timestamp).toISOString(),
+            editedAt: newComment.editedAt ? new Date(newComment.editedAt).toISOString() : null,
+        });
     } catch (error) {
         console.error("Error creating comment:", error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -66,7 +144,28 @@ router.put('/:commentId', async (req, res) => {
                 editedAt: new Date(),
             }
         });
-        res.json(updatedComment);
+        const itemId = updatedComment.sermonId || updatedComment.eventId || updatedComment.blogPostId || updatedComment.newsItemId || updatedComment.historyChapterId || updatedComment.prayerRequestId;
+        let itemType = "sermon";
+        if (updatedComment.eventId) itemType = "event";
+        else if (updatedComment.blogPostId) itemType = "blogPost";
+        else if (updatedComment.newsItemId) itemType = "news";
+        else if (updatedComment.historyChapterId) itemType = "historyChapter";
+        else if (updatedComment.prayerRequestId) itemType = "prayerRequest";
+
+        res.json({
+            id: updatedComment.id,
+            itemId,
+            itemType,
+            userId: updatedComment.userId,
+            userName: updatedComment.userName,
+            userProfileImageUrl: updatedComment.userProfileImageUrl,
+            isGuest: updatedComment.isGuest,
+            guestEmail: updatedComment.guestEmail,
+            guestPhone: updatedComment.guestPhone,
+            text: updatedComment.text,
+            timestamp: new Date(updatedComment.timestamp).toISOString(),
+            editedAt: updatedComment.editedAt ? new Date(updatedComment.editedAt).toISOString() : null,
+        });
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Comment to update not found.' });

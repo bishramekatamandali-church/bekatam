@@ -5,51 +5,75 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
-const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
-// POST /api/interactions/toggle-like/:itemType/:itemId
 router.post('/toggle-like/:itemType/:itemId', async (req, res) => {
     const { itemType, itemId } = req.params;
-    const { action } = req.body; // 'like' or 'unlike'
+    const { action, userId, guestName, guestEmail, guestPhone } = req.body;
     if (!['like', 'unlike'].includes(action)) {
-        return res.status(400).json({ error: 'Invalid action specified.' });
+        return res.status(400).json({ error: 'Invalid action. Use like/unlike.' });
     }
-    const prismaModelMap = {
-        sermon: db_1.prisma.sermon,
-        event: db_1.prisma.eventitem,
-        blogPost: db_1.prisma.blogpost,
-        news: db_1.prisma.newsitem,
-        historyChapter: db_1.prisma.historychapter,
+    // identity rules
+    const isLoggedIn = Boolean(userId);
+    const isGuest = !isLoggedIn && Boolean(guestEmail || guestPhone);
+    if (!isLoggedIn && !isGuest) {
+        return res.status(400).json({ error: 'userId OR guestEmail/guestPhone is required.' });
+    }
+    const likeWhere = {
+        itemType,
+        itemId,
+        userId: isLoggedIn ? userId : null,
+        guestEmail: isGuest ? (guestEmail || null) : null,
+        guestPhone: isGuest ? (guestPhone || null) : null,
     };
-    const model = prismaModelMap[itemType];
-    if (!model) {
-        return res.status(400).json({ error: 'Invalid item type specified.' });
-    }
     try {
-        const updatedItem = await model.update({
-            where: { id: itemId },
-            data: {
-                likes: {
-                    [action === 'like' ? 'increment' : 'decrement']: 1,
-                },
-            },
+        if (action === 'like') {
+            // prevent duplicates (handle cases where unique constraint may not cover phone-only guests)
+            const existing = await db_1.prisma.contentlike.findFirst({ where: likeWhere });
+            if (!existing) {
+                await db_1.prisma.contentlike.create({
+                    data: {
+                        itemType,
+                        itemId,
+                        userId: isLoggedIn ? userId : null,
+                        guestName: isGuest ? (guestName || null) : null,
+                        guestEmail: isGuest ? (guestEmail || null) : null,
+                        guestPhone: isGuest ? (guestPhone || null) : null,
+                    },
+                });
+            }
+        }
+        else {
+            // unlike -> delete if exists
+            const existing = await db_1.prisma.contentlike.findFirst({ where: likeWhere });
+            if (existing) {
+                await db_1.prisma.contentlike.delete({ where: { id: existing.id } });
+            }
+        }
+        // recompute likes from contentlike table (source of truth)
+        const likesCount = await db_1.prisma.contentlike.count({
+            where: { itemType, itemId },
         });
-        // Ensure likes don't go below zero
-        if (updatedItem.likes < 0) {
-            await model.update({
-                where: { id: itemId },
-                data: { likes: 0 }
-            });
-            updatedItem.likes = 0;
-        }
-        res.json(updatedItem);
+        // update the target item likes column so existing API responses remain compatible
+        const modelMap = {
+            sermon: db_1.prisma.sermon,
+            event: db_1.prisma.eventitem,
+            blogPost: db_1.prisma.blogpost,
+            news: db_1.prisma.newsitem,
+            historyChapter: db_1.prisma.historychapter,
+            prayerRequest: db_1.prisma.prayerrequest,
+        };
+        const model = modelMap[itemType];
+        if (!model)
+            return res.status(400).json({ error: 'Invalid itemType.' });
+        await model.update({
+            where: { id: itemId },
+            data: { likes: likesCount },
+        });
+        return res.json({ likes: likesCount });
     }
-    catch (error) {
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return res.status(404).json({ error: `Item of type ${itemType} with ID ${itemId} not found.` });
-        }
-        console.error(`Error toggling like for ${itemType} ${itemId}:`, error);
-        res.status(500).json({ error: 'Failed to update like count.' });
+    catch (err) {
+        console.error(`toggle-like error ${itemType}/${itemId}`, err);
+        return res.status(500).json({ error: 'Failed to update like.' });
     }
 });
 exports.default = router;

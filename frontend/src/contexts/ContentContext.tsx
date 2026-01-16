@@ -169,41 +169,51 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
-    const fetchPromises = dataFetchConfig.map(async (config) => {
-      const hasExistingContent = Array.isArray(config.getCurrent?.())
-        ? (config.getCurrent?.() as any[]).length > 0
-        : false;
+  if (setLoading) setLoadingContent(true);
 
-      if (!navigator.onLine) {
+  const fetchPromises = dataFetchConfig.map(async (config) => {
+    const hasExistingContent = Array.isArray(config.getCurrent?.())
+      ? (config.getCurrent?.() as any[]).length > 0
+      : false;
+
+    if (!navigator.onLine) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/${config.key}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`${config.key} fetch failed`);
+
+      const data = await response.json();
+
+      // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
+      const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
+      if (!hasServerContent && hasExistingContent) {
+        console.warn(
+          `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
+        );
         return;
       }
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/${config.key}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`${config.key} fetch failed`);
-        const data = await response.json();
-        const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
+      // ✅ Normalize comment relation name: backend uses `comment`, frontend expects `comments`
+      const normalized = Array.isArray(data)
+        ? data.map((item: any) => {
+            if (item && item.comment && !item.comments) {
+              return { ...item, comments: item.comment };
+            }
+            return item;
+          })
+        : data;
 
-        if (!hasServerContent) {
-          if (hasExistingContent) {
-            console.warn(`Skipped overwriting ${config.key} with empty server response to preserve existing content.`);
-            return;
-          }
+      config.setter(normalized);
+      if (config.storageKey) saveStoredData(config.storageKey, normalized);
+    } catch (error) {
+      console.error(`Failed to load ${config.key}:`, error);
+    }
+  }); // ✅ <-- this was missing before
 
-        }
-
-        config.setter(data);
-        if (config.storageKey) saveStoredData(config.storageKey, data);
-      } catch (error) {
-        console.error(`Failed to load ${config.key}:`, error);
-      }
-    });
-
-    if (setLoading) setLoadingContent(true);
-    await Promise.all(fetchPromises).finally(() => {
-      if (setLoading) setLoadingContent(false);
-    });
-  }, [dataFetchConfig]);
+  await Promise.all(fetchPromises).finally(() => {
+    if (setLoading) setLoadingContent(false);
+  });
+}, [dataFetchConfig]);
 
   useEffect(() => {
     fetchContentBatch(true);
@@ -559,7 +569,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     const contentTypeToEndpoint: Partial<Record<ContentType, string>> =
  { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections',
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
- directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'timonials',
+ directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials',
  donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
  ministryJoinRequest: 'ministry-join-requests' };
     const endpoint = contentTypeToEndpoint[type];
@@ -688,24 +698,55 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     return undefined;
   };
   const addCommentToItem = async (itemId: string, itemType: Comment['itemType'], commentText: string): Promise<Comment | null> => {
-    if (!currentUser) { alert("You must be logged in to comment."); return null; }
     try {
-        const response = await fetch(`${API_BASE_URL}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemType, itemId, text: commentText, userId: currentUser.id, userName: currentUser.fullName, userProfileImageUrl: currentUser.profileImageUrl }) });
+        const payload: any = { itemType, itemId, text: commentText };
+
+        if (!currentUser) {
+            // Basic guest flow (replace with a proper modal if desired)
+            const guestName = window.prompt('Enter your name to comment:');
+            if (!guestName) return null;
+            const contact = window.prompt('Enter your email OR phone:');
+            if (!contact) return null;
+
+            if (contact.includes('@')) payload.guestEmail = contact.trim();
+            else payload.guestPhone = contact.trim();
+
+            payload.userName = guestName.trim();
+            payload.isGuest = true;
+        } else {
+            payload.userId = currentUser.id;
+            payload.userName = currentUser.fullName;
+            payload.userProfileImageUrl = currentUser.profileImageUrl;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
         if (!response.ok) throw new Error('Failed to post comment.');
+
         const newComment: Comment = await response.json();
+
+        // Re-fetch the content list so comment counts stay consistent everywhere
         const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests' };
         const endpoint = endpointMap[itemType as keyof typeof endpointMap];
-         if(endpoint) {
-             const res = await fetch(`${API_BASE_URL}/${endpoint}`);
-             const data = await res.json();
-             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests };
-             const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
-             if(setter) setter(data);
-         }
+        if (endpoint) {
+            const res = await fetch(`${API_BASE_URL}/${endpoint}`);
+            const data = await res.json();
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests };
+            const setter = setterMap[endpoint.replace('-', '')] || setterMap[endpoint];
+            if (setter) setter(data);
+        }
+
         logContentActivity(`Commented on ${itemType}: ${itemId}`, `${itemType}_comment_added` as any, 'comment', newComment.id);
         return newComment;
-    } catch (error) { console.error("Error adding comment:", error); return null; }
-  };
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        return null;
+    }
+};
+
   const updateComment = async (commentId: string, newText: string, itemType: Comment['itemType'], itemId: string): Promise<boolean> => {
     try {
          const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: newText }) });
@@ -779,18 +820,58 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const getMinistryJoinRequestsForUser = (userId: string) => ministryJoinRequests.filter(req => req.userId === userId);
   const addPrayerRequest = (data: PrayerRequestFormData) => addContent('prayerRequest', data).then(res => res.newItem as PrayerRequest || null);
   const addTestimonial = (data: TestimonialFormData) => addContent('testimonial', data).then(res => res.newItem as Testimonial || null);
-  const toggleLikeOnItem = async (itemType: ContentType, itemId: string, isLiked: boolean): Promise<ContentItem | null> => {
-      try {
-          const action = isLiked ? 'unlike' : 'like';
-          const response = await fetch(`${API_BASE_URL}/interactions/toggle-like/${itemType}/${itemId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
-          if (!response.ok) throw new Error('Failed to toggle like');
-          const updatedItem = await response.json();
-          const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters };
-          const setter = setterMap[itemType];
-          if (setter) setter((prev: any[]) => prev.map(item => item.id === itemId ? { ...item, likes: updatedItem.likes } : item));
-          return updatedItem;
-      } catch (error) { return null; }
-  };
+  const toggleLikeOnItem = async (itemType: ContentType, itemId: string, isLiked: boolean) => {
+  try {
+    const action = isLiked ? 'unlike' : 'like';
+
+    const payload: any = { action };
+
+    // logged in user
+    if (currentUser?.id) {
+      payload.userId = currentUser.id;
+      payload.userName = currentUser.fullName;
+    } else {
+      // OPTIONAL: if you support guest likes, pass guest fields from UI form
+      // payload.guestName = guestName;
+      // payload.guestEmail = guestEmail;
+      // payload.guestPhone = guestPhone;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/interactions/toggle-like/${itemType}/${itemId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) throw new Error('Failed to toggle like');
+
+    const updated = await response.json();
+
+    const setterMap: Record<string, Function> = {
+      sermon: setSermons,
+      event: setEvents,
+      blogPost: setBlogPosts,
+      news: setNewsItems,
+      historyChapter: setHistoryChapters,
+      prayerRequest: setPrayerRequests,
+    };
+
+    const setter = setterMap[itemType];
+    if (setter) {
+      setter((prev: any[]) =>
+        prev.map(item => item.id === itemId ? { ...item, likes: updated.likes } : item)
+      );
+    }
+
+    return updated;
+  } catch {
+    return null;
+  }
+};
+
   const togglePrayerOnRequest = async (requestId: string): Promise<boolean> => {
       if (!currentUser) return false;
       try {
@@ -814,7 +895,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       if(status !== 'answered' && status !== 'active') return false;
       return updatePrayerRequestStatusByAdmin(id, status);
   };
-   return (
+  
+  return (
     <ContentContext.Provider
       value={{	
         sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
@@ -837,8 +919,9 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
-export const useContent = (): ContentContextType => {
+
+  export const useContent = (): ContentContextType => {
   const context = useContext(ContentContext);
   if (context === undefined) throw new Error('useContent must be used within a ContentProvider');
   return context;
-}; 
+};

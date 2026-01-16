@@ -16,20 +16,32 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 const router = express.Router();
 
 // Helper to ensure the sermon object sent to the frontend has the expected shape
-const shapeSermonForFrontend = (sermon: sermon): any => {
-    return {
-        ...sermon,
-        comments: [], // Comments are handled separately on the frontend
-    };
+const shapeSermonForFrontend = (s: any): any => {
+    const { comment, ...sermon } = s;
+    const comments = Array.isArray(comment) ? comment.map((c: any) => ({
+        id: c.id,
+        itemId: sermon.id,
+        itemType: 'sermon',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    return { ...sermon, comments };
 };
 
 // GET all sermons
 router.get('/', async (req, res) => {
     try {
         const sermons = await prisma.sermon.findMany({
-            orderBy: {
-                date: 'desc',
-            },
+            include: { comment: true },
+            orderBy: { date: 'desc' },
         });
         res.json(sermons.map(shapeSermonForFrontend));
     } catch (error) {
@@ -47,6 +59,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await prisma.sermon.findUnique({
             where: { id: id },
+            include: { comment: true },
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));

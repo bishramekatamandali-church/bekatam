@@ -1,4 +1,39 @@
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
@@ -17,31 +52,44 @@ const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
     return true;
 };
 
-const shapePrayerRequestForFrontend = (pr: prayerrequest & { prayers?: any[], _count?: { prayers: number } }): any => {
-    const { _count, ...rest } = pr;
+const shapePrayerRequestForFrontend = (item: any): any => {
+    const { comment, ...rest } = item;
+    const comments = Array.isArray(comment) ? comment.map((c: any) => ({
+        id: c.id,
+        itemId: rest.id,
+        itemType: 'prayerRequest',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
     return {
         ...rest,
-        comments: [], // Comments handled separately
-        linkPath: `/prayer-requests#prayer-${pr.id}`,
-        submittedAt: new Date(pr.submittedAt).toISOString(),
-        lastPrayedAt: pr.lastPrayedAt ? new Date(pr.lastPrayedAt).toISOString() : null,
-        createdAt: pr.createdAt ? new Date(pr.createdAt).toISOString() : null,
-        updatedAt: pr.updatedAt ? new Date(pr.updatedAt).toISOString() : null,
-        mediaUrls: pr.mediaUrls || [],
-        // The frontend `Prayer` type has userName, but the DB `Prayer` model doesn't store it.
-        // The frontend will have to rely on a userMap or we join the user table here.
-        // For simplicity now, we send what we have. Frontend can adapt.
-        prayers: pr.prayers || [], 
+        comments,
+        createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
+        updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
     };
 };
+
 
 // GET all prayer requests
 router.get('/', async (req, res) => {
     try {
         const requests = await prisma.prayerrequest.findMany({
-            orderBy: { submittedAt: 'desc' },
-            include: { prayer: true }
-        });
+  include: {
+    comment: true,
+    prayer: true,
+  },
+  orderBy: { submittedAt: 'desc' },
+});
+
+
         res.json(requests.map(shapePrayerRequestForFrontend));
     } catch (error) {
         if (handleDatabaseFallback(req, res, error)) {
@@ -153,9 +201,14 @@ router.post('/:id/toggle-prayer', async (req, res) => {
 
         // Fetch the updated prayer request with the new prayer list
         const updatedRequest = await prisma.prayerrequest.findUnique({
-            where: { id: prayerRequestId },
-            include: { prayer: true },
-        });
+  where: { id: prayerRequestId },
+  include: {
+    comment: true,
+    prayer: true,
+  },
+});
+
+
 
         if (!updatedRequest) {
             return res.status(404).json({ error: "Prayer request not found after toggling prayer." });
@@ -186,4 +239,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 
-export default router;
+export default router; 

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Load environment variables first
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+dotenv_1.default.config({ override: true });
 // --- Environment Variable Validation ---
 const missingRequiredVars = [];
 if (!process.env.DATABASE_URL) {
