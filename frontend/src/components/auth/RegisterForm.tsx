@@ -1,4 +1,3 @@
-/*
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
@@ -205,6 +204,7 @@ const countryCodes = [
   'Yemen (+967)',
   'Zambia (+260)',
   'Zimbabwe (+263)',
+  'Nepal (+977)',
 ];
 
 
@@ -423,11 +423,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onR
       </form>
      </>
   );
-}; */
+}; 
 
 
 
 
+
+
+    
+
+/*
 import React, { useState } from "react";
 import Button from "../ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -691,7 +696,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       {error && <p className="text-red-600 text-sm">{error}</p>}
       {success && <p className="text-green-600 text-sm">{success}</p>}
 
-      {/* Full Name */}
+      {/* Full Name *}
       <div>
         <label className="block text-xs mb-1">Full Name *</label>
         <input
@@ -703,7 +708,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         />
       </div>
 
-      {/* Email */}
+      {/* Email *}
       <div>
         <label className="block text-xs mb-1">Email *</label>
         <input
@@ -715,7 +720,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         />
       </div>
 
-      {/* Phone */}
+      {/* Phone *}
       <div>
         <label className="block text-xs mb-1">Phone (optional)</label>
         <div className="flex gap-2">
@@ -741,7 +746,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         </div>
       </div>
 
-      {/* Password */}
+      {/* Password *}
       <div>
         <label className="block text-xs mb-1">Password *</label>
         <div className="relative">
@@ -786,4 +791,4 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   );
 };
 
-export default RegisterForm;
+export default RegisterForm; */
