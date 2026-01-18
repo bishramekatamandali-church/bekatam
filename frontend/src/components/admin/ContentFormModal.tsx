@@ -78,15 +78,16 @@ import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUpl
 
 const DEFAULT_BS_YEAR = adToBs(new Date()).year
 
-const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({
-  title,
-  children,
-  className,
-}) => (
+const FormSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  titleClassName?: string;
+}> = ({ title, children, className, titleClassName }) => (
   <div
     className={`pt-5 mt-5 border-t border-slate-200 dark:border-slate-700 first:mt-0 first:pt-0 first:border-t-0 ${className}`}
   >
-    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+    <h3 className={`text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 ${titleClassName || ''}`}>
       {title}
     </h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
@@ -112,6 +113,9 @@ const UnifiedMediaInputs: React.FC<{
   isFieldUploading: Record<string, boolean>;
   uploadingStatus: Record<string, string | null>;
   variant?: 'default' | 'compact';
+  containerClassName?: string;
+  titleClassName?: string;
+  forceLightText?: boolean;
 }> = ({
   formData,
   setFormData,
@@ -120,6 +124,9 @@ const UnifiedMediaInputs: React.FC<{
   isFieldUploading,
   uploadingStatus,
   variant = 'default',
+  containerClassName,
+  titleClassName,
+  forceLightText = false,
 }) => {
   const anyMediaFieldUploading =
     isFieldUploading['imageUrl'] ||
@@ -131,22 +138,12 @@ const UnifiedMediaInputs: React.FC<{
 
   const handleUnifiedMediaUploadFile = async (file: File) => {
     if (!file) return;
-    
-    const setPreview = (fieldName: string) => {
-      if (file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-        const previewUrl = URL.createObjectURL(file);
-        setFormData((prev) => ({ ...prev, [fieldName]: previewUrl }));
-      }
-    };
 
     if (file.type.startsWith('image/')) {
-      setPreview('imageUrl');
       await handleCloudinaryUpload(file, 'imageUrl');
     } else if (file.type.startsWith('video/')) {
-      setPreview('videoUrl');
       await handleCloudinaryUpload(file, 'videoUrl');
     } else if (file.type.startsWith('audio/')) {
-      setPreview('audioUrl');
       await handleCloudinaryUpload(file, 'audioUrl');
     } else {
       alert('Unsupported file type. Please upload an image, video, or audio file.');
@@ -190,7 +187,7 @@ const UnifiedMediaInputs: React.FC<{
             </button>
           </>
         ) : (
-          <div className="text-slate-400 dark:text-slate-500">
+          <div className={forceLightText ? 'text-black/60' : 'text-slate-400 dark:text-slate-500'}>
             <Icon className="w-8 h-8 mx-auto" />
             <p className="text-xs mt-1">No {type} uploaded</p>
           </div>
@@ -210,8 +207,8 @@ const UnifiedMediaInputs: React.FC<{
   });
 
   return (
-    <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg space-y-4 sm:col-span-2">
-      <h3 className="font-semibold text-slate-800 dark:text-slate-200">Media Attachments</h3>
+    <div className={`rounded-lg space-y-4 sm:col-span-2 ${variant === 'compact' ? 'p-3' : 'p-4'} bg-slate-100 dark:bg-slate-800/50 ${containerClassName || ''}`}>
+      <h3 className={`font-semibold text-slate-800 dark:text-slate-200 ${titleClassName || ''}`}>Media Attachments</h3>
       {variant === 'default' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MediaSlot type="image" url={(formData as any).imageUrl} />
@@ -219,7 +216,7 @@ const UnifiedMediaInputs: React.FC<{
           <MediaSlot type="audio" url={(formData as any).audioUrl} />
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <div className={`flex flex-wrap gap-2 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
           {(['image', 'video', 'audio'] as const).map((type) => {
             const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
             const currentUrl = (formData as any)[fieldName];
@@ -227,7 +224,7 @@ const UnifiedMediaInputs: React.FC<{
             return (
               <span
                 key={type}
-                className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow-sm dark:bg-slate-700"
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700'}`}
               >
                 {type.toUpperCase()} attached
                 <button
@@ -263,7 +260,7 @@ const UnifiedMediaInputs: React.FC<{
               type="button"
               onClick={() => unifiedMediaInputRef.current?.click()}
               disabled={anyMediaFieldUploading}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'}`}
             >
               <PhotoIcon className="h-5 w-5" /> Add Media
             </button>
@@ -273,9 +270,9 @@ const UnifiedMediaInputs: React.FC<{
               disabled={anyMediaFieldUploading}
               size="sm"
               variant="outline"
-              className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+              className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600'}`}
             >
-              <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Library
+              <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Gallery
             </Button>
           </div>
         ) : (
@@ -303,11 +300,11 @@ const UnifiedMediaInputs: React.FC<{
                 type="button"
                 onClick={() => unifiedMediaInputRef.current?.click()}
                 disabled={anyMediaFieldUploading}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-              >
-                <PhotoIcon className="h-5 w-5" /> Add Media
-              </button>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'}`}
+            >
+              <PhotoIcon className="h-5 w-5" /> Add Media
+            </button>
+              <p className={forceLightText ? 'mt-2 text-xs text-black/70' : 'mt-2 text-xs text-slate-500 dark:text-slate-400'}>
                 Upload images, videos, or audio from your device (drag & drop works too).
               </p>
             </div>
@@ -318,9 +315,9 @@ const UnifiedMediaInputs: React.FC<{
                 disabled={anyMediaFieldUploading}
                 size="sm"
                 variant="outline"
-                className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+                className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600'}`}
               >
-                <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
+                <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Gallery
               </Button>
             </div>
           </>
@@ -624,6 +621,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [uploadingStatus, setUploadingStatus] = useState<Record<string, string | null>>({});
   const [isFieldUploading, setIsFieldUploading] = useState<Record<string, boolean>>({});
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
+  const isSermonForm = contentType === 'sermon';
+  const resolvedLabelClasses = isSermonForm
+    ? 'block text-xs font-medium text-black mb-1'
+    : labelClasses;
+  const resolvedInputClasses = isSermonForm
+    ? 'w-full p-2.5 border border-slate-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white text-black placeholder:text-slate-400 disabled:bg-slate-100'
+    : inputClasses;
+  const resolvedSectionTitleClasses = isSermonForm ? 'text-black dark:text-black' : '';
 
   const dateFieldsConfig: Record<string, string[]> = {
     sermon: ['incidentAt'],
@@ -1219,7 +1224,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   const renderDateFieldWithBSPicker = (fieldName: string, label: string) => (
     <div className="relative">
-      <label htmlFor={fieldName} className={labelClasses}>
+      <label htmlFor={fieldName} className={resolvedLabelClasses}>
         {label}{' '}
         <span className="font-normal text-purple-600 dark:text-purple-400 text-xs ml-2">
           {bsDateDisplays[fieldName] || 'Select a date'}
@@ -1232,7 +1237,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           name={fieldName}
           value={(formData as any)[fieldName] || ''}
           onChange={handleChange}
-          className={inputClasses}
+          className={resolvedInputClasses}
         />
         <Button
           type="button"
@@ -1241,7 +1246,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           onClick={() =>
             setPickerVisibleFor(pickerVisibleFor === fieldName ? null : fieldName)
           }
-          className="!p-1.5 ml-1 dark:text-slate-300 dark:hover:bg-slate-600"
+          className={`!p-1.5 ml-1 ${isSermonForm ? 'text-black hover:bg-slate-100' : 'dark:text-slate-300 dark:hover:bg-slate-600'}`}
         >
           <CalendarOutlineIcon className="w-5 h-5" />
         </Button>
@@ -1259,7 +1264,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   const renderEmbeddedVideoField = (idSuffix: string) => (
     <FullWidthField>
-      <label htmlFor={`videoUrl-${idSuffix}`} className={labelClasses}>
+      <label htmlFor={`videoUrl-${idSuffix}`} className={resolvedLabelClasses}>
         Social Media Embed URL (Optional)
       </label>
       <input
@@ -1269,9 +1274,9 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         value={(formData as any).videoUrl || ''}
         onChange={handleChange}
         placeholder="Paste a YouTube, Facebook, X, Instagram, Threads, or other embed/share URL"
-        className={inputClasses}
+        className={resolvedInputClasses}
       />
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className={isSermonForm ? 'mt-1 text-xs text-black/70' : 'mt-1 text-xs text-slate-500 dark:text-slate-400'}>
         Use this for embedded videos from YouTube, Facebook, X, Instagram, Threads, or similar sources. Leave it
         blank if you upload media above.
       </p>
@@ -1285,9 +1290,9 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
         return (
           <>
-            <FormSection title="Core Information">
+            <FormSection title="Core Information" titleClassName={resolvedSectionTitleClasses}>
               <FullWidthField>
-                <label htmlFor="title" className={labelClasses}>
+                <label htmlFor="title" className={resolvedLabelClasses}>
                   Title
                 </label>
                 <input
@@ -1297,12 +1302,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.title}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
+                  placeholder="Enter the sermon title"
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="speaker" className={labelClasses}>
+                <label htmlFor="speaker" className={resolvedLabelClasses}>
                   Speaker
                 </label>
                 <input
@@ -1311,12 +1317,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="speaker"
                   value={data.speaker || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
+                  placeholder="Enter the speaker name"
                 />
               </div>
 
               <div>
-                <label htmlFor="category" className={labelClasses}>
+                <label htmlFor="category" className={resolvedLabelClasses}>
                   Category
                 </label>
                 <select
@@ -1324,7 +1331,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="category"
                   value={data.category}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {sermonCategoriesList.map((c) => (
                     <option key={c} value={c}>
@@ -1337,7 +1344,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               {renderDateFieldWithBSPicker('incidentAt', 'Sermon Date')}
 
               <div>
-                <label htmlFor="scripture" className={labelClasses}>
+                <label htmlFor="scripture" className={resolvedLabelClasses}>
                   Scripture
                 </label>
                 <input
@@ -1346,14 +1353,15 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="scripture"
                   value={data.scripture || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
+                  placeholder="Add key scripture reference"
                 />
               </div>
             </FormSection>
 
-            <FormSection title="Content & Media">
+            <FormSection title="Content & Media" titleClassName={resolvedSectionTitleClasses}>
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   Description / Overview
                 </label>
                 <RichTextEditor
@@ -1364,11 +1372,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       description: html,
                     }))
                   }
+                  placeholder="Share the sermon overview."
+                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
               <FullWidthField>
-                <label htmlFor="fullContent" className={labelClasses}>
+                <label htmlFor="fullContent" className={resolvedLabelClasses}>
                   Full Content/Transcript (Optional)
                 </label>
                 <RichTextEditor
@@ -1379,6 +1389,8 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       fullContent: html,
                     }))
                   }
+                  placeholder="Add the full sermon transcript (plain text formatting only)."
+                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
@@ -1389,6 +1401,10 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
+                containerClassName={isSermonForm ? 'bg-white text-black border border-slate-200' : undefined}
+                titleClassName={isSermonForm ? 'text-black' : undefined}
+                forceLightText={isSermonForm}
               />
               {renderEmbeddedVideoField('sermon')}
             </FormSection>
@@ -1421,7 +1437,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           const values = Array.isArray(data[field]) && data[field]!.length > 0 ? data[field]! : [''];
           return (
             <FullWidthField>
-              <label className={labelClasses}>{label}</label>
+              <label className={resolvedLabelClasses}>{label}</label>
               <div className="space-y-2">
                 {values.map((value, index) => (
                   <div key={`${field}-${index}`} className="flex items-center gap-2">
@@ -1430,7 +1446,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       value={value}
                       onChange={(event) => updateEventStringArrayField(field, index, event.target.value)}
                       placeholder={placeholder}
-                      className={inputClasses}
+                      className={resolvedInputClasses}
                     />
                     {values.length > 1 && (
                       <button
@@ -1462,7 +1478,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
           <FormSection title="Event Information">
               <FullWidthField>
-                <label htmlFor="title" className={labelClasses}>
+                <label htmlFor="title" className={resolvedLabelClasses}>
                   Event Title
                 </label>
                 <input
@@ -1471,12 +1487,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.title}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   Description
                 </label>
                 <textarea
@@ -1485,13 +1501,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.description || ''}
                   onChange={handleChange}
                   rows={4}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                   placeholder="Share the event overview in plain text."
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="eventType" className={labelClasses}>
+                <label htmlFor="eventType" className={resolvedLabelClasses}>
                   Event Type
                 </label>
                 <select
@@ -1499,7 +1515,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="eventType"
                   value={resolvedEventType}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {eventTypeOptions.map((type) => (
                     <option key={type} value={type}>
@@ -1510,14 +1526,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </div>
 
               <div>
-                <label htmlFor="category" className={labelClasses}>
+                <label htmlFor="category" className={resolvedLabelClasses}>
                   Category
                 </label>
                 <select
                   name="category"
                   value={data.category}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {eventCategoriesList.map((c) => (
                     <option key={c} value={c}>
@@ -1531,14 +1547,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             {isRegularEvent && (
               <FormSection title="Schedule Pattern">
                 <FullWidthField>
-                  <label htmlFor="scheduleType" className={labelClasses}>
+                  <label htmlFor="scheduleType" className={resolvedLabelClasses}>
                     Schedule Type
                   </label>
                   <select
                     name="scheduleType"
                     value={data.scheduleType || 'ONE_TIME'}
                     onChange={handleChange}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   >
                     {eventScheduleTypeList.map((type) => (
                       <option key={type} value={type}>
@@ -1549,7 +1565,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </FullWidthField>
 
                 <FullWidthField>
-                  <label htmlFor="scheduleNotes" className={labelClasses}>
+                  <label htmlFor="scheduleNotes" className={resolvedLabelClasses}>
                     Recurrence Notes (optional)
                   </label>
                   <textarea
@@ -1557,7 +1573,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     value={data.scheduleNotes || ''}
                     onChange={handleChange}
                     rows={2}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                     placeholder="Add any additional recurrence details or notes."
                   />
                 </FullWidthField>
@@ -1568,7 +1584,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               {renderDateFieldWithBSPicker('incidentAt', 'Event Date')}
 
               <div>
-                <label htmlFor="time" className={labelClasses}>
+                <label htmlFor="time" className={resolvedLabelClasses}>
                   Time
                 </label>
                 <input
@@ -1577,7 +1593,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.time || ''}
                   onChange={handleChange}
                   placeholder="e.g., 10:00 AM"
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
                 
@@ -1585,7 +1601,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 renderStringListField('Locations', 'locations', 'Add a location')
               ) : (
                 <FullWidthField>
-                  <label htmlFor="location" className={labelClasses}>
+                  <label htmlFor="location" className={resolvedLabelClasses}>
                     Location
                   </label>
                   <input
@@ -1593,12 +1609,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     name="location"
                     value={data.location || ''}
                     onChange={handleChange}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   />
                 </FullWidthField>
               )}
               <FullWidthField>
-                <label htmlFor="mapEmbedUrl" className={labelClasses}>
+                <label htmlFor="mapEmbedUrl" className={resolvedLabelClasses}>
                   Map Embed / Share Link (optional)
                 </label>
                 <input
@@ -1606,7 +1622,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="mapEmbedUrl"
                   value={(data as any).mapEmbedUrl || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                   placeholder="Google Maps share or embed link"
                 />
               </FullWidthField>
@@ -1618,7 +1634,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 {renderStringListField('Speakers', 'speakers', 'Add a speaker')}
              
             <FullWidthField>
-                  <label htmlFor="expectations" className={labelClasses}>
+                  <label htmlFor="expectations" className={resolvedLabelClasses}>
                     What to Expect
                   </label>
                   <textarea
@@ -1626,12 +1642,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     value={data.expectations || ''}
                     onChange={handleChange}
                     rows={2}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   />
                 </FullWidthField>
 
                <FullWidthField>
-                  <label htmlFor="guests" className={labelClasses}>
+                  <label htmlFor="guests" className={resolvedLabelClasses}>
                     Special Guests (optional)
                   </label>
                   <input
@@ -1639,12 +1655,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="guests"
                     value={data.guests || ''}
                     onChange={handleChange}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   />
                 </FullWidthField>
 
                 <div>
-                  <label htmlFor="capacity" className={labelClasses}>
+                  <label htmlFor="capacity" className={resolvedLabelClasses}>
                     Capacity (0 for unlimited)
                   </label>
                   <input
@@ -1652,7 +1668,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     name="capacity"
                     value={data.capacity || 0}
                     onChange={handleChange}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   />
                 </div>
 
@@ -1675,7 +1691,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
                 {data.isFeeRequired && (
                   <FullWidthField>
-                    <label htmlFor="feeAmount" className={labelClasses}>
+                    <label htmlFor="feeAmount" className={resolvedLabelClasses}>
                       Fee Amount/Details
                     </label>
                     <input
@@ -1683,7 +1699,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       name="feeAmount"
                       value={data.feeAmount || ''}
                       onChange={handleChange}
-                      className={inputClasses}
+                      className={resolvedInputClasses}
                     />
                   </FullWidthField>
                 )}
@@ -1692,7 +1708,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
             <FormSection title="Contact & Registration">
               <div>
-                <label htmlFor="contactPerson" className={labelClasses}>
+                <label htmlFor="contactPerson" className={resolvedLabelClasses}>
                   Contact Person
                 </label>
                 <input
@@ -1700,12 +1716,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="contactPerson"
                   value={data.contactPerson || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="contactEmail" className={labelClasses}>
+                <label htmlFor="contactEmail" className={resolvedLabelClasses}>
                   Contact Email
                 </label>
                 <input
@@ -1713,12 +1729,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="contactEmail"
                   value={data.contactEmail || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="contactPhone" className={labelClasses}>
+                <label htmlFor="contactPhone" className={resolvedLabelClasses}>
                   Contact Phone
                 </label>
                 <input
@@ -1726,12 +1742,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="contactPhone"
                   value={data.contactPhone || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="registrationLink" className={labelClasses}>
+                <label htmlFor="registrationLink" className={resolvedLabelClasses}>
                   Registration Link
                 </label>
                 <input
@@ -1739,7 +1755,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="registrationLink"
                   value={data.registrationLink || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                   required={!!data.isFeeRequired}
                   placeholder={data.isFeeRequired ? 'Required when fee is enabled' : 'Optional unless fee required'}
                 />
@@ -1768,7 +1784,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
             <FormSection title="Ministry Details">
               <div>
-                <label htmlFor="title" className={labelClasses}>
+                <label htmlFor="title" className={resolvedLabelClasses}>
                   Ministry Title
                 </label>
                 <input
@@ -1777,19 +1793,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.title}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="category" className={labelClasses}>
+                <label htmlFor="category" className={resolvedLabelClasses}>
                   Category
                 </label>
                 <select
                   name="category"
                   value={data.category}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {ministryCategoriesList.map((c) => (
                     <option key={c} value={c}>
@@ -1800,7 +1816,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </div>
 
               <div>
-                <label htmlFor="leader" className={labelClasses}>
+                <label htmlFor="leader" className={resolvedLabelClasses}>
                   Leader
                 </label>
                 <input
@@ -1808,12 +1824,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="leader"
                   value={data.leader || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="meetingTime" className={labelClasses}>
+                <label htmlFor="meetingTime" className={resolvedLabelClasses}>
                   Meeting Time
                 </label>
                 <input
@@ -1822,12 +1838,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.meetingTime || ''}
                   onChange={handleChange}
                   placeholder="e.g., Every Saturday after service"
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   Description / Guidelines
                 </label>
                 <RichTextEditor
@@ -1870,7 +1886,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
             <FormSection title="Core Information">
               <FullWidthField>
-                <label htmlFor="title" className={labelClasses}>
+                <label htmlFor="title" className={resolvedLabelClasses}>
                   Blog Title
                 </label>
                 <input
@@ -1880,12 +1896,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.title}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="category" className={labelClasses}>
+                <label htmlFor="category" className={resolvedLabelClasses}>
                   Category
                 </label>
                 <select
@@ -1893,7 +1909,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="category"
                   value={data.category || blogPostCategoriesList[0]}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {blogPostCategoriesList.map((c) => (
                     <option key={c} value={c}>
@@ -1929,7 +1945,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
             <FormSection title="Content & Media">
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   Blog Content
                 </label>
                 <RichTextEditor
@@ -1963,7 +1979,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
             <FormSection title="Core Information">
               <FullWidthField>
-                <label htmlFor="title" className={labelClasses}>
+                <label htmlFor="title" className={resolvedLabelClasses}>
                   News Headline
                 </label>
                 <input
@@ -1973,12 +1989,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.title}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="category" className={labelClasses}>
+                <label htmlFor="category" className={resolvedLabelClasses}>
                   Category
                 </label>
                 <select
@@ -1986,7 +2002,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="category"
                   value={data.category || newsCategoriesList[0]}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {newsCategoriesList.map((c) => (
                     <option key={c} value={c}>
@@ -2022,7 +2038,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
             <FormSection title="Content & Media">
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   News Content
                 </label>
                 <RichTextEditor
@@ -2056,7 +2072,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
             <FormSection title="Branch Information">
               <FullWidthField>
-                <label htmlFor="name" className={labelClasses}>
+                <label htmlFor="name" className={resolvedLabelClasses}>
                   Branch Name
                 </label>
                 <input
@@ -2065,12 +2081,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.name}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <FullWidthField>
-                <label htmlFor="address" className={labelClasses}>
+                <label htmlFor="address" className={resolvedLabelClasses}>
                   Address
                 </label>
                 <input
@@ -2079,12 +2095,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.address}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <FullWidthField>
-                <label htmlFor="description" className={labelClasses}>
+                <label htmlFor="description" className={resolvedLabelClasses}>
                   Description (Optional)
                 </label>
                 <textarea
@@ -2092,12 +2108,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.description || ''}
                   onChange={handleChange}
                   rows={3}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="pastorName" className={labelClasses}>
+                <label htmlFor="pastorName" className={resolvedLabelClasses}>
                   Pastor Name
                 </label>
                 <input
@@ -2105,7 +2121,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="pastorName"
                   value={data.pastorName || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
@@ -2114,7 +2130,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
             <FormSection title="Contact & Schedule">
               <div>
-                <label htmlFor="phone" className={labelClasses}>
+                <label htmlFor="phone" className={resolvedLabelClasses}>
                   Phone
                 </label>
                 <input
@@ -2122,12 +2138,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="phone"
                   value={data.phone || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className={labelClasses}>
+                <label htmlFor="email" className={resolvedLabelClasses}>
                   Email
                 </label>
                 <input
@@ -2135,12 +2151,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="email"
                   value={data.email || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <FullWidthField>
-                <label htmlFor="serviceTimes" className={labelClasses}>
+                <label htmlFor="serviceTimes" className={resolvedLabelClasses}>
                   Service Times
                 </label>
                 <input
@@ -2149,14 +2165,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.serviceTimes}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
             </FormSection>
 
             <FormSection title="Media">
               <FullWidthField>
-                <label htmlFor="mapEmbedUrl" className={labelClasses}>
+                <label htmlFor="mapEmbedUrl" className={resolvedLabelClasses}>
                   Map Embed URL (Optional)
                 </label>
                 <input
@@ -2164,7 +2180,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="mapEmbedUrl"
                   value={data.mapEmbedUrl || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                   placeholder="e.g., https://www.google.com/maps/embed?..."
                 />
                 <p className="text-xs text-slate-500 mt-1">
@@ -2202,7 +2218,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           <>
             <FormSection title="Ad Details">
               <FullWidthField>
-                <label htmlFor="name" className={labelClasses}>
+                <label htmlFor="name" className={resolvedLabelClasses}>
                   Ad Name*
                 </label>
                 <input
@@ -2211,19 +2227,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   value={data.name}
                   onChange={handleChange}
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
 
               <div>
-                <label htmlFor="adType" className={labelClasses}>
+                <label htmlFor="adType" className={resolvedLabelClasses}>
                   Ad Type
                 </label>
                 <select
                   name="adType"
                   value={data.adType}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   <option value="image_banner">Image Banner</option>
                   <option value="video_banner">Video Banner</option>
@@ -2231,7 +2247,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </div>
 
               <div>
-                <label htmlFor="linkUrl" className={labelClasses}>
+                <label htmlFor="linkUrl" className={resolvedLabelClasses}>
                   Link URL*
                 </label>
                 <input
@@ -2241,12 +2257,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   onChange={handleChange}
                   placeholder="https://example.com/page"
                   required
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <FullWidthField>
-                <label htmlFor="altText" className={labelClasses}>
+                <label htmlFor="altText" className={resolvedLabelClasses}>
                   Alt Text (for accessibility)
                 </label>
                 <input
@@ -2254,7 +2270,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="altText"
                   value={data.altText || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </FullWidthField>
             </FormSection>
@@ -2329,7 +2345,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               {renderDateFieldWithBSPicker('endDate', 'End Date (Optional)')}
 
               <div>
-                <label htmlFor="displayOrder" className={labelClasses}>
+                <label htmlFor="displayOrder" className={resolvedLabelClasses}>
                   Display Order
                 </label>
                 <input
@@ -2337,19 +2353,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   name="displayOrder"
                   value={data.displayOrder || 0}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="adSizeKey" className={labelClasses}>
+                <label htmlFor="adSizeKey" className={resolvedLabelClasses}>
                   Ad Size
                 </label>
                 <select
                   name="adSizeKey"
                   value={data.adSizeKey || ''}
                   onChange={handleChange}
-                  className={inputClasses}
+                  className={resolvedInputClasses}
                 >
                   {Object.entries(AD_SIZES).map(([key, value]) => (
                     <option key={key} value={key}>
@@ -2379,7 +2395,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </FullWidthField>
 
               <FullWidthField>
-                <label className={labelClasses}>Placements</label>
+                <label className={resolvedLabelClasses}>Placements</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1 border p-3 rounded-lg dark:border-slate-600">
                   {adPlacementList.map((p) => (
                     <div key={p} className="flex items-center">
@@ -2428,7 +2444,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               }
               return (
                 <div key={key}>
-                  <label htmlFor={key} className={labelClasses}>
+                  <label htmlFor={key} className={resolvedLabelClasses}>
                     {label}
                   </label>
                   <input
@@ -2436,7 +2452,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     name={key}
                     value={(formData as any)[key] ?? ''}
                     onChange={handleChange}
-                    className={inputClasses}
+                    className={resolvedInputClasses}
                   />
                 </div>
               );
@@ -2462,8 +2478,15 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
  const useFullscreen = ['sermon', 'blogPost', 'news'].includes(contentType);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size={useFullscreen ? 'full' : 'lg'}>
-      <form onSubmit={finalSubmit} className="flex flex-col min-h-full">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={getModalTitle()}
+      size={useFullscreen ? 'full' : 'lg'}
+      overlayClassName={isSermonForm ? 'pt-16 sm:pt-20' : undefined}
+      panelClassName={isSermonForm ? 'text-black' : undefined}
+    >
+      <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
         <div className="space-y-4">
           {renderSpecificFields()}
         </div>

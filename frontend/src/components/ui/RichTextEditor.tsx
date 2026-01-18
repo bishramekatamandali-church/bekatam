@@ -8,12 +8,32 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  toolbarOptions?: {
+    bold?: boolean;
+    italic?: boolean;
+    unorderedList?: boolean;
+    orderedList?: boolean;
+    image?: boolean;
+  };
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, disabled }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  toolbarOptions,
+}) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const {
+    bold = true,
+    italic = true,
+    unorderedList = true,
+    orderedList = true,
+    image = true,
+  } = toolbarOptions || {};
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -84,21 +104,41 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   return (
     <div className="border border-slate-300 dark:border-slate-600 rounded-lg">
       <div className="flex items-center space-x-1 border-b border-slate-300 dark:border-slate-600 p-2 bg-slate-50 dark:bg-slate-700 rounded-t-lg">
-        <button type="button" onClick={() => execCommand('bold')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600"><strong>B</strong></button>
-        <button type="button" onClick={() => execCommand('italic')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600"><em>I</em></button>
-        <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">UL</button>
-        <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">OL</button>
-        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-        <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} size="sm" variant="ghost" className="text-xs">
-          <PhotoIcon className="w-4 h-4 mr-1"/> {isUploading ? "Uploading..." : "Insert Image"}
-        </Button>
+        {bold && (
+          <button type="button" onClick={() => execCommand('bold')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">
+            <strong>B</strong>
+          </button>
+        )}
+        {italic && (
+          <button type="button" onClick={() => execCommand('italic')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">
+            <em>I</em>
+          </button>
+        )}
+        {unorderedList && (
+          <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">
+            UL
+          </button>
+        )}
+        {orderedList && (
+          <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">
+            OL
+          </button>
+        )}
+        {image && (
+          <>
+            <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+            <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} size="sm" variant="ghost" className="text-xs">
+              <PhotoIcon className="w-4 h-4 mr-1"/> {isUploading ? "Uploading..." : "Insert Image"}
+            </Button>
+          </>
+        )}
       </div>
       <div
         ref={editorRef}
         contentEditable={!disabled}
         onInput={handleInput}
         data-placeholder={placeholder}
-        className="prose dark:prose-invert max-w-none w-full min-h-[200px] p-3 focus:outline-none bg-white dark:bg-slate-900 rounded-b-lg"
+        className="prose dark:prose-invert max-w-none w-full min-h-[200px] p-3 focus:outline-none bg-white dark:bg-slate-900 rounded-b-lg relative empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none empty:before:absolute empty:before:top-3 empty:before:left-3"
         style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
       ></div>
     </div>
