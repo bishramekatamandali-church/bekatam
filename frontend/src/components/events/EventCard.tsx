@@ -27,16 +27,6 @@ export const MapPinIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const HeartIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className, isFilled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" 
-         fill={isFilled ? "currentColor" : "none"} 
-         viewBox="0 0 24 24" 
-         strokeWidth={1.5} 
-         stroke="currentColor" 
-         className={`${className} ${isFilled ? 'text-red-500' : ''}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-    </svg>
-);
 const ChatBubbleOvalLeftEllipsisIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25a9.765 9.765 0 01-1.935-.274A7.707 7.707 0 0012 15.75a7.71 7.71 0 00-3.935 1.085A9.754 9.754 0 013 12c0-4.556-3.86-8.25 8.625-8.25S21 7.444 21 12z" /></svg>
 );
@@ -61,6 +51,9 @@ const getYouTubeEmbedUrl = (url?: string): string | null => {
     return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 };
 
+const stripHtml = (value?: string): string =>
+  value ? value.replace(/<[^>]*>/g, '').trim() : '';
+
 interface EventCardProps {
   event: EventItem;
   isFeatured?: boolean; // For subtle highlight, not the main page featured display
@@ -70,37 +63,18 @@ interface EventCardProps {
 
 const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPastEvent = false, className = "" }) => {
   const { isAuthenticated, currentUser } = useAuth();
-  const { logContentActivity, addCommentToItem, getContentById } = useContent(); 
+  const { addCommentToItem, getContentById } = useContent(); 
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [currentEventData, setCurrentEventData] = useState(event);
-  const [likeCount, setLikeCount] = useState(currentEventData.likes || 0);
-  const [isLiked, setIsLiked] = useState(false); 
   const locationDisplay =
     currentEventData.location ||
     (currentEventData.locations && currentEventData.locations.length > 0
       ? currentEventData.locations.join(', ')
       : '');
-
-  const handleLike = () => {
-    if (!isAuthenticated) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    logContentActivity(
-        `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${currentEventData.title}"`,
-        'content_update', 
-        'event',
-        currentEventData.id
-    );
-    alert(`Like updated for "${currentEventData.title}".`);
-  };
 
   const handleCommentClick = () => {
     if (!isAuthenticated) {
@@ -125,6 +99,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
   const detailUrl = `/events/${currentEventData.id}`;
   const commentCount = currentEventData.comments?.length || 0;
   const youtubeEmbedUrl = getYouTubeEmbedUrl(currentEventData.videoUrl);
+  const descriptionText = stripHtml(currentEventData.description);
 
   return (
     <>
@@ -182,15 +157,12 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
             </div>
           )}
           <p className={`text-sm text-slate-600 leading-relaxed line-clamp-3`}>
-            {currentEventData.description}
+            {descriptionText}
           </p>
         </CardContent>
-        <CardFooter className={`flex ${isPastEvent ? 'justify-around items-center flex-wrap gap-1 sm:gap-2' : 'justify-start'} bg-purple-100 border-t border-purple-200`}>
+        <CardFooter className={`flex ${isPastEvent ? 'justify-between items-center flex-wrap gap-1 sm:gap-2' : 'justify-start'} bg-purple-100 border-t border-purple-200`}>
           {isPastEvent ? (
             <>
-              <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500 px-1.5 sm:px-2 py-1" aria-pressed={isLiked} aria-label={isLiked ? `Unlike event, ${likeCount} likes` : `Like event, ${likeCount} likes`}>
-                <HeartIcon className={`w-5 h-5 mr-1`} isFilled={isLiked} /> {likeCount > 0 ? likeCount : ''} <span className="sr-only sm:not-sr-only ml-1">Like</span>
-              </Button>
               <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Comment on event">
                 <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1" /> 
                 {commentCount > 0 ? commentCount : ''} <span className="sr-only sm:not-sr-only ml-1">Comment</span>

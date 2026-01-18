@@ -73,7 +73,7 @@ const ManageSermonsPage: React.FC = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {sortedSermons.map((sermon) => (
           <Card key={sermon.id} className="flex flex-col">
             {sermon.imageUrl && <img src={sermon.imageUrl} alt={sermon.title} className="w-full h-40 object-cover"/>}

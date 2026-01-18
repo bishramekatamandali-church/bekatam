@@ -32,6 +32,7 @@ import {
   sermonCategoriesList,
   eventCategoriesList,
   eventScheduleTypeList,
+  eventTypeOptions,
   EventType,
   ministryCategoriesList,
   blogPostCategoriesList,
@@ -205,6 +206,11 @@ const UnifiedMediaInputs: React.FC<{
     );
   };
 
+  const hasAnyMedia = (['image', 'video', 'audio'] as const).some((type) => {
+    const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
+    return Boolean((formData as any)[fieldName]);
+  });
+
   return (
     <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg space-y-4 sm:col-span-2">
       <h3 className="font-semibold text-slate-800 dark:text-slate-200">Media Attachments</h3>
@@ -241,13 +247,10 @@ const UnifiedMediaInputs: React.FC<{
               </span>
             );
           })}
-          {!(['image', 'video', 'audio'] as const).some((type) => {
-            const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
-            return Boolean((formData as any)[fieldName]);
-          }) && <span>No media attached yet.</span>}
+          {!hasAnyMedia && <span>No media attached yet.</span>}
         </div>
       )}
-      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
+      <div className={`${variant === 'compact' ? '' : 'pt-2 border-t border-slate-200 dark:border-slate-700'} space-y-3`}>
         <input
           type="file"
           ref={unifiedMediaInputRef}
@@ -256,49 +259,74 @@ const UnifiedMediaInputs: React.FC<{
           accept="image/*,video/*,audio/*"
           capture="environment"
         />
-        <div
-          className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
-            isDragging
-              ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
-              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
-          }`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={async (event) => {
-            event.preventDefault();
-            setIsDragging(false);
-            const file = event.dataTransfer.files?.[0];
-            if (!file) return;
-            await handleUnifiedMediaUploadFile(file);
-          }}
-        >
-         <button
-            type="button"
-            onClick={() => unifiedMediaInputRef.current?.click()}
-            disabled={anyMediaFieldUploading}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            <PhotoIcon className="h-5 w-5" /> Add Media
-          </button>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Upload images, videos, or audio from your device (drag & drop works too).
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            onClick={() => handleImageFieldSelect('imageUrl')}
-            disabled={anyMediaFieldUploading}
-            size="sm"
-            variant="outline"
-            className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
-          >
-            <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
-          </Button>
-        </div>
+        {variant === 'compact' ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => unifiedMediaInputRef.current?.click()}
+              disabled={anyMediaFieldUploading}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <PhotoIcon className="h-5 w-5" /> Add Media
+            </button>
+            <Button
+              type="button"
+              onClick={() => handleImageFieldSelect('imageUrl')}
+              disabled={anyMediaFieldUploading}
+              size="sm"
+              variant="outline"
+              className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+            >
+              <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Library
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
+                isDragging
+                  ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
+                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
+              }`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={async (event) => {
+                event.preventDefault();
+                setIsDragging(false);
+                const file = event.dataTransfer.files?.[0];
+                if (!file) return;
+                await handleUnifiedMediaUploadFile(file);
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => unifiedMediaInputRef.current?.click()}
+                disabled={anyMediaFieldUploading}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <PhotoIcon className="h-5 w-5" /> Add Media
+              </button>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Upload images, videos, or audio from your device (drag & drop works too).
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => handleImageFieldSelect('imageUrl')}
+                disabled={anyMediaFieldUploading}
+                size="sm"
+                variant="outline"
+                className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+              >
+                <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -574,7 +602,6 @@ interface ContentFormModalProps {
   isLoading?: boolean;
   isCoreSectionEditing?: boolean;
   createDefaults?: Partial<GenericContentFormData>;
-  eventFormVariant?: EventType;
   enableAutoNarration?: boolean;
 }
 
@@ -587,7 +614,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   isLoading = false,
   isCoreSectionEditing = false,
   createDefaults,
-  eventFormVariant,
 }) => {
   const [formData, setFormData] = useState<GenericContentFormData>(
     defaultFormValues[contentType]
@@ -695,8 +721,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       
       if (contentType === 'event') {
         const eventData = dataToSet as EventFormData;
-        const fallbackEventType = eventData.eventType || eventFormVariant || 'REGULAR';
-        eventData.eventType = fallbackEventType;
+        eventData.eventType = eventData.eventType || 'REGULAR';
         eventData.scheduleType = eventData.scheduleType || 'ONE_TIME';
         eventData.scheduleNotes = eventData.scheduleNotes || '';
         eventData.locations = Array.isArray(eventData.locations)
@@ -715,7 +740,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType, createDefaults, eventFormVariant]);
+  }, [isOpen, initialData, contentType, createDefaults]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
@@ -1180,7 +1205,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   if (contentType === 'event') {
       const eventData = dataToSubmit as EventFormData;
-      eventData.eventType = eventData.eventType || eventFormVariant || 'REGULAR';
+      eventData.eventType = eventData.eventType || 'REGULAR';
       eventData.locations = (eventData.locations || []).map((entry) => entry.trim()).filter(Boolean);
       eventData.conductedBy = (eventData.conductedBy || []).map((entry) => entry.trim()).filter(Boolean);
       eventData.speakers = (eventData.speakers || []).map((entry) => entry.trim()).filter(Boolean);
@@ -1375,7 +1400,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
       case 'event': {
         const data = formData as EventFormData;
-        const resolvedEventType = data.eventType || eventFormVariant || 'REGULAR';
+        const resolvedEventType = data.eventType || 'REGULAR';
         const isRegularEvent = resolvedEventType === 'REGULAR';
 
         const scheduleTypeLabels: Record<string, string> = {
@@ -1437,7 +1462,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
         return (
           <>
-            <FormSection title={isRegularEvent ? 'Regular Event Form' : 'Special Event Form'}>
+            <FormSection title="Event Information">
               <FullWidthField>
                 <label htmlFor="title" className={labelClasses}>
                   Event Title
@@ -1456,28 +1481,34 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 <label htmlFor="description" className={labelClasses}>
                   Description
                 </label>
-                <RichTextEditor
-                  value={data.description}
-                  onChange={(html) =>
-                    setFormData((p) => ({
-                      ...p,
-                      description: html,
-                    }))
-                  }
+                <textarea
+                  id="description"
+                  name="description"
+                  value={data.description || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className={inputClasses}
+                  placeholder="Share the event overview in plain text."
                 />
               </FullWidthField>
-              
+
               <div>
                 <label htmlFor="eventType" className={labelClasses}>
                   Event Type
                 </label>
-                <input
-                  type="text"
+                <select
+                  id="eventType"
                   name="eventType"
                   value={resolvedEventType}
-                  readOnly
-                  className={`${inputClasses} bg-slate-100 dark:bg-slate-800`}
-                />
+                  onChange={handleChange}
+                  className={inputClasses}
+                >
+                  {eventTypeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type === 'REGULAR' ? 'Regular' : 'Special'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -1725,6 +1756,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
             </FormSection>
           </>
@@ -2338,7 +2370,7 @@ import {
   sermonCategoriesList,
   eventCategoriesList,
   eventScheduleTypeList,
-  EventType,
+  eventTypeOptions,
   ministryCategoriesList,
   blogPostCategoriesList,
   newsCategoriesList,
@@ -2511,6 +2543,11 @@ const UnifiedMediaInputs: React.FC<{
     );
   };
 
+  const hasAnyMedia = (['image', 'video', 'audio'] as const).some((type) => {
+    const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
+    return Boolean((formData as any)[fieldName]);
+  });
+
   return (
     <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg space-y-4 sm:col-span-2">
       <h3 className="font-semibold text-slate-800 dark:text-slate-200">Media Attachments</h3>
@@ -2547,13 +2584,10 @@ const UnifiedMediaInputs: React.FC<{
               </span>
             );
           })}
-          {!(['image', 'video', 'audio'] as const).some((type) => {
-            const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
-            return Boolean((formData as any)[fieldName]);
-          }) && <span>No media attached yet.</span>}
+          {!hasAnyMedia && <span>No media attached yet.</span>}
         </div>
       )}
-      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
+      <div className={`${variant === 'compact' ? '' : 'pt-2 border-t border-slate-200 dark:border-slate-700'} space-y-3`}>
         <input
           type="file"
           ref={unifiedMediaInputRef}
@@ -2562,49 +2596,74 @@ const UnifiedMediaInputs: React.FC<{
           accept="image/*,video/*,audio/*"
           capture="environment"
         />
-        <div
-          className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
-            isDragging
-              ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
-              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
-          }`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={async (event) => {
-            event.preventDefault();
-            setIsDragging(false);
-            const file = event.dataTransfer.files?.[0];
-            if (!file) return;
-            await handleUnifiedMediaUploadFile(file);
-          }}
-        >
-         <button
-            type="button"
-            onClick={() => unifiedMediaInputRef.current?.click()}
-            disabled={anyMediaFieldUploading}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            <PhotoIcon className="h-5 w-5" /> Add Media
-          </button>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Upload images, videos, or audio from your device (drag & drop works too).
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            onClick={() => handleImageFieldSelect('imageUrl')}
-            disabled={anyMediaFieldUploading}
-            size="sm"
-            variant="outline"
-            className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
-          >
-            <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
-          </Button>
-        </div>
+        {variant === 'compact' ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => unifiedMediaInputRef.current?.click()}
+              disabled={anyMediaFieldUploading}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <PhotoIcon className="h-5 w-5" /> Add Media
+            </button>
+            <Button
+              type="button"
+              onClick={() => handleImageFieldSelect('imageUrl')}
+              disabled={anyMediaFieldUploading}
+              size="sm"
+              variant="outline"
+              className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+            >
+              <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Library
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
+                isDragging
+                  ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
+                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
+              }`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={async (event) => {
+                event.preventDefault();
+                setIsDragging(false);
+                const file = event.dataTransfer.files?.[0];
+                if (!file) return;
+                await handleUnifiedMediaUploadFile(file);
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => unifiedMediaInputRef.current?.click()}
+                disabled={anyMediaFieldUploading}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <PhotoIcon className="h-5 w-5" /> Add Media
+              </button>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Upload images, videos, or audio from your device (drag & drop works too).
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => handleImageFieldSelect('imageUrl')}
+                disabled={anyMediaFieldUploading}
+                size="sm"
+                variant="outline"
+                className="text-xs dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600"
+              >
+                <PhotoIcon className="w-4 h-4 mr-1.5" /> Select Image from Library
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2880,7 +2939,6 @@ interface ContentFormModalProps {
   isLoading?: boolean;
   isCoreSectionEditing?: boolean;
   createDefaults?: Partial<GenericContentFormData>;
-  eventFormVariant?: EventType;
   enableAutoNarration?: boolean;
 }
 
@@ -2893,7 +2951,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   isLoading = false,
   isCoreSectionEditing = false,
   createDefaults,
-  eventFormVariant,
 }) => {
   const [formData, setFormData] = useState<GenericContentFormData>(
     defaultFormValues[contentType]
@@ -3001,8 +3058,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       
       if (contentType === 'event') {
         const eventData = dataToSet as EventFormData;
-        const fallbackEventType = eventData.eventType || eventFormVariant || 'REGULAR';
-        eventData.eventType = fallbackEventType;
+        eventData.eventType = eventData.eventType || 'REGULAR';
         eventData.scheduleType = eventData.scheduleType || 'ONE_TIME';
         eventData.scheduleNotes = eventData.scheduleNotes || '';
         eventData.locations = Array.isArray(eventData.locations)
@@ -3021,7 +3077,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType, createDefaults, eventFormVariant]);
+  }, [isOpen, initialData, contentType, createDefaults]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
@@ -3486,7 +3542,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   if (contentType === 'event') {
       const eventData = dataToSubmit as EventFormData;
-      eventData.eventType = eventData.eventType || eventFormVariant || 'REGULAR';
+      eventData.eventType = eventData.eventType || 'REGULAR';
       eventData.locations = (eventData.locations || []).map((entry) => entry.trim()).filter(Boolean);
       eventData.conductedBy = (eventData.conductedBy || []).map((entry) => entry.trim()).filter(Boolean);
       eventData.speakers = (eventData.speakers || []).map((entry) => entry.trim()).filter(Boolean);
@@ -3681,7 +3737,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
       case 'event': {
         const data = formData as EventFormData;
-        const resolvedEventType = data.eventType || eventFormVariant || 'REGULAR';
+        const resolvedEventType = data.eventType || 'REGULAR';
         const isRegularEvent = resolvedEventType === 'REGULAR';
 
         const scheduleTypeLabels: Record<string, string> = {
@@ -3743,7 +3799,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
         return (
           <>
-            <FormSection title={isRegularEvent ? 'Regular Event Form' : 'Special Event Form'}>
+          <FormSection title="Event Information">
               <FullWidthField>
                 <label htmlFor="title" className={labelClasses}>
                   Event Title
@@ -3762,28 +3818,34 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 <label htmlFor="description" className={labelClasses}>
                   Description
                 </label>
-                <RichTextEditor
-                  value={data.description}
-                  onChange={(html) =>
-                    setFormData((p) => ({
-                      ...p,
-                      description: html,
-                    }))
-                  }
+                <textarea
+                  id="description"
+                  name="description"
+                  value={data.description || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className={inputClasses}
+                  placeholder="Share the event overview in plain text."
                 />
               </FullWidthField>
-              
+
               <div>
                 <label htmlFor="eventType" className={labelClasses}>
                   Event Type
                 </label>
-                <input
-                  type="text"
+                <select
+                  id="eventType"
                   name="eventType"
                   value={resolvedEventType}
-                  readOnly
-                  className={`${inputClasses} bg-slate-100 dark:bg-slate-800`}
-                />
+                  onChange={handleChange}
+                  className={inputClasses}
+                >
+                  {eventTypeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type === 'REGULAR' ? 'Regular' : 'Special'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -4031,6 +4093,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
             </FormSection>
           </>
@@ -4782,16 +4845,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 };
 
 export default ContentFormModal;
-
-
-
-
-
-
-
-
-
-
 
 
 

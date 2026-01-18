@@ -1,6 +1,6 @@
 
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useRef } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -21,9 +21,17 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     full: 'max-w-screen-2xl h-[94vh]',
   };
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [isOpen]);
+
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out"
+      className="fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-start justify-center p-4 py-6 transition-opacity duration-300 ease-in-out overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -54,7 +62,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         )}
         
         {/* Scrollable Content Area */}
-        <div className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100">
+        <div
+          ref={contentRef}
+          className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100"
+        >
           {children}
         </div>
       </div>
