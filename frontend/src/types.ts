@@ -210,6 +210,7 @@ export interface Sermon extends FeatureInfo {
   audioUrl?: string;
   category?: SermonCategory;
   fullContent?: string; 
+  location?: string;
   likes?: number; 
   comments: Comment[];
   likedByMe?: boolean;
@@ -968,6 +969,7 @@ export interface SermonFormData extends BaseContentFormData {
   audioUrl?: string;
   category?: SermonCategory;
   fullContent?: string; 
+  location?: string;
 }
 
 export interface EventFormData extends BaseContentFormData {
