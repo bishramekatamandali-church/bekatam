@@ -55,7 +55,7 @@ const ManageSermonsPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full"> 
+    <div className="w-full bg-white text-slate-800 rounded-2xl p-4 sm:p-6"> 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Manage Sermons</h1>
         <Button onClick={() => handleOpenModal()} variant="primary" size="sm">

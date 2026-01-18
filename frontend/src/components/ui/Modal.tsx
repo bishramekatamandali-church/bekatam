@@ -24,6 +24,7 @@ const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (isOpen && contentRef.current) {
       contentRef.current.scrollTop = 0;
+      contentRef.current.focus();
     }
   }, [isOpen]);
 
@@ -47,14 +48,14 @@ const Modal: React.FC<ModalProps> = ({
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
     >
-      <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${
-          sizeClasses[size]
-        } m-4 opacity-0 animate-modalShow flex flex-col transform-gpu ${
-          size === "full" ? "max-h-[94vh]" : "max-h-[85vh]"
-        } ${panelClassName || ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+        <div
+          className={`bg-white rounded-2xl shadow-xl w-full ${
+            sizeClasses[size]
+          } m-4 opacity-0 animate-modalShow flex flex-col transform-gpu ${
+            size === "full" ? "max-h-[94vh]" : "max-h-[85vh]"
+          } ${panelClassName || ""}`}
+          onClick={(e) => e.stopPropagation()}
+        >
         {(title || typeof onClose === "function") && (
           <div className="p-6 pb-4 border-b border-slate-200 flex-shrink-0 relative">
             {title && (
@@ -90,7 +91,30 @@ const Modal: React.FC<ModalProps> = ({
 
         <div
           ref={contentRef}
-          className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            const target = event.target as HTMLElement;
+            const isEditable =
+              target.isContentEditable ||
+              ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+            if (!contentRef.current || isEditable) return;
+
+            const scrollStep = 48;
+            if (event.key === "ArrowDown") {
+              contentRef.current.scrollBy({ top: scrollStep, behavior: "smooth" });
+              event.preventDefault();
+            } else if (event.key === "ArrowUp") {
+              contentRef.current.scrollBy({ top: -scrollStep, behavior: "smooth" });
+              event.preventDefault();
+            } else if (event.key === "PageDown") {
+              contentRef.current.scrollBy({ top: contentRef.current.clientHeight * 0.9, behavior: "smooth" });
+              event.preventDefault();
+            } else if (event.key === "PageUp") {
+              contentRef.current.scrollBy({ top: -contentRef.current.clientHeight * 0.9, behavior: "smooth" });
+              event.preventDefault();
+            }
+          }}
+          className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100 focus:outline-none"
         >
           {children}
         </div>
@@ -111,4 +135,3 @@ const Modal: React.FC<ModalProps> = ({
 };
 
 export default Modal;
-
