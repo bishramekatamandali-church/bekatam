@@ -154,6 +154,7 @@ const SingleSermonPage: React.FC = () => {
   const youtubeEmbedUrl = getYouTubeEmbedUrl(sermon.videoUrl);
   const hasVideo = !!youtubeEmbedUrl || !!sermon.videoUrl;
   const showRecognition = true;
+  const postedDate = sermon.publishedAt || sermon.createdAt || sermon.date;
 
   return (
     <div className="pb-12">
@@ -165,12 +166,14 @@ const SingleSermonPage: React.FC = () => {
               <span className="font-medium text-slate-700">
                 {sermon.postedByAdminName || 'Admin'}
               </span>
+              {sermon.location && (
+                <>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-500">from {sermon.location}</span>
+                </>
+              )}
               <span className="text-slate-400">•</span>
-              <span>{formatDateADBS(sermon.date)}</span>
-              <span className="text-slate-400">•</span>
-              <span className="font-semibold text-slate-700">{sermon.title}</span>
-              <span className="text-slate-400">•</span>
-              <span>Series: {sermon.category || 'General'}</span>
+              <span>{postedDate ? formatDateADBS(postedDate) : 'Date unavailable'}</span>
             </div>
           )}
           {youtubeEmbedUrl && (
@@ -192,7 +195,6 @@ const SingleSermonPage: React.FC = () => {
             <p className="text-md text-gray-500">By <span className="font-semibold text-gray-700">{sermon.speaker}</span> on <span className="font-semibold text-gray-700">{formatDateADBS(sermon.date)}</span></p>
             {sermon.scripture && <p className="text-sm text-teal-600 mt-2">Scripture: {sermon.scripture}</p>}
             {sermon.category && <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400">{sermon.category}</p>}
-            {sermon.postedByAdminName && (<p className="text-xs text-slate-400 mt-2 flex items-center"><UserCircleIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />Posted by: {sermon.postedByAdminName}</p>)}
           </CardHeader>
 
           <CardContent>
