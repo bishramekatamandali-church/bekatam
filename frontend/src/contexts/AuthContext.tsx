@@ -12,7 +12,7 @@ import {
   UserRole,
   AdminActionLog,
   FrontendActivityLog,
-  } from "../types";
+} from "../types";
 import { API_BASE_URL } from "../utils/apiConfig";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,20 +39,24 @@ const saveStoredData = <T,>(key: string, value: T) => {
   }
 };
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(() =>
+    getStoredData<User | null>(CURRENT_USER_KEY, null)
+  );
   const [loadingAuthState, setLoadingAuthState] = useState(true);
 
   const [adminActionLogs, setAdminActionLogs] = useState<AdminActionLog[]>(
     () => getStoredData(ADMIN_ACTION_LOGS_STORAGE_KEY, [])
   );
-  const [userActivityLogs, setUserActivityLogs] =
-    useState<FrontendActivityLog[]>(() =>
-      getStoredData(USER_ACTIVITY_LOGS_STORAGE_KEY, [])
-    );
-  
+  const [userActivityLogs, setUserActivityLogs] = useState<FrontendActivityLog[]>(
+    () => getStoredData(USER_ACTIVITY_LOGS_STORAGE_KEY, [])
+  );
+
   const isAuthenticated = !!currentUser;
   const isAdmin = currentUser?.role === "admin";
 
@@ -72,7 +76,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         details,
       };
 
-      setAdminActionLogs((prev) => [log, ...prev.slice(0, 49)]);
+      setAdminActionLogs((prev) => {
+        const next = [log, ...prev.slice(0, 49)];
+        saveStoredData(ADMIN_ACTION_LOGS_STORAGE_KEY, next);
+        return next;
+      });
     },
     [currentUser, isAdmin]
   );
@@ -96,7 +104,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         itemType,
       };
 
-      setUserActivityLogs((prev) => [log, ...prev.slice(0, 99)]);
+      setUserActivityLogs((prev) => {
+        const next = [log, ...prev.slice(0, 99)];
+        saveStoredData(USER_ACTIVITY_LOGS_STORAGE_KEY, next);
+        return next;
+      });
     },
     [currentUser]
   );
@@ -130,10 +142,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (!res.ok) throw new Error("Token invalid");
 
         const user = data.user ?? data;
-
         setCurrentUser(user);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-      } catch (err) {
+      } catch {
         logout();
       }
 
@@ -145,10 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   /* --------------------------- BACKEND LOGIN --------------------------- */
 
-  const login = async (
-    identifier: string,
-    password: string
-  ): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     setLoadingAuthState(true);
 
     try {
@@ -166,13 +174,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(data.user));
-
       setCurrentUser(data.user);
 
       logUserActivity("User logged in", "user_login");
-      if (data.user.role === "admin") {
-        logAdminAction("Admin Logged In", data.user.id);
-      }
+      if (data.user.role === "admin") logAdminAction("Admin Logged In", data.user.id);
 
       setLoadingAuthState(false);
       return true;
@@ -188,8 +193,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const register = async (
     fullName: string,
     email: string,
-    _countryCode: string,
-    _phone: string,
+    countryCode: string,
+    phone: string,
     password: string,
     _profileImageUrl?: string
   ): Promise<boolean> => {
@@ -199,13 +204,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName,
-          email,
-          password,
-          countryCode: _countryCode,
-          phone: _phone,
-        }),
+        body: JSON.stringify({ fullName, email, password, countryCode, phone }),
       });
 
       const data = await res.json();
@@ -229,7 +228,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  /* --------------------------- PASSWORD  --------------------------- */
+  /* --------------------------- USERS (ADMIN) --------------------------- */
+
+  const getAllUsers = useCallback(async (): Promise<User[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/users`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) return [];
+      const users = await res.json();
+      return Array.isArray(users) ? users : [];
+    } catch (e) {
+      console.error("getAllUsers error:", e);
+      return [];
+    }
+  }, []);
+
+  const updateUserRole = useCallback(
+    async (userId: string, role: UserRole): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/${userId}/role`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ role }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { success: false, message: data?.error || "Failed to update role." };
+        }
+
+        // If admin edits their own role or current user is updated, keep session consistent
+        if (data?.user?.id && currentUser?.id === data.user.id) {
+          setCurrentUser(data.user);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(data.user));
+        }
+
+        logAdminAction("Updated user role", userId, `role=${role}`);
+        return { success: true };
+      } catch (e) {
+        console.error("updateUserRole error:", e);
+        return { success: false, message: "Failed to update role." };
+      }
+    },
+    [currentUser, logAdminAction]
+  );
+
+  /* --------------------------- PASSWORD (NOT IMPLEMENTED) --------------------------- */
 
   const changePassword = async () => ({
     success: false,
@@ -256,17 +301,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         login,
         register,
         logout,
+
         updateUserProfile: async () => false,
+
         adminActionLogs,
         logAdminAction,
-        getAllUsers: () => [],
-        updateUserRole: async () => ({ success: false }),
+
+        getAllUsers,
+        updateUserRole,
+
         userActivityLogs,
         logUserActivity,
+
         changePassword,
         forgotPassword,
         resetPassword,
-        }}
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -275,7 +325,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
 export const useAuth = (): AuthContextType => {
   const ctx = useContext(AuthContext);
-  if (!ctx)
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 };

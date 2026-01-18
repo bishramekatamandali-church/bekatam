@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export function authMiddleware(req: Request & { user?: any }, res: Response, next: NextFunction) {
+export function authMiddleware(
+  req: Request & { user?: any },
+  res: Response,
+  next: NextFunction
+) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -20,3 +24,9 @@ export function authMiddleware(req: Request & { user?: any }, res: Response, nex
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 }
+
+/**
+ * Backward/compat alias for routes that expect authenticateToken
+ * (e.g. /api/users)
+ */
+export const authenticateToken = authMiddleware;
