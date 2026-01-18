@@ -17,10 +17,14 @@ fi
 
 echo "==> Backend install/build"
 cd "$ROOT_DIR/backend"
-npm install
-npm run build
+npm install --ignore-scripts
 npx prisma generate
-npx prisma migrate deploy
+npm run build
+if ! npx prisma migrate deploy; then
+  echo "Prisma migrate deploy failed. Attempting to resolve known failed migration 20250906120000_add_sermon_location."
+  npx prisma migrate resolve --applied 20250906120000_add_sermon_location
+  npx prisma migrate deploy
+fi
 
 echo "==> Frontend install/build"
 cd "$ROOT_DIR/frontend"

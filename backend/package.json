@@ -14,7 +14,7 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:pull": "npx prisma db pull",
-    "postinstall": "npm run build && npx prisma generate"
+    "postinstall": "npx prisma generate && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.10.0",
