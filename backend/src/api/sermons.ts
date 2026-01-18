@@ -74,7 +74,7 @@ router.get('/:id', async (req, res) => {
 
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
     
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
@@ -100,6 +100,9 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
+                location,
+                postedByAdminId,
+                postedByAdminName,
                 linkPath: `/sermons/${id}`,
                 }
         });
@@ -117,7 +120,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a sermon
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
 
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
@@ -141,6 +144,9 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
+                location,
+                postedByAdminId,
+                postedByAdminName,
                 updatedAt: new Date(),
             }
         });

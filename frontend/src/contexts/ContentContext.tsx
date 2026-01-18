@@ -97,6 +97,7 @@ const ContentContext = createContext<ContentContextType | undefined>(undefined);
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser, isAdmin } = useAuth();
   const { addNotification } = useNotification();
+  const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
 
   const [sermons, setSermons] = useState<Sermon[]>(() => getStoredData('bem_sermons', []));
   const [events, setEvents] = useState<EventItem[]>(() => getStoredData('bem_events', []));
@@ -170,6 +171,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
   if (setLoading) setLoadingContent(true);
+  lastFetchTimestampRef.current = new Date().toISOString();
 
   const fetchPromises = dataFetchConfig.map(async (config) => {
     const hasExistingContent = Array.isArray(config.getCurrent?.())
@@ -300,38 +302,32 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [fetchContentBatch]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(sermons, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(sermons, lastFetchTimestampRef.current);
     if (updated) setSermons(items);
   }, [sermons]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(events, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(events, lastFetchTimestampRef.current);
     if (updated) setEvents(items);
   }, [events]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(blogPosts, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(blogPosts, lastFetchTimestampRef.current);
     if (updated) setBlogPosts(items);
   }, [blogPosts]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(newsItems, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(newsItems, lastFetchTimestampRef.current);
     if (updated) setNewsItems(items);
   }, [newsItems]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(prayerRequests, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(prayerRequests, lastFetchTimestampRef.current);
     if (updated) setPrayerRequests(items);
   }, [prayerRequests]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(testimonials, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(testimonials, lastFetchTimestampRef.current);
     if (updated) setTestimonials(items);
   }, [testimonials]);
 
@@ -449,6 +445,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           videoUrl: formData.videoUrl,
           audioUrl: formData.audioUrl,
           fullContent: formData.fullContent,
+          location: formData.location,
           postedByAdminId: currentUser?.id,
           postedByAdminName: currentUser?.fullName,
           createdAt: timestamp,

@@ -634,6 +634,7 @@ model sermon {
   videoUrl          String?          @db.Text
   audioUrl          String?          @db.Text
   fullContent       String?          @db.Text
+  location          String?
   likes             Int              @default(0)
   comment           comment[]
 }
