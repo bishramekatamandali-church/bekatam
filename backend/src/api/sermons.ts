@@ -20,6 +20,9 @@ const isMissingLocationColumnError = (error: unknown): boolean => {
         const message = typeof error.message === 'string' ? error.message : '';
         return message.includes('location');
     }
+    if (error instanceof Prisma.PrismaClientValidationError) {
+        return error.message.includes('location');
+    }
     return false;
 };
 
