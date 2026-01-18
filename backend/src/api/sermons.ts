@@ -15,6 +15,36 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
+const isMissingLocationColumnError = (error: unknown): boolean => {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022') {
+        const message = typeof error.message === 'string' ? error.message : '';
+        return message.includes('location');
+    }
+    return false;
+};
+
+const buildSermonSelect = (includeLocation: boolean) => ({
+    id: true,
+    title: true,
+    description: true,
+    imageUrl: true,
+    linkPath: true,
+    category: true,
+    date: true,
+    postedByAdminId: true,
+    postedByAdminName: true,
+    createdAt: true,
+    updatedAt: true,
+    speaker: true,
+    scripture: true,
+    videoUrl: true,
+    audioUrl: true,
+    fullContent: true,
+    likes: true,
+    ...(includeLocation ? { location: true } : {}),
+    comment: true,
+});
+
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (s: any): any => {
     const { comment, ...sermon } = s;
@@ -40,11 +70,28 @@ const shapeSermonForFrontend = (s: any): any => {
 router.get('/', async (req, res) => {
     try {
         const sermons = await prisma.sermon.findMany({
-            include: { comment: true },
+            select: buildSermonSelect(true),
             orderBy: { date: 'desc' },
         });
         res.json(sermons.map(shapeSermonForFrontend));
     } catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const sermons = await prisma.sermon.findMany({
+                    select: buildSermonSelect(false),
+                    orderBy: { date: 'desc' },
+                });
+                res.json(sermons.map(shapeSermonForFrontend));
+                return;
+            } catch (fallbackError) {
+                if (handleDatabaseFallback(req, res, fallbackError)) {
+                    return;
+                }
+                console.error("Error fetching sermons without location:", fallbackError);
+                res.status(500).json({ error: "Failed to fetch sermons" });
+                return;
+            }
+        }
         if (handleDatabaseFallback(req, res, error)) {
             return;
         }
@@ -59,7 +106,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await prisma.sermon.findUnique({
             where: { id: id },
-            include: { comment: true },
+            select: buildSermonSelect(true),
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));
@@ -67,6 +114,24 @@ router.get('/:id', async (req, res) => {
             res.status(404).json({ error: "Sermon not found" });
         }
     } catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const sermon = await prisma.sermon.findUnique({
+                    where: { id: id },
+                    select: buildSermonSelect(false),
+                });
+                if (sermon) {
+                    res.json(shapeSermonForFrontend(sermon));
+                } else {
+                    res.status(404).json({ error: "Sermon not found" });
+                }
+                return;
+            } catch (fallbackError) {
+                console.error(`Error fetching sermon with id "${id}" without location:`, fallbackError);
+                res.status(500).json({ error: "Failed to fetch sermon" });
+                return;
+            }
+        }
         console.error(`Error fetching sermon with id "${id}":`, error);
         res.status(500).json({ error: "Failed to fetch sermon" });
     }
@@ -109,6 +174,39 @@ router.post('/', async (req, res) => {
     publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeSermonForFrontend(newSermon));
     } catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const newSermon = await prisma.sermon.create({
+                    data: {
+                        id,
+                        updatedAt: new Date(),
+                        title,
+                        description,
+                        date: sermonDate,
+                        category: normalizedCategory,
+                        speaker,
+                        scripture,
+                        videoUrl,
+                        audioUrl,
+                        fullContent,
+                        imageUrl,
+                        postedByAdminId,
+                        postedByAdminName,
+                        linkPath: `/sermons/${id}`,
+                    }
+                });
+                publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+                res.status(201).json(shapeSermonForFrontend(newSermon));
+                return;
+            } catch (fallbackError) {
+                console.error("Error creating sermon without location:", fallbackError);
+                if (fallbackError instanceof Prisma.PrismaClientKnownRequestError) {
+                    return res.status(400).json({ error: 'Database error creating sermon.', details: fallbackError.message });
+                }
+                res.status(500).json({ error: 'Failed to create sermon' });
+                return;
+            }
+        }
         console.error("Error creating sermon:", error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             return res.status(400).json({ error: 'Database error creating sermon.', details: error.message });
@@ -153,6 +251,41 @@ router.put('/:id', async (req, res) => {
     publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
         res.json(shapeSermonForFrontend(updatedSermon));
     } catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const updatedSermon = await prisma.sermon.update({
+                    where: { id: id },
+                    data: {
+                        title,
+                        description,
+                        date: sermonDate,
+                        category: normalizedCategory,
+                        speaker,
+                        scripture,
+                        videoUrl,
+                        audioUrl,
+                        fullContent,
+                        imageUrl,
+                        postedByAdminId,
+                        postedByAdminName,
+                        updatedAt: new Date(),
+                    }
+                });
+                publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+                res.json(shapeSermonForFrontend(updatedSermon));
+                return;
+            } catch (fallbackError) {
+                console.error(`Error updating sermon with id "${id}" without location:`, fallbackError);
+                if (fallbackError instanceof Prisma.PrismaClientKnownRequestError) {
+                    if (fallbackError.code === 'P2025') {
+                        return res.status(404).json({ error: 'Sermon to update not found.' });
+                    }
+                    return res.status(400).json({ error: 'Database error updating sermon.', details: fallbackError.message });
+                }
+                res.status(500).json({ error: 'Failed to update sermon' });
+                return;
+            }
+        }
         console.error(`Error updating sermon with id "${id}":`, error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2025') {
