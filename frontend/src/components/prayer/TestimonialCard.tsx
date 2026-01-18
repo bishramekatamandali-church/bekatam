@@ -22,6 +22,11 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial }) => {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
+  const mediaUrls = testimonial.mediaUrls && testimonial.mediaUrls.length > 0
+    ? testimonial.mediaUrls
+    : (testimonial as any).imageUrl
+      ? [(testimonial as any).imageUrl]
+      : [];
 
   const handleDelete = (reason: string) => {
     if (!isAdmin) return;
@@ -75,7 +80,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial }) => {
             </p>
         </div>
 
-        <PostMediaDisplay mediaUrls={testimonial.mediaUrls || []} title={testimonial.title} />
+        <PostMediaDisplay mediaUrls={mediaUrls} title={testimonial.title} />
         <PostMeta className="text-slate-500 dark:text-slate-400" />
       </CardContent>
       {isAdmin && (

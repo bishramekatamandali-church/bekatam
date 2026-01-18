@@ -67,14 +67,20 @@ const HomePage: React.FC = () => {
 
   const mapToFeatureInfo = (item: ContentItem, typeKey: string): FeatureInfo => {
     const id = (item as any).id;
-    const rawLinkPath = (item as any).linkPath || `/${typeKey}/${id}`;
-    const linkPath = typeKey === 'testimonials' ? '/prayer-requests' : rawLinkPath;
+    const defaultLinkPath = typeKey === 'prayer-requests'
+      ? `/prayer-requests#prayer-${id}`
+      : typeKey === 'testimonials'
+        ? `/prayer-requests#testimonial-${id}`
+        : `/${typeKey}/${id}`;
+    const rawLinkPath = (item as any).linkPath || defaultLinkPath;
+    const linkPath = rawLinkPath || defaultLinkPath;
+    const mediaUrls = Array.isArray((item as any).mediaUrls) ? (item as any).mediaUrls : [];
 
     return ({
       id,
       title: (item as any).title || (item as any).name || 'Untitled',
       description: (item as any).description || (item as any).summary || (item as any).content || (item as any).contentText || (item as any).requestText || 'No description available.',
-      imageUrl: (item as any).imageUrl || ((item as any).mediaType === 'image' ? (item as any).url : undefined),
+      imageUrl: (item as any).imageUrl || mediaUrls[0] || ((item as any).mediaType === 'image' ? (item as any).url : undefined),
       linkPath,
       category: (item as any).category || typeKey,
       date: getPublishedAt(item).toISOString(),
