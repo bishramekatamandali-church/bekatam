@@ -8,9 +8,19 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  overlayClassName?: string;
+  panelClassName?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  overlayClassName,
+  panelClassName,
+}) => {
   if (!isOpen) return null;
 
   const sizeClasses = {
@@ -31,14 +41,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-start justify-center p-4 py-6 transition-opacity duration-300 ease-in-out overflow-y-auto"
+      className={`fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-start justify-center p-4 py-6 transition-opacity duration-300 ease-in-out overflow-y-auto ${overlayClassName || ''}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 opacity-0 animate-modalShow flex flex-col transform-gpu ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'}`}
+        className={`bg-white rounded-2xl shadow-xl w-full ${sizeClasses[size]} m-4 opacity-0 animate-modalShow flex flex-col transform-gpu ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'} ${panelClassName || ''}`}
         onClick={(e) => e.stopPropagation()} // Prevent click inside modal from closing it
       >
         {/* Header Section (Non-scrollable) */}
