@@ -56,7 +56,7 @@ const ManageMinistriesPage: React.FC = () => {
          <Card><CardContent><p className="text-center text-gray-500 py-8">No ministries found. Add one to get started!</p></CardContent></Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {ministries.map((ministry) => (
           <Card key={ministry.id} className="flex flex-col">
              {ministry.imageUrl && <img src={ministry.imageUrl} alt={ministry.title} className="w-full h-40 object-cover"/>}

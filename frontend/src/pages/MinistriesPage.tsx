@@ -30,7 +30,7 @@ const MinistriesPage: React.FC = () => {
       {ministries.length === 0 ? (
         <p className="text-center text-gray-500 text-lg py-10 bg-white rounded-lg shadow">No ministries available at this time. Please check back later.</p>
       ) : (
-        <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {ministries.map((ministry: Ministry) => ( 
             <Card key={ministry.id} className="flex flex-col md:flex-row shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out">
               {ministry.imageUrl && (
@@ -48,7 +48,12 @@ const MinistriesPage: React.FC = () => {
                   {ministry.category && <span className="text-xs font-medium uppercase tracking-wider text-purple-600">{ministry.category}</span>}
                 </CardHeader>
                 <CardContent className="flex-grow py-3">
-                  <p className="text-sm text-gray-600 leading-relaxed mb-3 line-clamp-4 md:line-clamp-none">{ministry.description}</p>
+                  <div
+                    className="prose prose-sm max-w-none text-gray-600 leading-relaxed mb-3"
+                    dangerouslySetInnerHTML={{
+                      __html: ministry.description || 'Details about this ministry will be updated soon.',
+                    }}
+                  />
                   {ministry.leader && <p className="text-sm text-gray-500"><strong className="text-gray-700">Leader:</strong> {ministry.leader}</p>}
                   {ministry.meetingTime && <p className="text-sm text-gray-500"><strong className="text-gray-700">Meets:</strong> {ministry.meetingTime}</p>}
                 </CardContent>

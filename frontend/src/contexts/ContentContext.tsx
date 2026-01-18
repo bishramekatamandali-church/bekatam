@@ -827,7 +827,31 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       return false;
     }
   };
-  const addMinistryJoinRequest = (data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>, ministry: Ministry) => addContent('ministryJoinRequest', { ministryId: ministry.id, ministryName: ministry.title, ...data } as any).then(res => res.newItem as MinistryJoinRequest || null);
+  const addMinistryJoinRequest = (
+    data: Omit<
+      MinistryJoinRequest,
+      | 'id'
+      | 'requestDate'
+      | 'status'
+      | 'processedDate'
+      | 'adminNotes'
+      | 'userId'
+      | 'userName'
+      | 'userEmail'
+      | 'membershipType'
+      | 'ministryId'
+      | 'ministryName'
+      | 'ministryGuidelines'
+    >,
+    ministry: Ministry
+  ) =>
+    addContent('ministryJoinRequest', {
+      ministryId: ministry.id,
+      ministryName: ministry.title,
+      ministryGuidelines: ministry.description || '',
+      membershipType: 'member',
+      ...data,
+    } as any).then(res => res.newItem as MinistryJoinRequest || null);
   const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/ministry-join-requests/${id}`, {
