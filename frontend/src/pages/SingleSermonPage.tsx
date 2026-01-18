@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import ShareModal from '../components/ui/ShareModal';
 import AuthModal from '../components/auth/AuthModal';
 import { Sermon, Comment as CommentType } from '../types';
-import { formatDateADBS } from '../dateConverter';
+import { formatDateADBS, formatTimestampADBS } from '../dateConverter';
 import AdSlot from '../components/ads/AdSlot';
 import CommentItem from '../components/comments/CommentItem';
 import {
@@ -173,7 +173,7 @@ const SingleSermonPage: React.FC = () => {
                 </>
               )}
               <span className="text-slate-400">•</span>
-              <span>{postedDate ? formatDateADBS(postedDate) : 'Date unavailable'}</span>
+              <span>{postedDate ? formatTimestampADBS(postedDate) : 'Date unavailable'}</span>
             </div>
           )}
           {youtubeEmbedUrl && (
