@@ -196,10 +196,38 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       // ✅ Normalize comment relation name: backend uses `comment`, frontend expects `comments`
       const normalized = Array.isArray(data)
         ? data.map((item: any) => {
-            if (item && item.comment && !item.comments) {
-              return { ...item, comments: item.comment };
+            if (!item || typeof item !== 'object') return item;
+            let normalizedItem = item;
+            if (item.comment && !item.comments) {
+              normalizedItem = { ...normalizedItem, comments: item.comment };
             }
-            return item;
+            if (config.key === 'prayer-requests') {
+              const mediaUrls = Array.isArray(normalizedItem.mediaUrls) && normalizedItem.mediaUrls.length > 0
+                ? normalizedItem.mediaUrls.filter(Boolean)
+                : normalizedItem.imageUrl
+                  ? [normalizedItem.imageUrl]
+                  : [];
+              normalizedItem = {
+                ...normalizedItem,
+                prayers: Array.isArray(normalizedItem.prayers) ? normalizedItem.prayers : [],
+                comments: Array.isArray(normalizedItem.comments) ? normalizedItem.comments : [],
+                mediaUrls,
+                linkPath: normalizedItem.linkPath || `/prayer-requests#prayer-${normalizedItem.id}`,
+              };
+            }
+            if (config.key === 'testimonials') {
+              const mediaUrls = Array.isArray(normalizedItem.mediaUrls) && normalizedItem.mediaUrls.length > 0
+                ? normalizedItem.mediaUrls.filter(Boolean)
+                : normalizedItem.imageUrl
+                  ? [normalizedItem.imageUrl]
+                  : [];
+              normalizedItem = {
+                ...normalizedItem,
+                mediaUrls,
+                linkPath: normalizedItem.linkPath || `/prayer-requests#testimonial-${normalizedItem.id}`,
+              };
+            }
+            return normalizedItem;
           })
         : data;
 

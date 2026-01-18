@@ -147,7 +147,7 @@ const ManagePrayerRequestsPage: React.FC = () => {
                           {pr.status.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 text-center">{pr.prayers.length}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 text-center">{pr.prayers?.length ?? 0}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-2">
                         <Button variant="outline" size="sm" onClick={() => openViewModal(pr)} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">View</Button>
                         <Button variant="primary" size="sm" onClick={() => openProcessModal(pr)}>Update Status</Button>

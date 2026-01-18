@@ -58,8 +58,18 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
   
   const isOwnRequest = currentUser?.id === request.postedByAdminId;
   const canPray = isAuthenticated && request.status !== 'answered' && request.status !== 'archived';
-  const isPrayedByUser = isAuthenticated && request.prayers.some(p => p.userId === currentUser?.id);
+  const isPrayedByUser = isAuthenticated && (request.prayers ?? []).some(p => p.userId === currentUser?.id);
   const isAnswered = request.status === 'answered';
+  const commentCount = request.comments?.length ?? 0;
+  const mediaUrls = request.mediaUrls && request.mediaUrls.length > 0
+    ? request.mediaUrls
+    : request.imageUrl
+      ? [request.imageUrl]
+      : request.videoUrl
+        ? [request.videoUrl]
+        : request.audioUrl
+          ? [request.audioUrl]
+          : [];
 
   const TEXT_TRUNCATE_LENGTH = 120;
   const isTruncated = request.requestText.length > TEXT_TRUNCATE_LENGTH;
@@ -157,12 +167,12 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
                 )}
               </p>
           </div>
-          <PostMediaDisplay mediaUrls={request.mediaUrls || []} title={request.title} />
+          <PostMediaDisplay mediaUrls={mediaUrls} title={request.title} />
           <PostMeta className={'text-slate-500 dark:text-slate-400'} />
         </CardContent>
         
         <div className="px-4 py-2 border-y dark:border-slate-700 bg-white dark:bg-slate-800">
-            <PrayerStatusText prayers={request.prayers} currentUserId={currentUser?.id} />
+            <PrayerStatusText prayers={request.prayers ?? []} currentUserId={currentUser?.id} />
         </div>
 
         <CardFooter className="bg-slate-50 dark:bg-slate-700/50 mt-auto grid grid-cols-3 gap-px p-0">
@@ -182,7 +192,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
                 onClick={() => setShowComments(p => !p)} 
             >
                 <ChatBubbleBottomCenterTextIcon className="w-5 h-5 mr-1.5"/>
-                Comments ({request.comments.length})
+                Comments ({commentCount})
             </Button>
             <Button 
                 variant="ghost" 

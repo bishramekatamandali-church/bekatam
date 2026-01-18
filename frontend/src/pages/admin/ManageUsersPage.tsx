@@ -15,9 +15,21 @@ const ManageUsersPage: React.FC = () => {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    if (!loadingAuthState) {
-      setUsers(getAllUsers());
-    }
+    if (loadingAuthState) return;
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      const usersData = await getAllUsers();
+      if (isMounted) {
+        setUsers(usersData);
+      }
+    };
+
+    loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
   }, [getAllUsers, loadingAuthState, currentUser]); // Add currentUser to re-evaluate users if it changes (e.g. role change)
 
   const openRoleModal = (user: User) => {
@@ -46,7 +58,8 @@ const ManageUsersPage: React.FC = () => {
     const result = await updateUserRole(selectedUser.id, newRole);
     
     if (result.success) {
-      setUsers(getAllUsers()); 
+      const usersData = await getAllUsers();
+      setUsers(usersData);
       setFeedback({ type: 'success', message: result.message || `Successfully updated ${selectedUser.fullName}'s role to ${newRole}.` });
     } else {
       setFeedback({ type: 'error', message: result.message || `Failed to update ${selectedUser.fullName}'s role.` });
