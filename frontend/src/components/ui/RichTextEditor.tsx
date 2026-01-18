@@ -8,6 +8,9 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  containerClassName?: string;
+  toolbarClassName?: string;
+  editorClassName?: string;
   toolbarOptions?: {
     bold?: boolean;
     italic?: boolean;
@@ -22,6 +25,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onChange,
   placeholder,
   disabled,
+  containerClassName,
+  toolbarClassName,
+  editorClassName,
   toolbarOptions,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -102,8 +108,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   return (
-    <div className="border border-slate-300 dark:border-slate-600 rounded-lg">
-      <div className="flex items-center space-x-1 border-b border-slate-300 dark:border-slate-600 p-2 bg-slate-50 dark:bg-slate-700 rounded-t-lg">
+    <div className={`border border-slate-300 dark:border-slate-600 rounded-lg ${containerClassName || ''}`}>
+      <div className={`flex items-center space-x-1 border-b border-slate-300 dark:border-slate-600 p-2 bg-slate-50 dark:bg-slate-700 rounded-t-lg ${toolbarClassName || ''}`}>
         {bold && (
           <button type="button" onClick={() => execCommand('bold')} className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600">
             <strong>B</strong>
@@ -138,7 +144,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         contentEditable={!disabled}
         onInput={handleInput}
         data-placeholder={placeholder}
-        className="prose dark:prose-invert max-w-none w-full min-h-[200px] p-3 focus:outline-none bg-white dark:bg-slate-900 rounded-b-lg relative empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none empty:before:absolute empty:before:top-3 empty:before:left-3"
+        className={`prose dark:prose-invert max-w-none w-full min-h-[200px] p-3 focus:outline-none bg-white dark:bg-slate-900 rounded-b-lg relative empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none empty:before:absolute empty:before:top-3 empty:before:left-3 ${editorClassName || ''}`}
         style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
       ></div>
     </div>

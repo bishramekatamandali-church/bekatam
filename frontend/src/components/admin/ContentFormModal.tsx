@@ -1364,34 +1364,40 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 <label htmlFor="description" className={resolvedLabelClasses}>
                   Description / Overview
                 </label>
-                <RichTextEditor
-                  value={data.description}
-                  onChange={(html) =>
-                    setFormData((p) => ({
-                      ...p,
-                      description: html,
-                    }))
-                  }
-                  placeholder="Share the sermon overview."
-                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
-                />
+                  <RichTextEditor
+                    value={data.description}
+                    onChange={(html) =>
+                      setFormData((p) => ({
+                        ...p,
+                        description: html,
+                      }))
+                    }
+                    placeholder="Share the sermon overview."
+                    toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
+                    containerClassName="bg-white"
+                    toolbarClassName="bg-white text-slate-700"
+                    editorClassName="bg-white text-slate-800"
+                  />
               </FullWidthField>
 
               <FullWidthField>
                 <label htmlFor="fullContent" className={resolvedLabelClasses}>
                   Full Content/Transcript (Optional)
                 </label>
-                <RichTextEditor
-                  value={data.fullContent || ''}
-                  onChange={(html) =>
-                    setFormData((p) => ({
-                      ...p,
-                      fullContent: html,
-                    }))
-                  }
-                  placeholder="Add the full sermon transcript (plain text formatting only)."
-                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
-                />
+                  <RichTextEditor
+                    value={data.fullContent || ''}
+                    onChange={(html) =>
+                      setFormData((p) => ({
+                        ...p,
+                        fullContent: html,
+                      }))
+                    }
+                    placeholder="Add the full sermon transcript (plain text formatting only)."
+                    toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
+                    containerClassName="bg-white"
+                    toolbarClassName="bg-white text-slate-700"
+                    editorClassName="bg-white text-slate-800"
+                  />
               </FullWidthField>
 
               <UnifiedMediaInputs
@@ -2483,7 +2489,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       onClose={onClose}
       title={getModalTitle()}
       size={useFullscreen ? 'full' : 'lg'}
-      overlayClassName={isSermonForm ? 'pt-16 sm:pt-20' : undefined}
+      overlayClassName={isSermonForm ? 'items-start pt-20 sm:pt-10 pb-6' : undefined}
       panelClassName={isSermonForm ? 'text-black' : undefined}
     >
       <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
