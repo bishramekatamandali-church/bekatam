@@ -15,18 +15,32 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
-const isMissingLocationColumnError = (error: unknown): boolean => {
+const isMissingColumnError = (error: unknown, column: string): boolean => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022') {
         const message = typeof error.message === 'string' ? error.message : '';
-        return message.includes('location');
+        return message.includes(column);
     }
     if (error instanceof Prisma.PrismaClientValidationError) {
-        return error.message.includes('location');
+        return error.message.includes(column);
     }
     return false;
 };
 
-const buildSermonSelect = (includeLocation: boolean) => ({
+const getMissingSermonColumns = (error: unknown) => {
+    const missing = new Set<string>();
+    if (isMissingColumnError(error, 'location')) {
+        missing.add('location');
+    }
+    if (isMissingColumnError(error, 'postedByAdminId')) {
+        missing.add('postedByAdminId');
+    }
+    if (isMissingColumnError(error, 'postedByAdminName')) {
+        missing.add('postedByAdminName');
+    }
+    return missing;
+};
+
+const buildSermonSelect = (includeLocation: boolean, includeAdminFields: boolean) => ({
     id: true,
     title: true,
     description: true,
@@ -34,8 +48,7 @@ const buildSermonSelect = (includeLocation: boolean) => ({
     linkPath: true,
     category: true,
     date: true,
-    postedByAdminId: true,
-    postedByAdminName: true,
+    ...(includeAdminFields ? { postedByAdminId: true, postedByAdminName: true } : {}),
     createdAt: true,
     updatedAt: true,
     speaker: true,
@@ -47,6 +60,17 @@ const buildSermonSelect = (includeLocation: boolean) => ({
     ...(includeLocation ? { location: true } : {}),
     comment: true,
 });
+
+const removeMissingColumns = (data: Record<string, unknown>, missing: Set<string>) => {
+    if (missing.size === 0) {
+        return data;
+    }
+    const pruned = { ...data };
+    for (const column of missing) {
+        delete pruned[column];
+    }
+    return pruned;
+};
 
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (s: any): any => {
@@ -73,15 +97,16 @@ const shapeSermonForFrontend = (s: any): any => {
 router.get('/', async (req, res) => {
     try {
         const sermons = await prisma.sermon.findMany({
-            select: buildSermonSelect(true),
+            select: buildSermonSelect(true, true),
             orderBy: { date: 'desc' },
         });
         res.json(sermons.map(shapeSermonForFrontend));
     } catch (error) {
-        if (isMissingLocationColumnError(error)) {
+        const missingColumns = getMissingSermonColumns(error);
+        if (missingColumns.size > 0) {
             try {
                 const sermons = await prisma.sermon.findMany({
-                    select: buildSermonSelect(false),
+                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                     orderBy: { date: 'desc' },
                 });
                 res.json(sermons.map(shapeSermonForFrontend));
@@ -109,7 +134,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await prisma.sermon.findUnique({
             where: { id: id },
-            select: buildSermonSelect(true),
+            select: buildSermonSelect(true, true),
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));
@@ -117,11 +142,12 @@ router.get('/:id', async (req, res) => {
             res.status(404).json({ error: "Sermon not found" });
         }
     } catch (error) {
-        if (isMissingLocationColumnError(error)) {
+        const missingColumns = getMissingSermonColumns(error);
+        if (missingColumns.size > 0) {
             try {
                 const sermon = await prisma.sermon.findUnique({
                     where: { id: id },
-                    select: buildSermonSelect(false),
+                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                 });
                 if (sermon) {
                     res.json(shapeSermonForFrontend(sermon));
@@ -177,10 +203,11 @@ router.post('/', async (req, res) => {
     publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeSermonForFrontend(newSermon));
     } catch (error) {
-        if (isMissingLocationColumnError(error)) {
+        const missingColumns = getMissingSermonColumns(error);
+        if (missingColumns.size > 0) {
             try {
                 const newSermon = await prisma.sermon.create({
-                    data: {
+                    data: removeMissingColumns({
                         id,
                         updatedAt: new Date(),
                         title,
@@ -193,10 +220,11 @@ router.post('/', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
+                        location,
                         postedByAdminId,
                         postedByAdminName,
                         linkPath: `/sermons/${id}`,
-                    }
+                    }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
                 res.status(201).json(shapeSermonForFrontend(newSermon));
@@ -254,11 +282,12 @@ router.put('/:id', async (req, res) => {
     publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
         res.json(shapeSermonForFrontend(updatedSermon));
     } catch (error) {
-        if (isMissingLocationColumnError(error)) {
+        const missingColumns = getMissingSermonColumns(error);
+        if (missingColumns.size > 0) {
             try {
                 const updatedSermon = await prisma.sermon.update({
                     where: { id: id },
-                    data: {
+                    data: removeMissingColumns({
                         title,
                         description,
                         date: sermonDate,
@@ -269,10 +298,11 @@ router.put('/:id', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
+                        location,
                         postedByAdminId,
                         postedByAdminName,
                         updatedAt: new Date(),
-                    }
+                    }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
                 res.json(shapeSermonForFrontend(updatedSermon));
