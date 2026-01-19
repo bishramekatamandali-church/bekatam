@@ -101,6 +101,9 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
           </Link>
         )}
         <CardHeader className="border-b border-purple-200">
+          <p className="text-xs text-slate-500 mb-1">
+            Posted by: {item.postedByAdminName || 'Admin'}
+          </p>
           <h2 className="font-semibold text-slate-800 mb-1 text-xl">
             <Link to={detailUrl} className="hover:text-purple-700 transition-colors">
               {title}

@@ -136,6 +136,10 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
         </div>
         
         <CardHeader>
+          <div className="flex items-center text-xs text-slate-500 mb-1">
+            <UserIcon className="mr-2 text-slate-300 flex-shrink-0" />
+            <span>Posted by: {sermon.postedByAdminName || 'Admin'}</span>
+          </div>
           <h2 className="font-semibold text-slate-800 mb-1 text-xl">
             <Link to={detailUrl} className="hover:text-purple-600 transition-colors">
               {title}
@@ -148,16 +152,17 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
             <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
             <span>{formatDateADBS(sermon.date)}</span>
           </div>
+          {sermon.location && (
+            <div className="text-xs text-slate-500 mb-2">
+              {sermon.location}
+            </div>
+          )}
           {sermon.speaker && (
             <div className="flex items-center text-sm text-slate-500 mb-2">
               <UserIcon className="mr-2 text-slate-400 flex-shrink-0" />
               <span>By: {speaker}</span>
             </div>
           )}
-            <div className="flex items-center text-xs text-slate-400 mb-2">
-             <UserIcon className="mr-2 text-slate-300 flex-shrink-0" />
-             <span>Posted by: {sermon.postedByAdminName || 'Admin'}</span>
-            </div>
           {sermon.audioUrl && (
             <div className="my-2">
                 <audio controls src={sermon.audioUrl} className="w-full h-10 text-sm">

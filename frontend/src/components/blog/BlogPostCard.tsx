@@ -108,6 +108,9 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
         ) : null}
         
         <CardHeader>
+          <p className="text-xs text-slate-500 mb-1">
+            Posted by: {post.postedByAdminName || 'Admin'}
+          </p>
           <h2 className="font-semibold mb-1 text-xl text-slate-800">
             <Link to={detailUrl} className="hover:text-purple-600 transition-colors">{title}</Link>
           </h2>
