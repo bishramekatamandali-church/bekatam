@@ -236,7 +236,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
                   : [];
               normalizedItem = {
                 ...normalizedItem,
-                prayers: Array.isArray(normalizedItem.prayers) ? normalizedItem.prayers : [],
+                prayers: Array.isArray(normalizedItem.prayers) ? normalizedItem.prayers : Array.isArray(normalizedItem.prayer) ? normalizedItem.prayer : [],
                 comments: Array.isArray(normalizedItem.comments) ? normalizedItem.comments : [],
                 mediaUrls,
                 linkPath: normalizedItem.linkPath || `/prayer-requests#prayer-${normalizedItem.id}`,
@@ -782,12 +782,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         const newComment: Comment = await response.json();
 
         // Re-fetch the content list so comment counts stay consistent everywhere
-        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests' };
+        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests', testimonial: 'testimonials' };
         const endpoint = endpointMap[itemType as keyof typeof endpointMap];
         if (endpoint) {
             const res = await fetch(`${API_BASE_URL}/${endpoint}`);
             const data = await res.json();
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
             const setter = setterMap[endpoint.replace('-', '')] || setterMap[endpoint];
             if (setter) setter(data);
         }
@@ -804,12 +804,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
          const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: newText }) });
         if (!response.ok) throw new Error('Failed to update comment.');
-        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests' };
+        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests', testimonial: 'testimonials' };
         const endpoint = endpointMap[itemType as keyof typeof endpointMap];
          if(endpoint) {
              const res = await fetch(`${API_BASE_URL}/${endpoint}`);
              const data = await res.json();
-             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests };
+             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
              const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
              if(setter) setter(data);
          }
@@ -820,15 +820,15 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
         const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, { method: 'DELETE' });
         if (!response.ok) throw new Error('Failed to delete comment.');
-        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests' };
+        const endpointMap = { sermon: 'sermons', event: 'events', blogPost: 'blogposts', news: 'newsitems', historyChapter: 'historychapters', prayerRequest: 'prayer-requests', testimonial: 'testimonials' };
         const endpoint = endpointMap[itemType as keyof typeof endpointMap];
-         if(endpoint) {
-             const res = await fetch(`${API_BASE_URL}/${endpoint}`);
-             const data = await res.json();
-             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests };
-             const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
-             if(setter) setter(data);
-         }
+        if(endpoint) {
+            const res = await fetch(`${API_BASE_URL}/${endpoint}`);
+            const data = await res.json();
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
+            const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
+            if(setter) setter(data);
+        }
         return true;
     } catch (error) { console.error("Error deleting comment:", error); return false; }
   };
@@ -934,6 +934,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       news: setNewsItems,
       historyChapter: setHistoryChapters,
       prayerRequest: setPrayerRequests,
+      testimonial: setTestimonials,
     };
 
     const setter = setterMap[itemType];
@@ -949,10 +950,29 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   }
 };
 
-  const togglePrayerOnRequest = async (requestId: string): Promise<boolean> => {
-      if (!currentUser) return false;
+  const togglePrayerOnRequest = async (
+    requestId: string,
+    guestContact?: { email?: string; phone?: string }
+  ): Promise<boolean> => {
       try {
-          const response = await fetch(`${API_BASE_URL}/prayer-requests/${requestId}/toggle-prayer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, userName: currentUser.fullName }), });
+          if (!currentUser && !guestContact?.email && !guestContact?.phone) return false;
+          const payload: Record<string, string> = {};
+          if (currentUser) {
+            payload.userId = currentUser.id;
+            payload.userName = currentUser.fullName;
+          } else if (guestContact?.email) {
+            payload.guestEmail = guestContact.email;
+          } else if (guestContact?.phone) {
+            payload.guestPhone = guestContact.phone;
+          }
+          const response = await fetch(
+            `${API_BASE_URL}/prayer-requests/${requestId}/toggle-prayer`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }
+          );
           if (!response.ok) throw new Error('Failed to toggle prayer');
           const updatedRequest: PrayerRequest = await response.json();
           setPrayerRequests(prev => prev.map(p => p.id === requestId ? updatedRequest : p));

@@ -64,6 +64,7 @@ router.post('/toggle-like/:itemType/:itemId', async (req, res) => {
       news: prisma.newsitem,
       historyChapter: prisma.historychapter,
       prayerRequest: prisma.prayerrequest,
+      testimonial: prisma.testimonial,
     };
 
     const model = modelMap[itemType];

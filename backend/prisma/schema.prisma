@@ -152,12 +152,14 @@ model comment {
   newsItemId          String?
   historyChapterId    String?
   prayerRequestId     String?
+  testimonialId       String?
   blogpost            blogpost?       @relation(fields: [blogPostId], references: [id], onDelete: Cascade, map: "Comment_blogPostId_fkey")
   eventitem           eventitem?      @relation(fields: [eventId], references: [id], onDelete: Cascade, map: "Comment_eventId_fkey")
   historychapter      historychapter? @relation(fields: [historyChapterId], references: [id], onDelete: Cascade, map: "Comment_historyChapterId_fkey")
   newsitem            newsitem?       @relation(fields: [newsItemId], references: [id], onDelete: Cascade, map: "Comment_newsItemId_fkey")
   prayerrequest       prayerrequest?  @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Comment_prayerRequestId_fkey")
   sermon              sermon?         @relation(fields: [sermonId], references: [id], onDelete: Cascade, map: "Comment_sermonId_fkey")
+  testimonial         testimonial?    @relation(fields: [testimonialId], references: [id], onDelete: Cascade, map: "Comment_testimonialId_fkey")
   user                user?           @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Comment_userId_fkey")
 
   @@index([blogPostId], map: "Comment_blogPostId_fkey")
@@ -166,6 +168,7 @@ model comment {
   @@index([newsItemId], map: "Comment_newsItemId_fkey")
   @@index([prayerRequestId], map: "Comment_prayerRequestId_fkey")
   @@index([sermonId], map: "Comment_sermonId_fkey")
+  @@index([testimonialId], map: "Comment_testimonialId_fkey")
   @@index([userId], map: "Comment_userId_fkey")
 }
 
@@ -567,14 +570,19 @@ model notification {
 
 model prayer {
   id              String        @id
-  userId          String
+  userId          String?
   userName        String
+  guestEmail      String?
+  guestPhone      String?
+  isGuest         Boolean       @default(false)
   timestamp       DateTime      @default(now())
   prayerRequestId String
   prayerrequest   prayerrequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Prayer_prayerRequestId_fkey")
-  user            user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Prayer_userId_fkey")
+  user            user?         @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Prayer_userId_fkey")
 
   @@unique([userId, prayerRequestId], map: "Prayer_userId_prayerRequestId_key")
+  @@unique([guestEmail, prayerRequestId], map: "Prayer_guestEmail_prayerRequestId_key")
+  @@unique([guestPhone, prayerRequestId], map: "Prayer_guestPhone_prayerRequestId_key")
   @@index([prayerRequestId], map: "Prayer_prayerRequestId_fkey")
 }
 
@@ -654,8 +662,10 @@ model testimonial {
   postedByAdminName   String?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime
+  likes               Int                    @default(0)
   mediaUrls           Json?
   location            String?
+  comment             comment[]
   user                user                   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Testimonial_userId_fkey")
 
   @@index([userId], map: "Testimonial_userId_fkey")

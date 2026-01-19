@@ -93,7 +93,7 @@ export interface PrayerRequest {
   incidentAt?: string; // ISO timestamp/date for the incident
   publishedAt?: string; // ISO timestamp when request is published
   lastPrayedAt?: string; // ISO timestamp, updated when someone indicates they prayed for it
-  prayers: Array<{ userId: string; userName: string; timestamp: string; }>; // Users who prayed
+  prayers: Array<{ userId?: string | null; userName: string; timestamp: string; }>; // Users who prayed
   adminNotes?: string; // Private notes by admins/pastors
   postedByAdminId?: string; // ID of the user who submitted OR admin who entered it
   postedByAdminName?: string; // Name of the user who submitted OR admin who entered it
@@ -132,6 +132,8 @@ export interface Testimonial {
   postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
+  likes?: number;
+  comments?: Comment[];
   likedByMe?: boolean;
   linkPath: string; // e.g., /prayer-requests#testimonial-id
   // New Facebook-like fields
@@ -163,7 +165,7 @@ export interface Ministry extends FeatureInfo {
 export interface Comment {
   id: string;
   itemId: string; // Generic ID for event, sermon, blog post, news item, history chapter, or prayer request
-  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest';
+  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest' | 'testimonial';
   userId?: string | null; 
   userName: string; 
   userProfileImageUrl?: string | null;
@@ -1384,7 +1386,7 @@ export interface ContentContextType {
   addPrayerRequest: (data: PrayerRequestFormData) => Promise<PrayerRequest | null>;
   updatePrayerRequestStatusByAdmin: (id: string, status: PrayerRequestStatus, adminNotes?: string) => Promise<boolean>;
   updatePrayerRequestStatusByUser: (id: string, newStatus: PrayerRequestStatus) => Promise<boolean>;
-  togglePrayerOnRequest: (id: string) => Promise<boolean>;
+  togglePrayerOnRequest: (id: string, guestContact?: { email?: string; phone?: string }) => Promise<boolean>;
   toggleLikeOnItem: (itemType: ContentType, itemId: string, isLiked: boolean) => Promise<ContentItem | null>;
 
   // New for Testimonials
