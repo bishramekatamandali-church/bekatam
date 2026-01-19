@@ -217,17 +217,28 @@ const UnifiedMediaInputs: React.FC<{
           <MediaSlot type="audio" url={(formData as any).audioUrl} />
         </div>
       ) : (
-        <div className={`flex flex-wrap gap-2 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
+        <div className={`flex flex-wrap gap-3 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
           {(['image', 'video', 'audio'] as const).map((type) => {
             const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
             const currentUrl = (formData as any)[fieldName];
             if (!currentUrl) return null;
             return (
-              <span
+              <div
                 key={type}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700'}`}
+                className={`flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700 dark:border-slate-600'}`}
               >
-                {type.toUpperCase()} attached
+                <div className="flex items-center justify-center">
+                  {type === 'image' && (
+                    <img src={currentUrl} alt="Preview" className="h-16 w-20 rounded object-cover" />
+                  )}
+                  {type === 'video' && (
+                    <video src={currentUrl} className="h-16 w-24 rounded object-cover" controls />
+                  )}
+                  {type === 'audio' && (
+                    <audio src={currentUrl} controls className="h-8 w-36" />
+                  )}
+                </div>
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wide">{type}</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -240,7 +251,7 @@ const UnifiedMediaInputs: React.FC<{
                 >
                   <XCircleIcon className="w-4 h-4" />
                 </button>
-              </span>
+              </div>
             );
           })}
           {!hasAnyMedia && <span>No media attached yet.</span>}
@@ -625,6 +636,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
   const [locationLookupStatus, setLocationLookupStatus] = useState<string | null>(null);
   const isSermonForm = contentType === 'sermon';
+  const isBlogOrNewsForm = contentType === 'blogPost' || contentType === 'news';
   const resolvedLabelClasses = isSermonForm
     ? 'block text-xs font-medium text-black mb-1'
     : labelClasses;
@@ -636,8 +648,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const dateFieldsConfig: Record<string, string[]> = {
     sermon: ['incidentAt'],
     event: ['incidentAt'],
-    blogPost: ['incidentAt'],
-    news: ['incidentAt'],
     branchChurch: ['establishedDate'],
     churchMember: ['memberSince', 'dateOfBirth', 'baptismDate'],
     meetingLog: ['meetingDate'],
@@ -2027,8 +2037,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
 
-              {renderDateFieldWithBSPicker('incidentAt', 'Publish / Post Date')}
-
               <FullWidthField>
                 <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                   <input
@@ -2064,6 +2072,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       description: html,
                     }))
                   }
+                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
@@ -2074,6 +2083,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
             </FormSection>
           </>
@@ -2120,8 +2130,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
 
-              {renderDateFieldWithBSPicker('incidentAt', 'Publish / Post Date')}
-
               <FullWidthField>
                 <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                   <input
@@ -2157,6 +2165,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       description: html,
                     }))
                   }
+                  toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
@@ -2167,6 +2176,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
             </FormSection>
           </>
@@ -2595,7 +2605,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       panelClassName={isSermonForm ? 'text-black' : undefined}
     >
       <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
-        <div className="space-y-4">
+        <div className={`space-y-4 ${isBlogOrNewsForm ? 'rounded-2xl bg-white p-6 shadow-xl' : ''}`}>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
             <span className="font-medium">Admin:</span>{' '}
             <span>{currentUser?.fullName || 'Admin'}</span>
