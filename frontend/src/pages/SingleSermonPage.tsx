@@ -166,12 +166,6 @@ const SingleSermonPage: React.FC = () => {
               <span className="font-medium text-slate-700">
                 {sermon.postedByAdminName || 'Admin'}
               </span>
-              {sermon.location && (
-                <>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-slate-500">from {sermon.location}</span>
-                </>
-              )}
               <span className="text-slate-400">•</span>
               <span>{postedDate ? formatTimestampADBS(postedDate) : 'Date unavailable'}</span>
             </div>

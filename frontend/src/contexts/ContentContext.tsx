@@ -210,7 +210,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
       const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
-      if (!hasServerContent && hasExistingContent) {
+      if (!hasServerContent && hasExistingContent && config.key !== 'sermons') {
         console.warn(
           `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
         );
@@ -472,7 +472,6 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           videoUrl: formData.videoUrl,
           audioUrl: formData.audioUrl,
           fullContent: formData.fullContent,
-          location: formData.location,
           postedByAdminId: currentUser?.id,
           postedByAdminName: currentUser?.fullName,
           createdAt: timestamp,

@@ -152,11 +152,6 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
             <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
             <span>{formatDateADBS(sermon.date)}</span>
           </div>
-          {sermon.location && (
-            <div className="text-xs text-slate-500 mb-2">
-              {sermon.location}
-            </div>
-          )}
           {sermon.speaker && (
             <div className="flex items-center text-sm text-slate-500 mb-2">
               <UserIcon className="mr-2 text-slate-400 flex-shrink-0" />

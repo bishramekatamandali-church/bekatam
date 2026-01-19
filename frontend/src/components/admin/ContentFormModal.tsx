@@ -341,7 +341,6 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     videoUrl: '',
     audioUrl: '',
     fullContent: '',
-    location: '',
   } as SermonFormData,
 
   event: {
@@ -1389,48 +1388,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 />
               </div>
         
-              <FullWidthField>
-                <label htmlFor="sermon-location" className={resolvedLabelClasses}>
-                  Admin Location (Google Maps)
-                </label>
-                <input
-                  id="sermon-location"
-                  type="text"
-                  name="location"
-                  value={data.location || ''}
-                  onChange={handleChange}
-                  className={resolvedInputClasses}
-                  placeholder="Auto-filled from your current location"
-                />
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleUseCurrentLocation('single')}
-                    className="text-xs"
-                  >
-                    Use Current Location
-                  </Button>
-                  {data.location && (
-                    <Button
-                      asLink
-                      to={`https://maps.google.com/?q=${encodeURIComponent(data.location)}`}
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      View on Google Maps
-                    </Button>
-                  )}
-                </div>
-                {locationLookupStatus && (
-                  <p className={isSermonForm ? 'mt-2 text-xs text-black/70' : 'mt-2 text-xs text-slate-500'}>
-                    {locationLookupStatus}
-                  </p>
-                )}
-              </FullWidthField>
-
               <div>
                 <label htmlFor="category" className={resolvedLabelClasses}>
                   Category

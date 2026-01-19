@@ -32,9 +32,6 @@ const SermonsPage: React.FC = () => {
         if (sermon.fullContent?.toLowerCase().includes(term)) {
             score += 1; // Full content is lowest priority to avoid noise
         }
-        if (sermon.location?.toLowerCase().includes(term)) {
-            score += 3;
-        }
         return score;
     };
 

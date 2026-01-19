@@ -1,11 +1,10 @@
 import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
-import { Prisma, sermon, sermon_category } from '@prisma/client';
+import { Prisma, sermon_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
-import { saveSermonSnapshot } from '../utils/sermonSnapshot';
 
 const router = express.Router();
 
@@ -22,9 +21,6 @@ const isMissingColumnError = (error: unknown, column: string): boolean => {
 
 const getMissingSermonColumns = (error: unknown) => {
     const missing = new Set<string>();
-    if (isMissingColumnError(error, 'location')) {
-        missing.add('location');
-    }
     if (isMissingColumnError(error, 'postedByAdminId')) {
         missing.add('postedByAdminId');
     }
@@ -34,7 +30,7 @@ const getMissingSermonColumns = (error: unknown) => {
     return missing;
 };
 
-const buildSermonSelect = (includeLocation: boolean, includeAdminFields: boolean) => ({
+const buildSermonSelect = (includeAdminFields: boolean) => ({
     id: true,
     title: true,
     description: true,
@@ -51,7 +47,6 @@ const buildSermonSelect = (includeLocation: boolean, includeAdminFields: boolean
     audioUrl: true,
     fullContent: true,
     likes: true,
-    ...(includeLocation ? { location: true } : {}),
     comment: true,
 });
 
@@ -64,26 +59,6 @@ const removeMissingColumns = <T extends Record<string, unknown>>(data: T, missin
         delete (pruned as Record<string, unknown>)[column];
     }
     return pruned;
-};
-
-const persistSermonSnapshot = (sermons: any[]): void => {
-    try {
-        saveSermonSnapshot(sermons);
-    } catch (error) {
-        console.warn("Failed to persist sermon snapshot.", error);
-    }
-};
-
-const refreshSermonSnapshot = async (): Promise<void> => {
-    try {
-        const sermons = await prisma.sermon.findMany({
-            select: buildSermonSelect(true, true),
-            orderBy: { date: 'desc' },
-        });
-        persistSermonSnapshot(sermons.map(shapeSermonForFrontend));
-    } catch (error) {
-        console.warn("Failed to refresh sermon snapshot.", error);
-    }
 };
 
 // Helper to ensure the sermon object sent to the frontend has the expected shape
@@ -111,22 +86,20 @@ const shapeSermonForFrontend = (s: any): any => {
 router.get('/', async (req, res) => {
     try {
         const sermons = await prisma.sermon.findMany({
-            select: buildSermonSelect(true, true),
+            select: buildSermonSelect(true),
             orderBy: { date: 'desc' },
         });
         const shapedSermons = sermons.map(shapeSermonForFrontend);
-        persistSermonSnapshot(shapedSermons);
         res.json(shapedSermons);
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
         if (missingColumns.size > 0) {
             try {
                 const sermons = await prisma.sermon.findMany({
-                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
+                    select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                     orderBy: { date: 'desc' },
                 });
                 const shapedSermons = sermons.map(shapeSermonForFrontend);
-                persistSermonSnapshot(shapedSermons);
                 res.json(shapedSermons);
                 return;
             } catch (fallbackError) {
@@ -152,7 +125,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await prisma.sermon.findUnique({
             where: { id: id },
-            select: buildSermonSelect(true, true),
+            select: buildSermonSelect(true),
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));
@@ -165,7 +138,7 @@ router.get('/:id', async (req, res) => {
             try {
                 const sermon = await prisma.sermon.findUnique({
                     where: { id: id },
-                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
+                    select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                 });
                 if (sermon) {
                     res.json(shapeSermonForFrontend(sermon));
@@ -186,7 +159,7 @@ router.get('/:id', async (req, res) => {
 
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName } = req.body;
     
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
@@ -212,14 +185,12 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
-                location,
                 postedByAdminId,
                 postedByAdminName,
                 linkPath: `/sermons/${id}`,
                 }
         });
     publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
-        await refreshSermonSnapshot();
         res.status(201).json(shapeSermonForFrontend(newSermon));
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -239,14 +210,12 @@ router.post('/', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
-                        location,
                         postedByAdminId,
                         postedByAdminName,
                         linkPath: `/sermons/${id}`,
                     }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
-                await refreshSermonSnapshot();
                 res.status(201).json(shapeSermonForFrontend(newSermon));
                 return;
             } catch (fallbackError) {
@@ -269,7 +238,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a sermon
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName } = req.body;
 
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
@@ -293,14 +262,12 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
-                location,
                 postedByAdminId,
                 postedByAdminName,
                 updatedAt: new Date(),
             }
         });
     publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
-        await refreshSermonSnapshot();
         res.json(shapeSermonForFrontend(updatedSermon));
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -319,14 +286,12 @@ router.put('/:id', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
-                        location,
                         postedByAdminId,
                         postedByAdminName,
                         updatedAt: new Date(),
                     }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
-                await refreshSermonSnapshot();
                 res.json(shapeSermonForFrontend(updatedSermon));
                 return;
             } catch (fallbackError) {
@@ -360,7 +325,6 @@ router.delete('/:id', async (req, res) => {
             where: { id: id },
         });
     publishContentUpdate({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
-        await refreshSermonSnapshot();
         res.status(204).send(); // No Content
     } catch (error) {
         console.error(`Error deleting sermon with id "${id}":`, error);

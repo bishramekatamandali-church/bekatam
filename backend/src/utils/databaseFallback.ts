@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { Request, Response } from "express";
 import { fallbackPayloads, resolveFallbackResource } from "../middleware/fallbackMiddleware";
-import { loadSermonSnapshot } from "./sermonSnapshot";
 
 const prismaConnectionErrorCodes = new Set([
   "P1000",
@@ -46,10 +45,6 @@ if (error instanceof Prisma.PrismaClientRustPanicError) {
 const sendFallbackResponse = (req: Request, res: Response): void => {
   const resource = resolveFallbackResource(req);
   if (resource && resource in fallbackPayloads) {
-    if (resource === "sermons") {
-      res.status(200).json(loadSermonSnapshot());
-      return;
-    }
     res.status(200).json(fallbackPayloads[resource]);
     return;
   }

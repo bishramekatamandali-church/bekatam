@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { loadSermonSnapshot } from "../utils/sermonSnapshot";
-
 // Minimal placeholder payloads for content lists used on the public site.
 export const fallbackPayloads: Record<string, unknown> = {
-  sermons: [],
   events: [],
   ministries: [],
   blogposts: [],
@@ -49,10 +46,6 @@ export const fallbackMiddleware = (
   const resource = resolveFallbackResource(req);
 
   if (resource && resource in fallbackPayloads) {
-    if (resource === "sermons") {
-      const snapshot = loadSermonSnapshot();
-      return res.status(200).json(snapshot);
-    }
     return res.status(200).json(fallbackPayloads[resource]);
   }
 
