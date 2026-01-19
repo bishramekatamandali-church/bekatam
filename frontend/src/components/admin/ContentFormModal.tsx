@@ -75,6 +75,7 @@ import {
 import RichTextEditor from '../ui/RichTextEditor';
 import DualNepaliCalendar from '../calendar/DualNepaliCalendar';
 import { getCloudinaryFileSizeError, getCloudinaryResourceType, getCloudinaryUploadDetails } from '../../utils/cloudinary';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DEFAULT_BS_YEAR = adToBs(new Date()).year
 
@@ -611,6 +612,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   isCoreSectionEditing = false,
   createDefaults,
 }) => {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState<GenericContentFormData>(
     defaultFormValues[contentType]
   );
@@ -657,7 +659,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
-  const handleUseCurrentLocation = useCallback(() => {
+  const handleUseCurrentLocation = useCallback((mode: 'single' | 'event-list' = 'single') => {
     if (!navigator.geolocation) {
       setLocationLookupStatus('Geolocation is not supported by this browser.');
       return;
@@ -689,10 +691,26 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           setLocationLookupStatus('Coordinates captured. Add a Google Maps API key to auto-resolve the address.');
         }
 
-        setFormData((prev) => ({
-          ...prev,
-          location: resolvedLocation,
-        }));
+        setFormData((prev) => {
+          if (mode === 'event-list') {
+            const currentLocations = Array.isArray((prev as EventFormData).locations)
+              ? ((prev as EventFormData).locations as string[])
+              : [];
+            const nextLocations = currentLocations.includes(resolvedLocation)
+              ? currentLocations
+              : [...currentLocations, resolvedLocation];
+            return {
+              ...(prev as EventFormData),
+              locations: nextLocations,
+              location: (prev as EventFormData).location || resolvedLocation,
+            };
+          }
+
+          return {
+            ...prev,
+            location: resolvedLocation,
+          };
+        });
       },
       () => {
         setLocationLookupStatus('Unable to access your location. Check browser permissions.');
@@ -1389,7 +1407,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleUseCurrentLocation}
+                    onClick={() => handleUseCurrentLocation('single')}
                     className="text-xs"
                   >
                     Use Current Location
@@ -1695,7 +1713,27 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               </div>
                 
               {isRegularEvent ? (
-                renderStringListField('Locations', 'locations', 'Add a location')
+                <>
+                  {renderStringListField('Locations', 'locations', 'Add a location')}
+                  <FullWidthField>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUseCurrentLocation('event-list')}
+                        className="text-xs"
+                      >
+                        Use Current Location
+                      </Button>
+                      {locationLookupStatus && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {locationLookupStatus}
+                        </span>
+                      )}
+                    </div>
+                  </FullWidthField>
+                </>
               ) : (
                 <FullWidthField>
                   <label htmlFor="location" className={resolvedLabelClasses}>
@@ -1708,6 +1746,22 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     onChange={handleChange}
                     className={resolvedInputClasses}
                   />
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUseCurrentLocation('single')}
+                      className="text-xs"
+                    >
+                      Use Current Location
+                    </Button>
+                    {locationLookupStatus && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {locationLookupStatus}
+                      </span>
+                    )}
+                  </div>
                 </FullWidthField>
               )}
               <FullWidthField>
@@ -2585,6 +2639,10 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     >
       <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
         <div className="space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <span className="font-medium">Admin:</span>{' '}
+            <span>{currentUser?.fullName || 'Admin'}</span>
+          </div>
           {renderSpecificFields()}
         </div>
 
