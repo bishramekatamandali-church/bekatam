@@ -11,6 +11,35 @@ const contentUpdates_1 = require("../services/contentUpdates");
 const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
+const isMissingLocationColumnError = (error) => {
+    if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2022') {
+        const message = typeof error.message === 'string' ? error.message : '';
+        return message.includes('location');
+    }
+    if (error instanceof client_1.Prisma.PrismaClientValidationError) {
+        return error.message.includes('location');
+    }
+    return false;
+};
+const buildBlogPostSelect = (includeLocation) => ({
+    id: true,
+    title: true,
+    description: true,
+    imageUrl: true,
+    linkPath: true,
+    category: true,
+    date: true,
+    postedByAdminId: true,
+    postedByAdminName: true,
+    createdAt: true,
+    updatedAt: true,
+    likes: true,
+    audioUrl: true,
+    mediaUrls: true,
+    ...(includeLocation ? { location: true } : {}),
+    videoUrl: true,
+    comment: true,
+});
 const shapeBlogPostForFrontend = (p) => {
     const { comment, ...post } = p;
     const comments = Array.isArray(comment) ? comment.map((c) => ({
@@ -43,12 +72,30 @@ const shapeBlogPostForFrontend = (p) => {
 router.get('/', async (req, res) => {
     try {
         const posts = await db_1.prisma.blogpost.findMany({
-            include: { comment: true },
+            select: buildBlogPostSelect(true),
             orderBy: { date: 'desc' },
         });
         res.json(posts.map(shapeBlogPostForFrontend));
     }
     catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const posts = await db_1.prisma.blogpost.findMany({
+                    select: buildBlogPostSelect(false),
+                    orderBy: { date: 'desc' },
+                });
+                res.json(posts.map(shapeBlogPostForFrontend));
+                return;
+            }
+            catch (fallbackError) {
+                if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, fallbackError)) {
+                    return;
+                }
+                console.error("Error fetching blog posts without location:", fallbackError);
+                res.status(500).json({ error: "Failed to fetch blog posts" });
+                return;
+            }
+        }
         if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
             return;
         }
@@ -57,7 +104,7 @@ router.get('/', async (req, res) => {
 });
 // POST a new blog post
 router.post('/', async (req, res) => {
-    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl, postedByAdminId, postedByAdminName, } = req.body;
     const id = crypto_1.default.randomUUID(); // ✅ generate missing id
     const linkPath = `/blog/${id}`; // ✅ generate missing linkPath
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
@@ -80,20 +127,57 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 mediaUrls,
                 location,
+                postedByAdminId,
+                postedByAdminName,
             },
         });
         (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'created', id: newPost.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeBlogPostForFrontend(newPost));
     }
     catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const newPost = await db_1.prisma.blogpost.create({
+                    data: {
+                        id,
+                        title,
+                        description,
+                        linkPath,
+                        updatedAt: new Date(),
+                        date: postDate,
+                        category: normalizedCategory,
+                        imageUrl,
+                        videoUrl,
+                        audioUrl,
+                        mediaUrls,
+                        postedByAdminId,
+                        postedByAdminName,
+                    },
+                });
+                (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'created', id: newPost.id, timestamp: new Date().toISOString() });
+                res.status(201).json(shapeBlogPostForFrontend(newPost));
+                return;
+            }
+            catch (fallbackError) {
+                console.error("Error creating blog post without location:", fallbackError);
+                if (fallbackError instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+                    return res.status(400).json({ error: 'Database error creating blog post.', details: fallbackError.message });
+                }
+                res.status(500).json({ error: 'Failed to create blog post' });
+                return;
+            }
+        }
         console.error(error);
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            return res.status(400).json({ error: 'Database error creating blog post.', details: error.message });
+        }
         res.status(500).json({ error: 'Failed to create blog post' });
     }
 });
 // PUT (update) a blog post
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, mediaUrls, location, videoUrl, audioUrl, postedByAdminId, postedByAdminName } = req.body;
     const postDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.blogpost_category);
     if (category && !normalizedCategory) {
@@ -112,6 +196,8 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 mediaUrls: mediaUrls || undefined,
                 location,
+                postedByAdminId,
+                postedByAdminName,
                 updatedAt: new Date(),
             }
         });
@@ -119,8 +205,45 @@ router.put('/:id', async (req, res) => {
         res.json(shapeBlogPostForFrontend(updatedPost));
     }
     catch (error) {
+        if (isMissingLocationColumnError(error)) {
+            try {
+                const updatedPost = await db_1.prisma.blogpost.update({
+                    where: { id },
+                    data: {
+                        title,
+                        description,
+                        date: postDate,
+                        category: normalizedCategory,
+                        imageUrl,
+                        videoUrl,
+                        audioUrl,
+                        mediaUrls: mediaUrls || undefined,
+                        postedByAdminId,
+                        postedByAdminName,
+                        updatedAt: new Date(),
+                    }
+                });
+                (0, contentUpdates_1.publishContentUpdate)({ type: 'blogPost', action: 'updated', id: updatedPost.id, timestamp: new Date().toISOString() });
+                res.json(shapeBlogPostForFrontend(updatedPost));
+                return;
+            }
+            catch (fallbackError) {
+                console.error(`Error updating blog post with id "${id}" without location:`, fallbackError);
+                if (fallbackError instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+                    if (fallbackError.code === 'P2025') {
+                        return res.status(404).json({ error: 'Blog post not found.' });
+                    }
+                    return res.status(400).json({ error: 'Database error updating blog post.', details: fallbackError.message });
+                }
+                res.status(500).json({ error: 'Failed to update blog post' });
+                return;
+            }
+        }
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Blog post not found.' });
+        }
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            return res.status(400).json({ error: 'Database error updating blog post.', details: error.message });
         }
         res.status(500).json({ error: 'Failed to update blog post' });
     }

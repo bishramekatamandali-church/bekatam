@@ -29,6 +29,28 @@ import { formatDateADBS } from '../dateConverter';
 
 import { API_BASE_URL } from "../utils/apiConfig";
 
+const normalizeSermonCategory = (category?: string): SermonCategory | undefined => {
+  if (!category) return undefined;
+  const cleaned = category.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return sermonCategoriesList.find((item) => item.toLowerCase() === cleaned.toLowerCase());
+};
+
+const normalizeSermonItem = (item: any): Sermon => {
+  const normalizedCategory = normalizeSermonCategory(item?.category);
+  const comments = Array.isArray(item?.comments)
+    ? item.comments
+    : Array.isArray(item?.comment)
+      ? item.comment
+      : [];
+
+  return {
+    ...item,
+    category: normalizedCategory || item?.category,
+    comments,
+    linkPath: item?.linkPath || `/sermons/${item?.id}`,
+  } as Sermon;
+};
+	
 const initialSampleDonatePageContent: DonatePageContent = {
   id: 'singleton',
   headerTitle: 'Support Our Mission',
@@ -97,6 +119,7 @@ const ContentContext = createContext<ContentContextType | undefined>(undefined);
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser, isAdmin } = useAuth();
   const { addNotification } = useNotification();
+  const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
 
   const [sermons, setSermons] = useState<Sermon[]>(() => getStoredData('bem_sermons', []));
   const [events, setEvents] = useState<EventItem[]>(() => getStoredData('bem_events', []));
@@ -129,23 +152,23 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [loadingContent, setLoadingContent] = useState(true);
   const [contentActivityLogs, setContentActivityLogs] = useState<FrontendActivityLog[]>(() => getStoredData('bem_content_activity_logs', []));
   const contentRef = useRef({
-    directMediaItems: [] as DirectMediaItem[],
-    sermons: [] as Sermon[],
-    events: [] as EventItem[],
-    ministries: [] as Ministry[],
-    blogPosts: [] as BlogPost[],
-    newsItems: [] as NewsItem[],
-    aboutSections: [] as AboutSection[],
-    keyPersons: [] as KeyPerson[],
-    historyMilestones: [] as HistoryMilestone[],
-    historyChapters: [] as HistoryChapter[],
-    branchChurches: [] as BranchChurch[],
-    prayerRequests: [] as PrayerRequest[],
-    testimonials: [] as Testimonial[],
-    contactMessages: [] as ContactMessage[],
-    donationRecords: [] as DonationRecord[],
-    collectionRecords: [] as CollectionRecord[],
-    ministryJoinRequests: [] as MinistryJoinRequest[],
+    directMediaItems: directMediaItems as DirectMediaItem[],
+    sermons: sermons as Sermon[],
+    events: events as EventItem[],
+    ministries: ministries as Ministry[],
+    blogPosts: blogPosts as BlogPost[],
+    newsItems: newsItems as NewsItem[],
+    aboutSections: aboutSections as AboutSection[],
+    keyPersons: keyPersons as KeyPerson[],
+    historyMilestones: historyMilestones as HistoryMilestone[],
+    historyChapters: historyChapters as HistoryChapter[],
+    branchChurches: branchChurches as BranchChurch[],
+    prayerRequests: prayerRequests as PrayerRequest[],
+    testimonials: testimonials as Testimonial[],
+    contactMessages: contactMessages as ContactMessage[],
+    donationRecords: donationRecords as DonationRecord[],
+    collectionRecords: collectionRecords as CollectionRecord[],
+    ministryJoinRequests: ministryJoinRequests as MinistryJoinRequest[],
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -170,6 +193,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
   if (setLoading) setLoadingContent(true);
+  lastFetchTimestampRef.current = new Date().toISOString();
 
   const fetchPromises = dataFetchConfig.map(async (config) => {
     const hasExistingContent = Array.isArray(config.getCurrent?.())
@@ -196,10 +220,41 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       // ✅ Normalize comment relation name: backend uses `comment`, frontend expects `comments`
       const normalized = Array.isArray(data)
         ? data.map((item: any) => {
-            if (item && item.comment && !item.comments) {
-              return { ...item, comments: item.comment };
+            if (!item || typeof item !== 'object') return item;
+            if (config.key === 'sermons') {
+              return normalizeSermonItem(item);
             }
-            return item;
+            let normalizedItem = item;
+            if (item.comment && !item.comments) {
+              normalizedItem = { ...normalizedItem, comments: item.comment };
+            }
+            if (config.key === 'prayer-requests') {
+              const mediaUrls = Array.isArray(normalizedItem.mediaUrls) && normalizedItem.mediaUrls.length > 0
+                ? normalizedItem.mediaUrls.filter(Boolean)
+                : normalizedItem.imageUrl
+                  ? [normalizedItem.imageUrl]
+                  : [];
+              normalizedItem = {
+                ...normalizedItem,
+                prayers: Array.isArray(normalizedItem.prayers) ? normalizedItem.prayers : [],
+                comments: Array.isArray(normalizedItem.comments) ? normalizedItem.comments : [],
+                mediaUrls,
+                linkPath: normalizedItem.linkPath || `/prayer-requests#prayer-${normalizedItem.id}`,
+              };
+            }
+            if (config.key === 'testimonials') {
+              const mediaUrls = Array.isArray(normalizedItem.mediaUrls) && normalizedItem.mediaUrls.length > 0
+                ? normalizedItem.mediaUrls.filter(Boolean)
+                : normalizedItem.imageUrl
+                  ? [normalizedItem.imageUrl]
+                  : [];
+              normalizedItem = {
+                ...normalizedItem,
+                mediaUrls,
+                linkPath: normalizedItem.linkPath || `/prayer-requests#testimonial-${normalizedItem.id}`,
+              };
+            }
+            return normalizedItem;
           })
         : data;
 
@@ -272,38 +327,32 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [fetchContentBatch]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(sermons, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(sermons, lastFetchTimestampRef.current);
     if (updated) setSermons(items);
   }, [sermons]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(events, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(events, lastFetchTimestampRef.current);
     if (updated) setEvents(items);
   }, [events]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(blogPosts, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(blogPosts, lastFetchTimestampRef.current);
     if (updated) setBlogPosts(items);
   }, [blogPosts]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(newsItems, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(newsItems, lastFetchTimestampRef.current);
     if (updated) setNewsItems(items);
   }, [newsItems]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(prayerRequests, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(prayerRequests, lastFetchTimestampRef.current);
     if (updated) setPrayerRequests(items);
   }, [prayerRequests]);
 
   useEffect(() => {
-    const fallbackTimestamp = new Date().toISOString();
-    const { items, updated } = normalizeHomepageDates(testimonials, fallbackTimestamp);
+    const { items, updated } = normalizeHomepageDates(testimonials, lastFetchTimestampRef.current);
     if (updated) setTestimonials(items);
   }, [testimonials]);
 
@@ -390,11 +439,13 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
+            const normalizedNewItem =
+              type === 'sermon' ? (normalizeSermonItem(newItem) as ContentItem) : newItem;
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
             const setter = setterMap[type];
-            if (setter) setter((prev: any[]) => [newItem, ...prev]);
-            logContentActivity(`${type} created: "${(newItem as any).title || (newItem as any).name}"`, 'content_creation', type, newItem.id);
-            return { success: true, newItem: newItem };
+            if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
+            logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
+            return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
           return { success: false, message: `Failed to create ${type}. Please try again.` };
@@ -421,6 +472,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           videoUrl: formData.videoUrl,
           audioUrl: formData.audioUrl,
           fullContent: formData.fullContent,
+          location: formData.location,
           postedByAdminId: currentUser?.id,
           postedByAdminName: currentUser?.fullName,
           createdAt: timestamp,
@@ -585,6 +637,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           throw new Error(errorData.error || `Failed to update ${type}`);
         }
         const updatedItem: ContentItem = await response.json();
+        const normalizedUpdatedItem =
+          type === 'sermon' ? (normalizeSermonItem(updatedItem) as ContentItem) : updatedItem;
         const setterMap: Record<string, Function> = {
           sermon: setSermons,
           event: setEvents,
@@ -603,14 +657,14 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           collectionRecord: setCollectionRecords,
         };
         const setter = setterMap[type];
-        if (setter) setter((prev: any[]) => prev.map(item => item.id === id ? updatedItem : item));
+        if (setter) setter((prev: any[]) => prev.map(item => item.id === id ? normalizedUpdatedItem : item));
         logContentActivity(
-          `${type} updated: "${(updatedItem as any).title || (updatedItem as any).name}"`,
+          `${type} updated: "${(normalizedUpdatedItem as any).title || (normalizedUpdatedItem as any).name}"`,
           'content_update',
           type,
           id,
         );
-        return { success: true, updatedItem };
+        return { success: true, updatedItem: normalizedUpdatedItem };
       } catch (error) {
         console.error(`Error updating ${type}:`, error);
         return { success: false, message: `Failed to update ${type}. Please try again.` };
@@ -799,7 +853,31 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       return false;
     }
   };
-  const addMinistryJoinRequest = (data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>, ministry: Ministry) => addContent('ministryJoinRequest', { ministryId: ministry.id, ministryName: ministry.title, ...data } as any).then(res => res.newItem as MinistryJoinRequest || null);
+  const addMinistryJoinRequest = (
+    data: Omit<
+      MinistryJoinRequest,
+      | 'id'
+      | 'requestDate'
+      | 'status'
+      | 'processedDate'
+      | 'adminNotes'
+      | 'userId'
+      | 'userName'
+      | 'userEmail'
+      | 'membershipType'
+      | 'ministryId'
+      | 'ministryName'
+      | 'ministryGuidelines'
+    >,
+    ministry: Ministry
+  ) =>
+    addContent('ministryJoinRequest', {
+      ministryId: ministry.id,
+      ministryName: ministry.title,
+      ministryGuidelines: ministry.description || '',
+      membershipType: 'member',
+      ...data,
+    } as any).then(res => res.newItem as MinistryJoinRequest || null);
   const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/ministry-join-requests/${id}`, {

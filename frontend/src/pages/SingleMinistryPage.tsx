@@ -127,9 +127,14 @@ const SingleMinistryPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <h3 className="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Ministry Guidelines & Expectations</h3>
-            <div className="prose max-w-none text-gray-700 whitespace-pre-line">
-                {ministry.description || "Details about this ministry's guidelines and expectations will be updated soon."}
-            </div>
+            <div
+              className="prose max-w-none text-gray-700"
+              dangerouslySetInnerHTML={{
+                __html:
+                  ministry.description ||
+                  "Details about this ministry's guidelines and expectations will be updated soon.",
+              }}
+            />
           </CardContent>
           <CardFooter>
              <Button variant="primary" onClick={handleOpenJoinModal}>
@@ -169,9 +174,12 @@ const SingleMinistryPage: React.FC = () => {
                     
                     <div>
                         <h4 className="text-md font-semibold text-gray-700 mb-2">Ministry Guidelines & Expectations:</h4>
-                        <div className="p-3 bg-gray-100 rounded-md max-h-40 overflow-y-auto text-sm text-gray-600 whitespace-pre-line border border-gray-200">
-                            {ministry.description || "No specific guidelines provided yet."}
-                        </div>
+                        <div
+                          className="prose prose-sm max-w-none p-3 bg-gray-100 rounded-md max-h-40 overflow-y-auto text-sm text-gray-600 border border-gray-200"
+                          dangerouslySetInnerHTML={{
+                            __html: ministry.description || "No specific guidelines provided yet.",
+                          }}
+                        />
                     </div>
 
                     {currentUser && (

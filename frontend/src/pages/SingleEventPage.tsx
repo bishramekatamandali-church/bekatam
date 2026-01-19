@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from "react-router-dom"; 
 import { useContent } from '../contexts/ContentContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,10 +35,6 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
 const ShareIconUI: React.FC<{ className?: string }> = ({ className }) => ( 
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.195.025.383.05.571.078m-1.571 2.032c.195.025.383.05.571.078m13.48 0a2.25 2.25 0 01-.621 1.628l-3.029 3.028a2.25 2.25 0 01-3.182 0l-3.029-3.028a2.25 2.25 0 01-.621-1.628m13.48 0L19.25 12l-1.521-.078m13.48 0c0 2.042-.832 3.901-2.186 5.256L16.5 21.75m1.217-9.843c-.195-.025-.383-.05-.571-.078m-1.571-2.032c-.195-.025-.383-.05-.571-.078m-1.412 5.690c.195.025.383.05.571.078" /></svg>
 );
-const HeartIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className, isFilled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill={isFilled ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`${className} ${isFilled ? 'text-red-500' : ''}`}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-);
-
 const getYouTubeEmbedUrl = (url?: string): string | null => {
   if (!url) return null;
   let videoId = null;
@@ -53,10 +49,12 @@ const getYouTubeEmbedUrl = (url?: string): string | null => {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 };
 
+const stripHtml = (value?: string): string =>
+  value ? value.replace(/<[^>]*>/g, '').trim() : '';
 
 const SingleEventPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
-  const { events, loadingContent, addCommentToItem, logContentActivity } = useContent();
+  const { events, loadingContent, addCommentToItem } = useContent();
   const { currentUser, isAuthenticated } = useAuth();
 
   const [event, setEvent] = React.useState<EventItem | undefined>(undefined);
@@ -64,25 +62,13 @@ const SingleEventPage: React.FC = () => {
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
 
   React.useEffect(() => {
     if (eventId && !loadingContent) {
         const foundEvent = events.find(e => e.id === eventId);
         setEvent(foundEvent);
-        if (foundEvent) { setLikeCount(foundEvent.likes || 0); }
     }
   }, [eventId, loadingContent, events]);
-
-
-  const handleLike = () => {
-    if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    if(event) { logContentActivity(`${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${event.title}"`, 'content_update', 'event', event.id); alert(`Like updatedfor "${event.title}".`); }
-  };
 
   const handleAddCommentClick = () => {
     if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
@@ -126,6 +112,7 @@ const SingleEventPage: React.FC = () => {
   const scheduleTypeLabel = event.scheduleType
     ? scheduleTypeLabels[event.scheduleType] || event.scheduleType
     : '';
+  const descriptionText = stripHtml(event.description);
 
   const renderDetailRow = (
     label: string,
@@ -159,7 +146,7 @@ const SingleEventPage: React.FC = () => {
         <Card className="max-w-4xl mx-auto dark:bg-slate-800">
           {youtubeEmbedUrl && (<div className="aspect-w-16 aspect-h-9 bg-black rounded-t-xl overflow-hidden"><iframe src={youtubeEmbedUrl} title={event.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full"></iframe></div>)}
           {!youtubeEmbedUrl && event.videoUrl && (<div className="bg-black rounded-t-xl overflow-hidden"><video src={event.videoUrl} controls className="w-full max-h-[500px] object-contain" aria-label={`Video player for ${event.title}`}/></div>)}
-          {event.imageUrl && (<div className={`${!hasVideo ? 'bg-black rounded-t-xl overflow-hidden' : 'mt-4'}`}><img src={event.imageUrl} alt={event.title} className={`w-full h-auto object-cover ${!hasVideo ? 'max-h-[500px]' : 'max-h-[400px] rounded-lg'}`}/></div>)}
+          {event.imageUrl && (<div className={`${!hasVideo ? 'bg-black rounded-t-xl overflow-hidden' : 'mt-4'}`}><img src={event.imageUrl} alt={event.title} className={`w-full h-auto object-contain ${!hasVideo ? 'max-h-[600px]' : 'max-h-[450px] rounded-lg'}`}/></div>)}
           <CardHeader className={`dark:border-slate-700 ${!(hasVideo || event.imageUrl) ? 'rounded-t-xl' : ''}`}>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-slate-100 mb-2">{event.title}</h1>
             <p className="text-md text-gray-500 dark:text-slate-400"><CalendarDaysIconSolid className="inline-block w-5 h-5 mr-2 align-text-bottom" />{formatDateADBS(event.date)} {event.time ? `at ${event.time}` : ''}</p>
@@ -176,7 +163,7 @@ const SingleEventPage: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-700 dark:text-slate-200 mb-2 border-b dark:border-slate-700 pb-2">
                 {resolvedEventType === 'REGULAR' ? 'Event Overview' : 'Event Summary'}
               </h3>
-              <div dangerouslySetInnerHTML={{ __html: event.description }} />
+              <p className="whitespace-pre-line">{descriptionText}</p>
             </div>
             {resolvedEventType === 'REGULAR' ? (
               <div className="mt-6 divide-y divide-slate-200 dark:divide-slate-700 text-sm">
@@ -256,7 +243,6 @@ const SingleEventPage: React.FC = () => {
               </div>
             )}
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex justify-around items-center">
-                <Button variant="ghost" onClick={handleLike} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400" aria-pressed={isLiked}><HeartIcon className="w-5 h-5 mr-1.5" isFilled={isLiked} /> {likeCount} <span className="ml-1 hidden sm:inline">Like</span></Button>
                 <Button variant="ghost" onClick={handleAddCommentClick} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
                 <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ShareIconUI className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span></Button>
             </div>

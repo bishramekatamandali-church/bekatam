@@ -26,8 +26,8 @@ const SermonsPage: React.FC = () => {
         if (sermon.scripture?.toLowerCase().includes(term)) {
             score += 5; // Scripture is also important
         }
-        if (sermon.description.toLowerCase().includes(term)) {
-            score += 2;
+        if (sermon.description?.toLowerCase().includes(term)) {
+          score += 2;
         }
         if (sermon.fullContent?.toLowerCase().includes(term)) {
             score += 1; // Full content is lowest priority to avoid noise
@@ -120,7 +120,7 @@ const SermonsPage: React.FC = () => {
             No sermons available matching your criteria. Please check back later or adjust your filters.
         </p>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {filteredSermons.map((sermon: Sermon) => ( 
             <SermonCard key={sermon.id} sermon={sermon} />
           ))}

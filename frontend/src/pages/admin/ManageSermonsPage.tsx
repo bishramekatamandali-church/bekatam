@@ -55,7 +55,7 @@ const ManageSermonsPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full"> 
+    <div className="w-full bg-white text-slate-800 rounded-2xl p-4 sm:p-6"> 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Manage Sermons</h1>
         <Button onClick={() => handleOpenModal()} variant="primary" size="sm">
@@ -73,7 +73,7 @@ const ManageSermonsPage: React.FC = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {sortedSermons.map((sermon) => (
           <Card key={sermon.id} className="flex flex-col">
             {sermon.imageUrl && <img src={sermon.imageUrl} alt={sermon.title} className="w-full h-40 object-cover"/>}

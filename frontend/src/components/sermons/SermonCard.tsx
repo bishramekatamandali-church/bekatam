@@ -1,17 +1,22 @@
-
-import React, { useState } from 'react';
-import { Link } from "react-router-dom";
-import { Sermon, Comment } from '../../types';
+import React, { useState } from 'react'; 
+import { Link, useNavigate } from "react-router-dom";
+import { Sermon } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import ShareModal from '../ui/ShareModal';
-import CommentModal from '../ui/CommentModal'; 
 import AuthModal from '../auth/AuthModal'; 
 import { useAuth } from '../../contexts/AuthContext'; 
 import { useContent } from '../../contexts/ContentContext'; 
 import { formatDateADBS } from '../../dateConverter'; 
 import useAITranslate from '../../../src/hooks/useAITranslate';
-import { ChatBubbleOvalLeftEllipsisIcon } from '../icons/GenericIcons';
+import {
+  HandThumbUpIcon as HandThumbUpIconSolid,
+} from '@heroicons/react/24/solid';
+import {
+  HandThumbUpIcon as HandThumbUpIconOutline,
+  ChatBubbleLeftRightIcon,
+  ShareIcon as ShareIconOutline,
+} from '@heroicons/react/24/outline';
 
 // Icons
 const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -21,19 +26,6 @@ const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${className || ''}`}><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" /></svg>
-);
-const HeartIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className, isFilled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" 
-         fill={isFilled ? "currentColor" : "none"} 
-         viewBox="0 0 24 24" 
-         strokeWidth={1.5} 
-         stroke="currentColor" 
-         className={`${className} ${isFilled ? 'text-red-500' : ''}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-    </svg>
-);
-const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.195.025.383.05.571.078m-1.571 2.032c.195.025.383.05.571.078m13.48 0a2.25 2.25 0 01-.621 1.628l-3.029 3.028a2.25 2.25 0 01-3.182 0l-3.029-3.028a2.25 2.25 0 01-.621-1.628m13.48 0L19.25 12l-1.521-.078m13.48 0c0 2.042-.832 3.901-2.186 5.256L16.5 21.75m1.217-9.843c-.195-.025-.383-.05-.571-.078m-1.571-2.032c-.195-.025-.383-.05-.571-.078m-1.412 5.690c.195.025.383.05.571.078" /></svg>
 );
 
 const getYouTubeEmbedUrl = (url?: string): string | null => {
@@ -60,10 +52,10 @@ interface SermonCardProps {
 
 const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
   const { isAuthenticated, currentUser } = useAuth();
-  const { logContentActivity, addCommentToItem } = useContent(); 
+  const { logContentActivity, toggleLikeOnItem } = useContent(); 
+  const navigate = useNavigate();
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [likeCount, setLikeCount] = useState(sermon.likes || 0);
@@ -73,22 +65,27 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
   const { translatedText: description } = useAITranslate(sermon.description, 'en');
   const { translatedText: speaker } = useAITranslate(sermon.speaker, 'en');
   const { translatedText: category } = useAITranslate(sermon.category, 'en');
+  const detailUrl = `/sermons/${sermon.id}`;
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
       return;
     }
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
-    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
+    const updated = await toggleLikeOnItem('sermon', sermon.id, isLiked);
+    if (updated?.likes !== undefined) {
+      setLikeCount(updated.likes);
+    } else {
+      setIsLiked(!newLikedState);
+    }
     logContentActivity(
         `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} sermon: "${sermon.title}"`,
         'content_update', 
         'sermon',
         sermon.id
     );
-    alert(`Like updated for "${sermon.title}".`);
   };
 
   const handleCommentClick = () => {
@@ -96,21 +93,9 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
       setIsAuthModalOpen(true);
       return;
     }
-    setIsCommentModalOpen(true);
-  };
-
-  const handleSubmitComment = async (commentText: string) => {
-    if (!currentUser) return;
-    const newComment = await addCommentToItem(sermon.id, 'sermon', commentText);
-    if (newComment) {
-      alert(`Comment submitted for "${sermon.title}"`);
-      setIsCommentModalOpen(false);
-    } else {
-      alert(`Failed to submit comment for "${sermon.title}"`);
-    }
+    navigate(detailUrl, { state: { focusComments: true } });
   };
   
-  const detailUrl = `/sermons/${sermon.id}`;
   const commentCount = sermon.comments?.length || 0;
   const youtubeEmbedUrl = getYouTubeEmbedUrl(sermon.videoUrl);
 
@@ -169,6 +154,10 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
               <span>By: {speaker}</span>
             </div>
           )}
+            <div className="flex items-center text-xs text-slate-400 mb-2">
+             <UserIcon className="mr-2 text-slate-300 flex-shrink-0" />
+             <span>Posted by: {sermon.postedByAdminName || 'Admin'}</span>
+            </div>
           {sermon.audioUrl && (
             <div className="my-2">
                 <audio controls src={sermon.audioUrl} className="w-full h-10 text-sm">
@@ -181,15 +170,22 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
           </p>
         </CardContent>
         <CardFooter className="flex justify-around items-center flex-wrap gap-1 sm:gap-2 bg-slate-50">
-            <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500 px-1.5 sm:px-2 py-1" aria-pressed={isLiked} aria-label={isLiked ? `Unlike sermon, ${likeCount} likes` : `Like sermon, ${likeCount} likes`}>
-                <HeartIcon className="w-5 h-5 mr-1" isFilled={isLiked} /> {likeCount > 0 ? likeCount : ''} <span className="sr-only sm:not-sr-only ml-1">Like</span>
+            <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-blue-600 px-1.5 sm:px-2 py-1" aria-pressed={isLiked} aria-label={isLiked ? `Unlike sermon, ${likeCount} likes` : `Like sermon, ${likeCount} likes`}>
+                {isLiked ? <HandThumbUpIconSolid className="w-5 h-5 mr-1 text-blue-600" /> : <HandThumbUpIconOutline className="w-5 h-5 mr-1" />}
+                {likeCount > 0 ? likeCount : ''} <span className="sr-only sm:not-sr-only ml-1">Like</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Comment on sermon">
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1" /> 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCommentClick}
+              className="flex items-center text-slate-600 hover:text-teal-500 px-1.5 sm:px-2 py-1"
+              aria-label="Comment on sermon"
+            >
+                <ChatBubbleLeftRightIcon className="w-5 h-5 mr-1" /> 
                 {commentCount > 0 ? commentCount : ''} <span className="sr-only sm:not-sr-only ml-1">Comment</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Share sermon">
-                <ShareIcon className="w-5 h-5 mr-1" /> <span className="sr-only sm:not-sr-only">Share</span>
+                <ShareIconOutline className="w-5 h-5 mr-1" /> <span className="sr-only sm:not-sr-only">Share</span>
             </Button>
             <Button asLink to={detailUrl} variant="outline" size="sm" className="px-1.5 sm:px-2 py-1">View Details</Button>
         </CardFooter>
@@ -203,14 +199,8 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
         url={detailUrl} 
         eventTitle={title} 
       />
-      <CommentModal
-        isOpen={isCommentModalOpen}
-        onClose={() => setIsCommentModalOpen(false)}
-        eventTitle={title} 
-        onSubmitComment={handleSubmitComment}
-      />
     </>
   );
 };
 
-export default SermonCard;
+export default SermonCard;  

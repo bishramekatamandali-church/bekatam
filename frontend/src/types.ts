@@ -209,7 +209,8 @@ export interface Sermon extends FeatureInfo {
   videoUrl?: string;
   audioUrl?: string;
   category?: SermonCategory;
-  fullContent?: string; 
+  fullContent?: string;
+  location?: string; 
   likes?: number; 
   comments: Comment[];
   likedByMe?: boolean;
@@ -967,7 +968,8 @@ export interface SermonFormData extends BaseContentFormData {
   videoUrl?: string;
   audioUrl?: string;
   category?: SermonCategory;
-  fullContent?: string; 
+  fullContent?: string;
+  location?: string; 
 }
 
 export interface EventFormData extends BaseContentFormData {

@@ -201,7 +201,7 @@ const EventsPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 gap-6 md:gap-8">
                   {upcomingEventsSorted.map((event) => (
                     <EventCard key={event.id} event={event} isPastEvent={false} />
                   ))}
@@ -212,7 +212,7 @@ const EventsPage: React.FC = () => {
             {pastEventsSorted.length > 0 && (
               <section aria-labelledby="past-events-title">
                 <h2 id="past-events-title" className="text-2xl font-semibold text-slate-700 mb-6 sm:mb-8 text-center sm:text-left">Past Events Archive</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 gap-6 md:gap-8">
                   {pastEventsSorted.map((event) => (
                     <EventCard key={event.id} event={event} isPastEvent={true} />
                   ))}
