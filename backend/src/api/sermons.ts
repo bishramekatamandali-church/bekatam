@@ -54,13 +54,13 @@ const buildSermonSelect = (includeLocation: boolean, includeAdminFields: boolean
     comment: true,
 });
 
-const removeMissingColumns = (data: Record<string, unknown>, missing: Set<string>) => {
+const removeMissingColumns = <T extends Record<string, unknown>>(data: T, missing: Set<string>): T => {
     if (missing.size === 0) {
         return data;
     }
-    const pruned = { ...data };
+    const pruned: T = { ...data };
     for (const column of missing) {
-        delete pruned[column];
+        delete (pruned as Record<string, unknown>)[column];
     }
     return pruned;
 };
