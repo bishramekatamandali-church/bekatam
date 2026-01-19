@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../contexts/ContentContext';
@@ -126,30 +126,6 @@ const HomePage: React.FC = () => {
     return combined.sort((a, b) => getPublishedAt(b.item).getTime() - getPublishedAt(a.item).getTime());
   }, [sortedPrayerRequests, sortedTestimonials]);
 
-  const NEWS_BATCH_SIZE = 6;
-  const [visibleNewsCount, setVisibleNewsCount] = useState(NEWS_BATCH_SIZE);
-  const newsSentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setVisibleNewsCount(NEWS_BATCH_SIZE);
-  }, [newsItems]);
-
-  useEffect(() => {
-    const sentinel = newsSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleNewsCount((prev) => Math.min(prev + NEWS_BATCH_SIZE, sortedNews.length));
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [sortedNews.length]);
 
   const renderMediaCard = (
     item: ContentItem,
@@ -302,39 +278,17 @@ const HomePage: React.FC = () => {
               </div>
               <Button asLink to="/news" variant="outline" size="sm">View all</Button>
             </div>
-            <div className="space-y-3">
-              {sortedNews.slice(0, visibleNewsCount).map((item) => {
-                const info = mapToFeatureInfo(item, 'news');
-                const publishedAt = info.publishedAt || getPublishedAt(item).toISOString();
-                const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
-                return (
-                  <Link
-                    key={(item as any).id}
-                    to={info.linkPath}
-                    className="group flex flex-col sm:flex-row gap-3 border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition-shadow"
-                  >
-                    <div className="sm:w-48 w-full h-32 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
-                      {info.imageUrl ? (
-                        <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-semibold text-slate-900">{info.title}</h3>
-                      <p className="text-sm text-slate-600 line-clamp-3">{info.description}</p>
-                      <div className="text-xs text-slate-500 space-y-0.5">
-                        <div>Posted on: {formatDateLabel(publishedAt)}</div>
-                        {incidentAt && <div>{incidentLabels.news}: {formatDateLabel(incidentAt)}</div>}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
+              {sortedNews.map((item) => (
+                <div key={(item as any).id} className="snap-start">
+                  {renderMediaCard(item, 'news', {
+                    containerClass: 'w-56 sm:w-60',
+                    imageClass: 'h-36',
+                    titleClass: 'text-sm sm:text-base',
+                  })}
+                </div>
+              ))}
             </div>
-            {visibleNewsCount < sortedNews.length && (
-              <div ref={newsSentinelRef} className="h-6" />
-            )}
           </section>
         ),
       },
@@ -350,7 +304,7 @@ const HomePage: React.FC = () => {
         if (dateDiff !== 0) return dateDiff;
         return a.fallbackIndex - b.fallbackIndex;
       });
-  }, [sortedEvents, sortedSermons, sortedBlogs, sortedCommunityStories, sortedNews, visibleNewsCount]);
+  }, [sortedEvents, sortedSermons, sortedBlogs, sortedCommunityStories, sortedNews]);
 
   useEffect(() => {
     if (import.meta.env.MODE === 'production') return;
