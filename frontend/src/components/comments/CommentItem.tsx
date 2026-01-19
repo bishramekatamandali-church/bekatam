@@ -50,7 +50,7 @@ import Button from '../ui/Button';
 
 interface CommentItemProps {
   comment: Comment;
-  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest';
+  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest' | 'testimonial';
   itemId: string;
 }
 

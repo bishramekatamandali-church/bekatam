@@ -117,6 +117,14 @@ const HomePage: React.FC = () => {
       .sort((a, b) => getPublishedAt(b).getTime() - getPublishedAt(a).getTime()),
     [testimonials]
   );
+  const sortedCommunityStories = useMemo(() => {
+    const combined = [
+      ...sortedPrayerRequests.map((item) => ({ item, typeKey: 'prayer-requests' })),
+      ...sortedTestimonials.map((item) => ({ item, typeKey: 'testimonials' })),
+    ];
+
+    return combined.sort((a, b) => getPublishedAt(b.item).getTime() - getPublishedAt(a.item).getTime());
+  }, [sortedPrayerRequests, sortedTestimonials]);
 
   const NEWS_BATCH_SIZE = 6;
   const [visibleNewsCount, setVisibleNewsCount] = useState(NEWS_BATCH_SIZE);
@@ -257,48 +265,22 @@ const HomePage: React.FC = () => {
         ),
       },
       {
-        key: 'prayers',
-        items: sortedPrayerRequests,
+        key: 'community',
+        items: sortedCommunityStories.map(({ item }) => item),
         render: () => (
           <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <div className="flex flex-wrap items-baseline gap-2">
-                <h2 className="text-xl font-bold text-slate-900">Prayer Requests</h2>
+                <h2 className="text-xl font-bold text-slate-900">Prayers & Testimonies</h2>
                 <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Community</span>
               </div>
               <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
-              {sortedPrayerRequests.map((item) => (
-                <div key={(item as any).id} className="snap-start">
-                  {renderMediaCard(item, 'prayer-requests', {
-                    containerClass: 'w-48 sm:w-52 md:w-56',
-                    imageClass: 'h-28',
-                    titleClass: 'text-sm sm:text-base',
-                  })}
-                </div>
-              ))}
-            </div>
-          </section>
-        ),
-      },
-      {
-        key: 'testimonials',
-        items: sortedTestimonials,
-        render: () => (
-          <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h2 className="text-xl font-bold text-slate-900">Testimonials</h2>
-                <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Stories</span>
-              </div>
-              <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
-              {sortedTestimonials.map((item) => (
-                <div key={(item as any).id} className="snap-start">
-                  {renderMediaCard(item, 'testimonials', {
-                    containerClass: 'w-52 sm:w-56',
+              {sortedCommunityStories.map(({ item, typeKey }) => (
+                <div key={`${typeKey}-${(item as any).id}`} className="snap-start">
+                  {renderMediaCard(item, typeKey, {
+                    containerClass: 'w-52 sm:w-56 md:w-60',
                     imageClass: 'h-32',
                     titleClass: 'text-sm sm:text-base',
                   })}
@@ -368,7 +350,7 @@ const HomePage: React.FC = () => {
         if (dateDiff !== 0) return dateDiff;
         return a.fallbackIndex - b.fallbackIndex;
       });
-  }, [sortedEvents, sortedSermons, sortedBlogs, sortedPrayerRequests, sortedTestimonials, sortedNews, visibleNewsCount]);
+  }, [sortedEvents, sortedSermons, sortedBlogs, sortedCommunityStories, sortedNews, visibleNewsCount]);
 
   useEffect(() => {
     if (import.meta.env.MODE === 'production') return;
