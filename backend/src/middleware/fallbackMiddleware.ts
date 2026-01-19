@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { loadSermonSnapshot } from "../utils/sermonSnapshot";
 
 // Minimal placeholder payloads for content lists used on the public site.
-const fallbackPayloads: Record<string, unknown> = {
+export const fallbackPayloads: Record<string, unknown> = {
   sermons: [],
   events: [],
   ministries: [],
@@ -40,7 +40,7 @@ export const fallbackMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-if (req.method !== "GET") {
+  if (req.method !== "GET") {
     return res.status(503).json({
       error: "Database unavailable. Write operations are temporarily disabled.",
     });
