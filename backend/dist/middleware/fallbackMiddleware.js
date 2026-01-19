@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.fallbackMiddleware = exports.resolveFallbackResource = exports.fallbackPayloads = void 0;
 // Minimal placeholder payloads for content lists used on the public site.
 exports.fallbackPayloads = {
-    sermons: [],
     events: [],
     ministries: [],
     blogposts: [],

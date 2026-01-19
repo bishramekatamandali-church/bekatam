@@ -23,9 +23,6 @@ const isMissingColumnError = (error, column) => {
 };
 const getMissingSermonColumns = (error) => {
     const missing = new Set();
-    if (isMissingColumnError(error, 'location')) {
-        missing.add('location');
-    }
     if (isMissingColumnError(error, 'postedByAdminId')) {
         missing.add('postedByAdminId');
     }
@@ -34,7 +31,7 @@ const getMissingSermonColumns = (error) => {
     }
     return missing;
 };
-const buildSermonSelect = (includeLocation, includeAdminFields) => ({
+const buildSermonSelect = (includeAdminFields) => ({
     id: true,
     title: true,
     description: true,
@@ -51,7 +48,6 @@ const buildSermonSelect = (includeLocation, includeAdminFields) => ({
     audioUrl: true,
     fullContent: true,
     likes: true,
-    ...(includeLocation ? { location: true } : {}),
     comment: true,
 });
 const removeMissingColumns = (data, missing) => {
@@ -88,20 +84,22 @@ const shapeSermonForFrontend = (s) => {
 router.get('/', async (req, res) => {
     try {
         const sermons = await db_1.prisma.sermon.findMany({
-            select: buildSermonSelect(true, true),
+            select: buildSermonSelect(true),
             orderBy: { date: 'desc' },
         });
-        res.json(sermons.map(shapeSermonForFrontend));
+        const shapedSermons = sermons.map(shapeSermonForFrontend);
+        res.json(shapedSermons);
     }
     catch (error) {
         const missingColumns = getMissingSermonColumns(error);
         if (missingColumns.size > 0) {
             try {
                 const sermons = await db_1.prisma.sermon.findMany({
-                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
+                    select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                     orderBy: { date: 'desc' },
                 });
-                res.json(sermons.map(shapeSermonForFrontend));
+                const shapedSermons = sermons.map(shapeSermonForFrontend);
+                res.json(shapedSermons);
                 return;
             }
             catch (fallbackError) {
@@ -126,7 +124,7 @@ router.get('/:id', async (req, res) => {
     try {
         const sermon = await db_1.prisma.sermon.findUnique({
             where: { id: id },
-            select: buildSermonSelect(true, true),
+            select: buildSermonSelect(true),
         });
         if (sermon) {
             res.json(shapeSermonForFrontend(sermon));
@@ -141,7 +139,7 @@ router.get('/:id', async (req, res) => {
             try {
                 const sermon = await db_1.prisma.sermon.findUnique({
                     where: { id: id },
-                    select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
+                    select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                 });
                 if (sermon) {
                     res.json(shapeSermonForFrontend(sermon));
@@ -163,7 +161,7 @@ router.get('/:id', async (req, res) => {
 });
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName } = req.body;
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto_1.default.randomUUID();
@@ -186,7 +184,6 @@ router.post('/', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
-                location,
                 postedByAdminId,
                 postedByAdminName,
                 linkPath: `/sermons/${id}`,
@@ -213,7 +210,6 @@ router.post('/', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
-                        location,
                         postedByAdminId,
                         postedByAdminName,
                         linkPath: `/sermons/${id}`,
@@ -242,7 +238,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a sermon
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, location, postedByAdminId, postedByAdminName } = req.body;
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName } = req.body;
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.sermon_category);
@@ -263,7 +259,6 @@ router.put('/:id', async (req, res) => {
                 audioUrl,
                 fullContent,
                 imageUrl,
-                location,
                 postedByAdminId,
                 postedByAdminName,
                 updatedAt: new Date(),
@@ -289,7 +284,6 @@ router.put('/:id', async (req, res) => {
                         audioUrl,
                         fullContent,
                         imageUrl,
-                        location,
                         postedByAdminId,
                         postedByAdminName,
                         updatedAt: new Date(),
