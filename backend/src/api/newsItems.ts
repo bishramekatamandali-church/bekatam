@@ -81,7 +81,7 @@ router.get('/', async (req, res) => {
 
 // POST a new news item
 router.post('/', async (req, res) => {
-    const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, videoUrl, audioUrl, postedByAdminId, postedByAdminName } = req.body;
     const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const id = crypto.randomUUID();
     const normalizedCategory = normalizeEnumValue(category, newsitem_category);
@@ -103,11 +103,16 @@ router.post('/', async (req, res) => {
                 videoUrl,
                 audioUrl,
                 linkPath: `/news/${id}`,
+                postedByAdminId,
+                postedByAdminName,
             }
         });
     publishContentUpdate({ type: 'news', action: 'created', id: newItem.id, timestamp: new Date().toISOString() });
         res.status(201).json(shapeNewsItemForFrontend(newItem));
     } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            return res.status(400).json({ error: 'Database error creating news item.', details: error.message });
+        }
         res.status(500).json({ error: 'Failed to create news item' });
     }
 });
@@ -115,7 +120,7 @@ router.post('/', async (req, res) => {
 // PUT (update) a news item
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, imageUrl, videoUrl, audioUrl } = req.body;
+    const { title, description, date, category, imageUrl, videoUrl, audioUrl, postedByAdminId, postedByAdminName } = req.body;
     const itemDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
     const normalizedCategory = normalizeEnumValue(category, newsitem_category);
 
@@ -134,6 +139,8 @@ router.put('/:id', async (req, res) => {
                 imageUrl,
                 videoUrl,
                 audioUrl,
+                postedByAdminId,
+                postedByAdminName,
                 updatedAt: new Date(),
             }
         });
@@ -142,6 +149,9 @@ router.put('/:id', async (req, res) => {
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'News item not found.' });
+        }
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            return res.status(400).json({ error: 'Database error updating news item.', details: error.message });
         }
         res.status(500).json({ error: 'Failed to update news item' });
     }
