@@ -637,6 +637,8 @@ model sermon {
   location          String?
   likes             Int              @default(0)
   comment           comment[]
+
+  @@map("Sermon")
 }
 
 model testimonial {
