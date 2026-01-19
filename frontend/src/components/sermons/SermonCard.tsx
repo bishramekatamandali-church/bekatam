@@ -154,6 +154,10 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
               <span>By: {speaker}</span>
             </div>
           )}
+          <div className="flex items-center text-xs text-slate-400 mb-2">
+            <UserIcon className="mr-2 text-slate-300 flex-shrink-0" />
+            <span>Posted by: {sermon.postedByAdminName || 'Admin'}</span>
+          </div>
           {sermon.audioUrl && (
             <div className="my-2">
                 <audio controls src={sermon.audioUrl} className="w-full h-10 text-sm">
