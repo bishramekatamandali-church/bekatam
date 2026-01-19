@@ -5,6 +5,7 @@ import { Prisma, sermon, sermon_category } from '@prisma/client';
 import { publishContentUpdate } from '../services/contentUpdates';
 import { normalizeEnumValue } from '../utils/enumNormalization';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
+import { saveSermonSnapshot } from '../utils/sermonSnapshot';
 
 const router = express.Router();
 
@@ -65,6 +66,26 @@ const removeMissingColumns = <T extends Record<string, unknown>>(data: T, missin
     return pruned;
 };
 
+const persistSermonSnapshot = (sermons: any[]): void => {
+    try {
+        saveSermonSnapshot(sermons);
+    } catch (error) {
+        console.warn("Failed to persist sermon snapshot.", error);
+    }
+};
+
+const refreshSermonSnapshot = async (): Promise<void> => {
+    try {
+        const sermons = await prisma.sermon.findMany({
+            select: buildSermonSelect(true, true),
+            orderBy: { date: 'desc' },
+        });
+        persistSermonSnapshot(sermons.map(shapeSermonForFrontend));
+    } catch (error) {
+        console.warn("Failed to refresh sermon snapshot.", error);
+    }
+};
+
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (s: any): any => {
     const { comment, ...sermon } = s;
@@ -93,7 +114,9 @@ router.get('/', async (req, res) => {
             select: buildSermonSelect(true, true),
             orderBy: { date: 'desc' },
         });
-        res.json(sermons.map(shapeSermonForFrontend));
+        const shapedSermons = sermons.map(shapeSermonForFrontend);
+        persistSermonSnapshot(shapedSermons);
+        res.json(shapedSermons);
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
         if (missingColumns.size > 0) {
@@ -102,7 +125,9 @@ router.get('/', async (req, res) => {
                     select: buildSermonSelect(!missingColumns.has('location'), !missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName')),
                     orderBy: { date: 'desc' },
                 });
-                res.json(sermons.map(shapeSermonForFrontend));
+                const shapedSermons = sermons.map(shapeSermonForFrontend);
+                persistSermonSnapshot(shapedSermons);
+                res.json(shapedSermons);
                 return;
             } catch (fallbackError) {
                 if (handleDatabaseFallback(req, res, fallbackError)) {
@@ -194,6 +219,7 @@ router.post('/', async (req, res) => {
                 }
         });
     publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+        await refreshSermonSnapshot();
         res.status(201).json(shapeSermonForFrontend(newSermon));
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -220,6 +246,7 @@ router.post('/', async (req, res) => {
                     }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+                await refreshSermonSnapshot();
                 res.status(201).json(shapeSermonForFrontend(newSermon));
                 return;
             } catch (fallbackError) {
@@ -273,6 +300,7 @@ router.put('/:id', async (req, res) => {
             }
         });
     publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+        await refreshSermonSnapshot();
         res.json(shapeSermonForFrontend(updatedSermon));
     } catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -298,6 +326,7 @@ router.put('/:id', async (req, res) => {
                     }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+                await refreshSermonSnapshot();
                 res.json(shapeSermonForFrontend(updatedSermon));
                 return;
             } catch (fallbackError) {
@@ -331,6 +360,7 @@ router.delete('/:id', async (req, res) => {
             where: { id: id },
         });
     publishContentUpdate({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
+        await refreshSermonSnapshot();
         res.status(204).send(); // No Content
     } catch (error) {
         console.error(`Error deleting sermon with id "${id}":`, error);
@@ -345,4 +375,3 @@ router.delete('/:id', async (req, res) => {
 
 
 export default router; 
-
