@@ -340,7 +340,6 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     videoUrl: '',
     audioUrl: '',
     fullContent: '',
-    location: '',
   } as SermonFormData,
 
   event: {
@@ -622,7 +621,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [uploadingStatus, setUploadingStatus] = useState<Record<string, string | null>>({});
   const [isFieldUploading, setIsFieldUploading] = useState<Record<string, boolean>>({});
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
-  const [locationLookupStatus, setLocationLookupStatus] = useState<string | null>(null);
   const isSermonForm = contentType === 'sermon';
   const resolvedLabelClasses = isSermonForm
     ? 'block text-xs font-medium text-black mb-1'
@@ -655,55 +653,8 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     );
   }, []);
 
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-
-  const handleUseCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationLookupStatus('Geolocation is not supported by this browser.');
-      return;
-    }
-
-    setLocationLookupStatus('Fetching location from Google Maps...');
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
-        let resolvedLocation = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-
-        if (googleMapsApiKey) {
-          try {
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapsApiKey}`
-            );
-            const data = await response.json();
-            if (data.status === 'OK' && data.results?.[0]?.formatted_address) {
-              resolvedLocation = data.results[0].formatted_address;
-              setLocationLookupStatus('Location updated from Google Maps.');
-            } else {
-              setLocationLookupStatus('Google Maps could not resolve the address. Using coordinates.');
-            }
-          } catch (error) {
-            setLocationLookupStatus('Unable to reach Google Maps. Using coordinates.');
-          }
-        } else {
-          setLocationLookupStatus('Coordinates captured. Add a Google Maps API key to auto-resolve the address.');
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          location: resolvedLocation,
-        }));
-      },
-      () => {
-        setLocationLookupStatus('Unable to access your location. Check browser permissions.');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, [googleMapsApiKey]);
-
   useEffect(() => {
     if (isOpen) {
-      setLocationLookupStatus(null);
       const mergedDefaults = createDefaults && !initialData
         ? { ...(defaultFormValues[contentType] as GenericContentFormData), ...createDefaults }
         : defaultFormValues[contentType];
@@ -1370,48 +1321,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   placeholder="Enter the speaker name"
                 />
               </div>
-
-              <FullWidthField>
-                <label htmlFor="sermon-location" className={resolvedLabelClasses}>
-                  Admin Location (Google Maps)
-                </label>
-                <input
-                  id="sermon-location"
-                  type="text"
-                  name="location"
-                  value={data.location || ''}
-                  onChange={handleChange}
-                  className={resolvedInputClasses}
-                  placeholder="Auto-filled from your current location"
-                />
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUseCurrentLocation}
-                    className="text-xs"
-                  >
-                    Use Current Location
-                  </Button>
-                  {data.location && (
-                    <Button
-                      asLink
-                      to={`https://maps.google.com/?q=${encodeURIComponent(data.location)}`}
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      View on Google Maps
-                    </Button>
-                  )}
-                </div>
-                {locationLookupStatus && (
-                  <p className={isSermonForm ? 'mt-2 text-xs text-black/70' : 'mt-2 text-xs text-slate-500'}>
-                    {locationLookupStatus}
-                  </p>
-                )}
-              </FullWidthField>
 
               <div>
                 <label htmlFor="category" className={resolvedLabelClasses}>

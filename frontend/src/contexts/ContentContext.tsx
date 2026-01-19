@@ -29,6 +29,28 @@ import { formatDateADBS } from '../dateConverter';
 
 import { API_BASE_URL } from "../utils/apiConfig";
 
+const normalizeSermonCategory = (category?: string): SermonCategory | undefined => {
+  if (!category) return undefined;
+  const cleaned = category.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return sermonCategoriesList.find((item) => item.toLowerCase() === cleaned.toLowerCase());
+};
+
+const normalizeSermonItem = (item: any): Sermon => {
+  const normalizedCategory = normalizeSermonCategory(item?.category);
+  const comments = Array.isArray(item?.comments)
+    ? item.comments
+    : Array.isArray(item?.comment)
+      ? item.comment
+      : [];
+
+  return {
+    ...item,
+    category: normalizedCategory || item?.category,
+    comments,
+    linkPath: item?.linkPath || `/sermons/${item?.id}`,
+  } as Sermon;
+};
+
 const initialSampleDonatePageContent: DonatePageContent = {
   id: 'singleton',
   headerTitle: 'Support Our Mission',
@@ -199,6 +221,9 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       const normalized = Array.isArray(data)
         ? data.map((item: any) => {
             if (!item || typeof item !== 'object') return item;
+            if (config.key === 'sermons') {
+              return normalizeSermonItem(item);
+            }
             let normalizedItem = item;
             if (item.comment && !item.comments) {
               normalizedItem = { ...normalizedItem, comments: item.comment };
@@ -414,11 +439,13 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
+            const normalizedNewItem =
+              type === 'sermon' ? (normalizeSermonItem(newItem) as ContentItem) : newItem;
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
             const setter = setterMap[type];
-            if (setter) setter((prev: any[]) => [newItem, ...prev]);
-            logContentActivity(`${type} created: "${(newItem as any).title || (newItem as any).name}"`, 'content_creation', type, newItem.id);
-            return { success: true, newItem: newItem };
+            if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
+            logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
+            return { success: true, newItem: normalizedNewItem };
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
           return { success: false, message: `Failed to create ${type}. Please try again.` };
@@ -610,6 +637,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           throw new Error(errorData.error || `Failed to update ${type}`);
         }
         const updatedItem: ContentItem = await response.json();
+        const normalizedUpdatedItem =
+          type === 'sermon' ? (normalizeSermonItem(updatedItem) as ContentItem) : updatedItem;
         const setterMap: Record<string, Function> = {
           sermon: setSermons,
           event: setEvents,
@@ -628,14 +657,14 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           collectionRecord: setCollectionRecords,
         };
         const setter = setterMap[type];
-        if (setter) setter((prev: any[]) => prev.map(item => item.id === id ? updatedItem : item));
+        if (setter) setter((prev: any[]) => prev.map(item => item.id === id ? normalizedUpdatedItem : item));
         logContentActivity(
-          `${type} updated: "${(updatedItem as any).title || (updatedItem as any).name}"`,
+          `${type} updated: "${(normalizedUpdatedItem as any).title || (normalizedUpdatedItem as any).name}"`,
           'content_update',
           type,
           id,
         );
-        return { success: true, updatedItem };
+        return { success: true, updatedItem: normalizedUpdatedItem };
       } catch (error) {
         console.error(`Error updating ${type}:`, error);
         return { success: false, message: `Failed to update ${type}. Please try again.` };

@@ -26,8 +26,8 @@ const SermonsPage: React.FC = () => {
         if (sermon.scripture?.toLowerCase().includes(term)) {
             score += 5; // Scripture is also important
         }
-        if (sermon.description.toLowerCase().includes(term)) {
-            score += 2;
+        if (sermon.description?.toLowerCase().includes(term)) {
+          score += 2;
         }
         if (sermon.fullContent?.toLowerCase().includes(term)) {
             score += 1; // Full content is lowest priority to avoid noise
