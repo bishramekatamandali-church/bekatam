@@ -436,7 +436,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
+            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const normalizedNewItem =
