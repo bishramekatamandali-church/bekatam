@@ -5,14 +5,13 @@ import { NewsItem } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import ShareModal from '../ui/ShareModal';
-import CommentModal from '../ui/CommentModal'; 
 import AuthModal from '../auth/AuthModal'; 
 import { useAuth } from '../../contexts/AuthContext'; 
 import { useContent } from '../../contexts/ContentContext'; 
 import { formatDateADBS } from '../../dateConverter'; 
 import useAITranslate from '../../../src/hooks/useAITranslate';
 import CommentItem from '../comments/CommentItem';
-import { ChatBubbleLeftRightIcon, HandThumbUpIcon as HandThumbUpIconOutline, ShareIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftEllipsisIcon, HandThumbUpIcon as HandThumbUpIconOutline, ShareIcon } from '@heroicons/react/24/outline';
 import { HandThumbUpIcon as HandThumbUpIconSolid } from '@heroicons/react/24/solid';
 
 // Icons (can be centralized)
@@ -32,12 +31,14 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
   const { logContentActivity, addCommentToItem, toggleLikeOnItem } = useContent(); 
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [likeCount, setLikeCount] = useState(item.likes || 0);
   const [isLiked, setIsLiked] = useState(item.likedByMe ?? false); 
   const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentError, setCommentError] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const { translatedText: title } = useAITranslate(item.title, 'en');
   const { translatedText: description } = useAITranslate(item.description, 'en');
@@ -76,22 +77,25 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
     setShowComments(prev => !prev);
   };
 
-  const handleAddCommentClick = () => {
+  const handleSubmitComment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCommentError('');
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
       return;
     }
-    setIsCommentModalOpen(true);
-  };
-
-  const handleSubmitComment = async (commentText: string) => {
-    if (!currentUser) return;
-    const newComment = await addCommentToItem(item.id, 'news', commentText);
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) {
+      setCommentError('Comment cannot be empty.');
+      return;
+    }
+    setIsSubmittingComment(true);
+    const newComment = await addCommentToItem(item.id, 'news', trimmedComment);
+    setIsSubmittingComment(false);
     if (newComment) {
-      alert(`Comment submitted for "${item.title}"`);
-      setIsCommentModalOpen(false);
+      setCommentText('');
     } else {
-      alert(`Failed to submit comment for "${item.title}"`);
+      setCommentError(`Failed to submit comment for "${item.title}".`);
     }
   };
   
@@ -129,7 +133,7 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
                 {likeCount} <span className="ml-1 hidden sm:inline">Like</span>
             </Button>
             <Button variant="ghost" onClick={handleCommentClick} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-purple-200" aria-label="Comment on news">
-                <ChatBubbleLeftRightIcon className="w-5 h-5 mr-1.5" />
+                <ChatBubbleLeftEllipsisIcon className="w-5 h-5 mr-1.5" />
                 {commentCount} <span className="ml-1 hidden sm:inline">Comment</span>
             </Button>
             <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-purple-200" aria-label="Share news">
@@ -147,11 +151,24 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
                 <p className="text-center text-xs text-slate-500 py-3">No comments yet.</p>
               )}
             </div>
-            <div className="mt-3 pt-3 border-t border-purple-200">
-              <Button onClick={handleAddCommentClick} size="sm" variant="primary" className="w-full">
-                Add a Comment
+            <form onSubmit={handleSubmitComment} className="mt-3 pt-3 border-t border-purple-200 space-y-2">
+              <label htmlFor={`news-comment-${item.id}`} className="sr-only">
+                Add a comment
+              </label>
+              <textarea
+                id={`news-comment-${item.id}`}
+                rows={3}
+                value={commentText}
+                onChange={(event) => setCommentText(event.target.value)}
+                placeholder="Write your comment..."
+                className="w-full rounded-md border border-purple-200 p-2 text-sm text-slate-700 focus:border-purple-500 focus:ring-purple-500"
+                disabled={isSubmittingComment}
+              />
+              {commentError && <p className="text-xs text-red-500">{commentError}</p>}
+              <Button type="submit" size="sm" variant="primary" className="w-full" disabled={isSubmittingComment || !commentText.trim()}>
+                {isSubmittingComment ? 'Submitting...' : 'Post Comment'}
               </Button>
-            </div>
+            </form>
           </div>
         )}
       </Card>
@@ -163,12 +180,6 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
         title={`Share "${title}"`}
         url={detailUrl} 
         eventTitle={title}
-      />
-      <CommentModal
-        isOpen={isCommentModalOpen}
-        onClose={() => setIsCommentModalOpen(false)}
-        eventTitle={title} 
-        onSubmitComment={handleSubmitComment}
       />
     </>
   );
