@@ -254,7 +254,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
       const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
-      if (!hasServerContent && hasExistingContent && config.key !== 'sermons') {
+      if (!hasServerContent && hasExistingContent) {
         console.warn(
           `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
         );
@@ -543,6 +543,7 @@ const nowTimestamp = new Date().toISOString();
     }
 
     const endpoint = contentTypeToEndpoint[type];
+    let useLocalFallback = false;
     if (endpoint) {
         try {
             const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
@@ -558,9 +559,16 @@ const nowTimestamp = new Date().toISOString();
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
-          const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
-          return { success: false, message };
+          if (type === 'sermon') {
+            useLocalFallback = true;
+          } else {
+            const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
+            return { success: false, message };
+          }
         }
+    }
+    if (endpoint && !useLocalFallback) {
+      return { success: false, message: 'Failed to create content.' };
     }
     let newItem: ContentItem | null = null;
     let success = false;
