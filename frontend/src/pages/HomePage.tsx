@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../contexts/ContentContext';
@@ -117,31 +117,14 @@ const HomePage: React.FC = () => {
       .sort((a, b) => getPublishedAt(b).getTime() - getPublishedAt(a).getTime()),
     [testimonials]
   );
+ const sortedCommunityStories = useMemo(() => {
+    const combined = [
+      ...sortedPrayerRequests.map((item) => ({ item, typeKey: 'prayer-requests' })),
+      ...sortedTestimonials.map((item) => ({ item, typeKey: 'testimonials' })),
+    ];
 
-  const NEWS_BATCH_SIZE = 6;
-  const [visibleNewsCount, setVisibleNewsCount] = useState(NEWS_BATCH_SIZE);
-  const newsSentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setVisibleNewsCount(NEWS_BATCH_SIZE);
-  }, [newsItems]);
-
-  useEffect(() => {
-    const sentinel = newsSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleNewsCount((prev) => Math.min(prev + NEWS_BATCH_SIZE, sortedNews.length));
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [sortedNews.length]);
+    return combined.sort((a, b) => getPublishedAt(b.item).getTime() - getPublishedAt(a.item).getTime());
+  }, [sortedPrayerRequests, sortedTestimonials]);
 
   const renderMediaCard = (
     item: ContentItem,
@@ -257,48 +240,22 @@ const HomePage: React.FC = () => {
         ),
       },
       {
-        key: 'prayers',
-        items: sortedPrayerRequests,
+        key: 'community',
+        items: sortedCommunityStories.map(({ item }) => item),
         render: () => (
           <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <div className="flex flex-wrap items-baseline gap-2">
-                <h2 className="text-xl font-bold text-slate-900">Prayer Requests</h2>
+                <h2 className="text-xl font-bold text-slate-900">Prayers & Testimonies</h2>
                 <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Community</span>
               </div>
               <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
-              {sortedPrayerRequests.map((item) => (
-                <div key={(item as any).id} className="snap-start">
-                  {renderMediaCard(item, 'prayer-requests', {
-                    containerClass: 'w-48 sm:w-52 md:w-56',
-                    imageClass: 'h-28',
-                    titleClass: 'text-sm sm:text-base',
-                  })}
-                </div>
-              ))}
-            </div>
-          </section>
-        ),
-      },
-      {
-        key: 'testimonials',
-        items: sortedTestimonials,
-        render: () => (
-          <section className="bg-white border border-slate-200 rounded-3xl px-2 sm:px-3 py-2.5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h2 className="text-xl font-bold text-slate-900">Testimonials</h2>
-                <span className="text-xs uppercase tracking-[0.25em] text-slate-400">Stories</span>
-              </div>
-              <Button asLink to="/prayer-requests" variant="outline" size="sm">View all</Button>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
-              {sortedTestimonials.map((item) => (
-                <div key={(item as any).id} className="snap-start">
-                  {renderMediaCard(item, 'testimonials', {
-                    containerClass: 'w-52 sm:w-56',
+              {sortedCommunityStories.map(({ item, typeKey }) => (
+                <div key={`${typeKey}-${(item as any).id}`} className="snap-start">
+                  {renderMediaCard(item, typeKey, {
+                    containerClass: 'w-52 sm:w-56 md:w-60',
                     imageClass: 'h-32',
                     titleClass: 'text-sm sm:text-base',
                   })}
@@ -320,39 +277,17 @@ const HomePage: React.FC = () => {
               </div>
               <Button asLink to="/news" variant="outline" size="sm">View all</Button>
             </div>
-            <div className="space-y-3">
-              {sortedNews.slice(0, visibleNewsCount).map((item) => {
-                const info = mapToFeatureInfo(item, 'news');
-                const publishedAt = info.publishedAt || getPublishedAt(item).toISOString();
-                const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
-                return (
-                  <Link
-                    key={(item as any).id}
-                    to={info.linkPath}
-                    className="group flex flex-col sm:flex-row gap-3 border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition-shadow"
-                  >
-                    <div className="sm:w-48 w-full h-32 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
-                      {info.imageUrl ? (
-                        <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-semibold text-slate-900">{info.title}</h3>
-                      <p className="text-sm text-slate-600 line-clamp-3">{info.description}</p>
-                      <div className="text-xs text-slate-500 space-y-0.5">
-                        <div>Posted on: {formatDateLabel(publishedAt)}</div>
-                        {incidentAt && <div>{incidentLabels.news}: {formatDateLabel(incidentAt)}</div>}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory pl-0.5 pr-1">
+              {sortedNews.map((item) => (
+                <div key={(item as any).id} className="snap-start">
+                  {renderMediaCard(item, 'news', {
+                    containerClass: 'w-56 sm:w-60',
+                    imageClass: 'h-36',
+                    titleClass: 'text-sm sm:text-base',
+                  })}
+                </div>
+              ))}
             </div>
-            {visibleNewsCount < sortedNews.length && (
-              <div ref={newsSentinelRef} className="h-6" />
-            )}
           </section>
         ),
       },
@@ -368,7 +303,7 @@ const HomePage: React.FC = () => {
         if (dateDiff !== 0) return dateDiff;
         return a.fallbackIndex - b.fallbackIndex;
       });
-  }, [sortedEvents, sortedSermons, sortedBlogs, sortedPrayerRequests, sortedTestimonials, sortedNews, visibleNewsCount]);
+  }, [sortedEvents, sortedSermons, sortedBlogs, sortedCommunityStories, sortedNews]);
 
   useEffect(() => {
     if (import.meta.env.MODE === 'production') return;

@@ -2,7 +2,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Prisma, testimonial, testimonial_visibility } from '@prisma/client';
+import { Prisma, testimonial_visibility } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
  
@@ -17,20 +17,40 @@ const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
     return true;
 };
 
-const shapeTestimonialForFrontend = (testimonial: testimonial): any => ({
-    ...testimonial,
-    linkPath: `/testimonials#testimonial-${testimonial.id}`, // Example, frontend might not have a dedicated page
-    submittedAt: new Date(testimonial.submittedAt).toISOString(),
-    createdAt: testimonial.createdAt ? new Date(testimonial.createdAt).toISOString() : null,
-    updatedAt: testimonial.updatedAt ? new Date(testimonial.updatedAt).toISOString() : null,
-    mediaUrls: testimonial.mediaUrls || [],
-});
+const shapeTestimonialForFrontend = (item: any): any => {
+    const { comment, ...rest } = item;
+    const comments = Array.isArray(comment) ? comment.map((c: any) => ({
+        id: c.id,
+        itemId: rest.id,
+        itemType: 'testimonial',
+        userId: c.userId ?? null,
+        userName: c.userName,
+        userProfileImageUrl: c.userProfileImageUrl ?? null,
+        isGuest: c.isGuest ?? false,
+        guestEmail: c.guestEmail ?? null,
+        guestPhone: c.guestPhone ?? null,
+        text: c.text,
+        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+    })) : [];
+    comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    return ({
+        ...rest,
+        comments,
+        linkPath: `/testimonials#testimonial-${rest.id}`,
+        submittedAt: rest.submittedAt ? new Date(rest.submittedAt).toISOString() : null,
+        createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
+        updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
+        mediaUrls: rest.mediaUrls || [],
+    });
+};
 
 // GET all testimonials
 router.get('/', async (req, res) => {
     try {
         const testimonials = await prisma.testimonial.findMany({
-            orderBy: { submittedAt: 'desc' },
+          include: { comment: true },  
+          orderBy: { submittedAt: 'desc' },
         });
         res.json(testimonials.map(shapeTestimonialForFrontend));
     } catch (error) {

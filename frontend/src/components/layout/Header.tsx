@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import AuthModal from '../auth/AuthModal';
 import Button from '../ui/Button';
 import NotificationIcon from '../notifications/NotificationIcon';
-import { HeroNewspaperIcon, CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon } from '../icons/GenericIcons';
+import { CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon } from '../icons/GenericIcons';
 import GlobalSearchModal from '../search/GlobalSearchModal'; 
 import { useNotification } from '../../contexts/NotificationContext';
 import { ArrowDownTrayIcon as HeroArrowDownTrayIcon } from '@heroicons/react/24/outline';
@@ -53,13 +53,10 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
   return (
     <div 
       className="relative" 
       ref={dropdownRef}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
     >
       <button 
         className="px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 whitespace-nowrap hover:bg-indigo-700 flex items-center"
@@ -134,6 +131,8 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   const { isAuthenticated, isAdmin, logout, currentUser } = useAuth();
   const { unreadCount } = useNotification();
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   
   // Close mobile menu on resize to desktop
   useEffect(() => {
@@ -150,7 +149,7 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   const baseNavItems: NavItem[] = [
     { label: "Home", path: '/' },
     { label: "Blog", path: '/blog' },
-    { label: "News", path: '/news', icon: HeroNewspaperIcon },
+    { label: "News", path: '/news' },
     {
       label: "Connect",
       children: [
@@ -259,60 +258,65 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
         </div>
 
         {isMobileMenuOpen && (
-          <div 
-            className="lg:hidden absolute top-20 right-0 w-64 bg-indigo-800 shadow-lg pb-3 max-h-[calc(100vh-5rem)] overflow-y-auto" 
-            id="mobile-menu"
-          >
-            <nav className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {installPrompt && (
-                <Button onClick={() => { onInstallClick(); setIsMobileMenuOpen(false); }} variant="primary" className="w-full mb-2 flex items-center justify-center">
-                  <HeroArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                  Install App
-                </Button>
-              )}
-              <button
-                onClick={() => { setIsSearchModalOpen(true); setIsMobileMenuOpen(false); }}
-                className="w-full flex items-center px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:bg-indigo-700 hover:text-white"
-              >
-                <HeroMagnifyingGlassIcon className="inline-block w-4 h-4 mr-1.5 align-text-bottom" />
-                Search
-              </button>
-              {allNavItems.map((item) => (
-                item.children ? (
-                  <MobileNavCollapsible key={item.label} item={item} closeMobileMenu={() => setIsMobileMenuOpen(false)} />
-                ) : (
-                  <NavLink
-                    key={item.label}
-                    to={item.path!}
-                    className={({isActive}) => `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150 ${isActive ? 'bg-teal-500 text-white' : 'text-indigo-200 hover:bg-indigo-700 hover:text-white'}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {item.icon && React.createElement(item.icon, { className: "inline-block w-4 h-4 mr-1.5 align-text-bottom" })}
-                    {item.label}
-                  </NavLink>
-                )
-              ))}
-              {!isAuthenticated && (
-                  <Button onClick={() => { setIsAuthModalOpen(true); setIsMobileMenuOpen(false); }} variant="primary" className="w-full mt-2">
-                    Login / Register
+          <div className="lg:hidden fixed inset-0 z-40" id="mobile-menu">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/20"
+              aria-label="Close mobile menu"
+              onClick={closeMobileMenu}
+            />
+            <div className="absolute top-20 right-0 w-64 bg-indigo-800 shadow-lg pb-3 max-h-[calc(100vh-5rem)] overflow-y-auto z-50">
+              <nav className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                {installPrompt && (
+                  <Button onClick={() => { onInstallClick(); closeMobileMenu(); }} variant="primary" className="w-full mb-2 flex items-center justify-center">
+                    <HeroArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                    Install App
                   </Button>
-              )}
-              {isAuthenticated && (
-                  <>
-                    <div className="border-t border-indigo-700 my-2"></div>
-                     <NavLink
-                        to="/profile"
-                        className={({isActive}) => `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150 ${isActive ? 'bg-teal-500 text-white' : 'text-indigo-200 hover:bg-indigo-700 hover:text-white'}`}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                       Profile
-                      </NavLink>
-                    <Button onClick={() => { logout(); setIsMobileMenuOpen(false); }} variant="ghost" className="w-full mt-1 hover:!bg-indigo-700 text-indigo-200">
-                      Logout
+                )}
+                <button
+                  onClick={() => { setIsSearchModalOpen(true); closeMobileMenu(); }}
+                  className="w-full flex items-center px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:bg-indigo-700 hover:text-white"
+                >
+                  <HeroMagnifyingGlassIcon className="inline-block w-4 h-4 mr-1.5 align-text-bottom" />
+                  Search
+                </button>
+                {allNavItems.map((item) => (
+                  item.children ? (
+                    <MobileNavCollapsible key={item.label} item={item} closeMobileMenu={closeMobileMenu} />
+                  ) : (
+                    <NavLink
+                      key={item.label}
+                      to={item.path!}
+                      className={({isActive}) => `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150 ${isActive ? 'bg-teal-500 text-white' : 'text-indigo-200 hover:bg-indigo-700 hover:text-white'}`}
+                      onClick={closeMobileMenu}
+                    >
+                      {item.icon && React.createElement(item.icon, { className: "inline-block w-4 h-4 mr-1.5 align-text-bottom" })}
+                      {item.label}
+                    </NavLink>
+                  )
+                ))}
+                {!isAuthenticated && (
+                    <Button onClick={() => { setIsAuthModalOpen(true); closeMobileMenu(); }} variant="primary" className="w-full mt-2">
+                      Login / Register
                     </Button>
-                  </>
-              )}
-            </nav>
+                )}
+                {isAuthenticated && (
+                    <>
+                      <div className="border-t border-indigo-700 my-2"></div>
+                       <NavLink
+                          to="/profile"
+                          className={({isActive}) => `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150 ${isActive ? 'bg-teal-500 text-white' : 'text-indigo-200 hover:bg-indigo-700 hover:text-white'}`}
+                          onClick={closeMobileMenu}
+                        >
+                         Profile
+                        </NavLink>
+                      <Button onClick={() => { logout(); closeMobileMenu(); }} variant="ghost" className="w-full mt-1 hover:!bg-indigo-700 text-indigo-200">
+                        Logout
+                      </Button>
+                    </>
+                )}
+              </nav>
+            </div>
           </div>
         )}
       </header>
@@ -322,4 +326,4 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   );
 };
 
-export default Header;
+export default Header; 

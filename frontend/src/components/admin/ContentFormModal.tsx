@@ -217,17 +217,28 @@ const UnifiedMediaInputs: React.FC<{
           <MediaSlot type="audio" url={(formData as any).audioUrl} />
         </div>
       ) : (
-        <div className={`flex flex-wrap gap-2 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
+        <div className={`flex flex-wrap gap-3 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
           {(['image', 'video', 'audio'] as const).map((type) => {
             const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
             const currentUrl = (formData as any)[fieldName];
             if (!currentUrl) return null;
             return (
-              <span
+              <div
                 key={type}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700'}`}
+                className={`flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700 dark:border-slate-600'}`}
               >
-                {type.toUpperCase()} attached
+                <div className="flex items-center justify-center">
+                  {type === 'image' && (
+                    <img src={currentUrl} alt="Preview" className="h-16 w-20 rounded object-cover" />
+                  )}
+                  {type === 'video' && (
+                    <video src={currentUrl} className="h-16 w-24 rounded object-cover" controls />
+                  )}
+                  {type === 'audio' && (
+                    <audio src={currentUrl} controls className="h-8 w-36" />
+                  )}
+                </div>
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wide">{type}</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -240,7 +251,7 @@ const UnifiedMediaInputs: React.FC<{
                 >
                   <XCircleIcon className="w-4 h-4" />
                 </button>
-              </span>
+              </div>
             );
           })}
           {!hasAnyMedia && <span>No media attached yet.</span>}
@@ -625,6 +636,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
   const [locationLookupStatus, setLocationLookupStatus] = useState<string | null>(null);
   const isSermonForm = contentType === 'sermon';
+  const isBlogOrNewsForm = contentType === 'blogPost' || contentType === 'news';
   const resolvedLabelClasses = isSermonForm
     ? 'block text-xs font-medium text-black mb-1'
     : labelClasses;
@@ -636,8 +648,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const dateFieldsConfig: Record<string, string[]> = {
     sermon: ['incidentAt'],
     event: ['incidentAt'],
-    blogPost: ['incidentAt'],
-    news: ['incidentAt'],
     branchChurch: ['establishedDate'],
     churchMember: ['memberSince', 'dateOfBirth', 'baptismDate'],
     meetingLog: ['meetingDate'],
@@ -809,7 +819,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType, createDefaults]);
+  }, [isOpen, initialData, contentType]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
@@ -2027,8 +2037,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
 
-              {renderDateFieldWithBSPicker('incidentAt', 'Publish / Post Date')}
-
               <FullWidthField>
                 <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                   <input
@@ -2064,6 +2072,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       description: html,
                     }))
                   }
+                 toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
@@ -2074,6 +2083,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
             </FormSection>
           </>
@@ -2120,8 +2130,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 </select>
               </div>
 
-              {renderDateFieldWithBSPicker('incidentAt', 'Publish / Post Date')}
-
+              
               <FullWidthField>
                 <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                   <input
@@ -2157,6 +2166,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                       description: html,
                     }))
                   }
+                 toolbarOptions={{ bold: false, italic: false, unorderedList: false, orderedList: false }}
                 />
               </FullWidthField>
 
@@ -2167,7 +2177,327 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 handleImageFieldSelect={handleImageFieldSelect}
                 isFieldUploading={isFieldUploading}
                 uploadingStatus={uploadingStatus}
+                variant="compact"
               />
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'aboutSection': {
+        const data = formData as AboutSectionFormData;
+
+        return (
+          <>
+            <FormSection title="Section Details">
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={data.title}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="content" className={resolvedLabelClasses}>
+                  Content
+                </label>
+                <textarea
+                  name="content"
+                  value={data.content}
+                  onChange={handleChange}
+                  rows={4}
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+
+              <div>
+                <label htmlFor="displayOrder" className={resolvedLabelClasses}>
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  name="displayOrder"
+                  value={data.displayOrder || 0}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection title="Media">
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Section Media"
+                  mediaType="any"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as AboutSectionFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                  onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'keyPerson': {
+        const data = formData as KeyPersonFormData;
+
+        return (
+          <>
+            <FormSection title="Profile Details">
+              <FullWidthField>
+                <label htmlFor="name" className={resolvedLabelClasses}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={data.name}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+
+              <div>
+                <label htmlFor="role" className={resolvedLabelClasses}>
+                  Role
+                </label>
+                <input
+                  type="text"
+                  name="role"
+                  value={data.role}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="bio" className={resolvedLabelClasses}>
+                  Bio
+                </label>
+                <textarea
+                  name="bio"
+                  value={data.bio}
+                  onChange={handleChange}
+                  rows={4}
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Media">
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Profile Media"
+                  mediaType="any"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as KeyPersonFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                  onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'historyMilestone': {
+        const data = formData as HistoryMilestoneFormData;
+
+        return (
+          <>
+            <FormSection title="Milestone Details">
+              <div>
+                <label htmlFor="year" className={resolvedLabelClasses}>
+                  Year
+                </label>
+                <input
+                  type="text"
+                  name="year"
+                  value={data.year}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={data.title}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="description" className={resolvedLabelClasses}>
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={data.description}
+                  onChange={handleChange}
+                  rows={4}
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Media">
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Milestone Media"
+                  mediaType="any"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as HistoryMilestoneFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                  onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'historyChapter': {
+        const data = formData as HistoryChapterFormData;
+
+        return (
+          <>
+            <FormSection title="Chapter Details">
+              <div>
+                <label htmlFor="chapterNumber" className={resolvedLabelClasses}>
+                  Chapter Number
+                </label>
+                <input
+                  type="number"
+                  id="chapterNumber"
+                  name="chapterNumber"
+                  min={1}
+                  value={data.chapterNumber}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Auto-detected from existing chapters. Adjust if needed.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="status" className={resolvedLabelClasses}>
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={data.status}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Chapter Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={data.title}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Enter the chapter title"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="summary" className={resolvedLabelClasses}>
+                  Summary (Optional)
+                </label>
+                <textarea
+                  id="summary"
+                  name="summary"
+                  value={data.summary || ''}
+                  onChange={handleChange}
+                  rows={3}
+                  className={resolvedInputClasses}
+                  placeholder="Short teaser for this chapter"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="content" className={resolvedLabelClasses}>
+                  Chapter Content
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  value={data.content}
+                  onChange={handleChange}
+                  rows={10}
+                  className={resolvedInputClasses}
+                  placeholder="Write the chapter content"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Chapter Media (Optional)"
+                  mediaType="any"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as HistoryChapterFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                />
+              </FullWidthField>
             </FormSection>
           </>
         );
@@ -2595,7 +2925,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       panelClassName={isSermonForm ? 'text-black' : undefined}
     >
       <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
-        <div className="space-y-4">
+        <div className={`space-y-4 ${isBlogOrNewsForm ? 'rounded-2xl bg-white p-6 shadow-xl' : ''}`}>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
             <span className="font-medium">Admin:</span>{' '}
             <span>{currentUser?.fullName || 'Admin'}</span>

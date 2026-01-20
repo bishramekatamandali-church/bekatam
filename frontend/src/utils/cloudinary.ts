@@ -20,7 +20,8 @@ const getMaxBytesForFile = (file: File) => {
 export const getCloudinaryResourceType = (file: File): CloudinaryResourceType => {
   if (file.type.startsWith('video/')) return 'video';
   if (file.type.startsWith('audio/')) return 'video';
-  return 'image';
+  if (!file.type.startsWith('image/')) return 'raw'; 
+ return 'image';
 };
 
 export const getCloudinaryUploadDetails = (resourceType: CloudinaryResourceType) => {

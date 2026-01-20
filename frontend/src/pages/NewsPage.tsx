@@ -35,8 +35,8 @@ const NewsPage: React.FC = () => {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 pb-12">
-        <div className="mb-8 p-4 bg-purple-50 border border-purple-200 rounded-lg shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+        <div className="mx-auto mb-8 max-w-4xl rounded-lg border border-purple-200 bg-purple-50 p-4 shadow-md">
+          <div className="grid grid-cols-1 gap-4 items-end">
             <div>
               <label htmlFor="search-news" className="block text-sm font-medium text-slate-700 mb-1">
                 Search News
@@ -78,12 +78,12 @@ const NewsPage: React.FC = () => {
         <AdSlot placementKey="news_list_top" />
 
         {filteredNewsItems.length === 0 && !loadingContent ? (
-         <p className="text-center text-gray-500 text-lg py-10 bg-purple-50 rounded-lg shadow">
+         <p className="text-center text-gray-500 text-lg py-10 bg-purple-50 rounded-lg shadow max-w-4xl mx-auto">
             No news items available matching your criteria. Please check back later or adjust your filters.
         </p>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredNewsItems.map((item: NewsItem) => ( 
+        <div className="mx-auto flex max-w-4xl flex-col gap-8">
+          {filteredNewsItems.map((item: NewsItem) => (
             <NewsItemCard key={item.id} item={item} />
           ))}
         </div>

@@ -8,6 +8,7 @@ import PrayerRequestCard from '../components/prayer/PrayerRequestCard';
 import Button from '../components/ui/Button';
 import CommentModal from '../components/ui/CommentModal';
 import AuthModal from '../components/auth/AuthModal';
+import GuestPrayerModal from '../components/prayer/GuestPrayerModal';
 import { ArrowLeftIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 
 const PublicProfilePage: React.FC = () => {
@@ -20,7 +21,9 @@ const PublicProfilePage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [activeRequestForComment, setActiveRequestForComment] = useState<PrayerRequest | null>(null);
-  
+  const [isGuestPrayerModalOpen, setIsGuestPrayerModalOpen] = useState(false);
+  const [activeRequestForPrayer, setActiveRequestForPrayer] = useState<PrayerRequest | null>(null);
+
   const allUsers = useMemo(() => getAllUsers(), [getAllUsers]);
 
   useEffect(() => {
@@ -61,6 +64,31 @@ const PublicProfilePage: React.FC = () => {
       setActiveRequestForComment(null);
     } else {
       alert('Failed to add comment.');
+    }
+  };
+
+  const handlePray = async (request: PrayerRequest) => {
+    if (isAuthenticated) {
+      await togglePrayerOnRequest(request.id);
+      return;
+    }
+    setActiveRequestForPrayer(request);
+    setIsGuestPrayerModalOpen(true);
+  };
+
+  const handleGuestPrayerSubmit = async (contact: { email?: string; phone?: string }) => {
+    if (!activeRequestForPrayer) return;
+    const success = await togglePrayerOnRequest(activeRequestForPrayer.id, contact);
+    if (success) {
+      const guestKey = `bem_guest_prayer_${activeRequestForPrayer.id}`;
+      const storedValue = contact.email || contact.phone || '';
+      if (storedValue) {
+        window.localStorage.setItem(guestKey, storedValue);
+      }
+      setIsGuestPrayerModalOpen(false);
+      setActiveRequestForPrayer(null);
+    } else {
+      alert('Unable to record your prayer. Please check your details and try again.');
     }
   };
 
@@ -119,7 +147,7 @@ const PublicProfilePage: React.FC = () => {
                 <PrayerRequestCard
                   key={pr.id}
                   request={pr}
-                  onPrayedFor={togglePrayerOnRequest}
+                  onPrayedFor={handlePray}
                   onStatusUpdate={() => {}}
                   onComment={handleOpenCommentModal}
                 />
@@ -142,6 +170,16 @@ const PublicProfilePage: React.FC = () => {
           onSubmitComment={handleSubmitComment}
         />
      )}
+      {isGuestPrayerModalOpen && (
+        <GuestPrayerModal
+          isOpen={isGuestPrayerModalOpen}
+          onClose={() => {
+            setIsGuestPrayerModalOpen(false);
+            setActiveRequestForPrayer(null);
+          }}
+          onSubmit={handleGuestPrayerSubmit}
+        />
+      )}
     </div>
   );
 };

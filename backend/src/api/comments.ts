@@ -94,6 +94,7 @@ router.post('/', async (req, res) => {
   case 'newsItem': data.newsItemId = itemId; break;
   case 'historyChapter': data.historyChapterId = itemId; break;
   case 'prayerRequest': data.prayerRequestId = itemId; break;
+  case 'testimonial': data.testimonialId = itemId; break;
   default:
     return res.status(400).json({ error: 'Invalid itemType for comment.' });
 }
@@ -144,13 +145,14 @@ router.put('/:commentId', async (req, res) => {
                 editedAt: new Date(),
             }
         });
-        const itemId = updatedComment.sermonId || updatedComment.eventId || updatedComment.blogPostId || updatedComment.newsItemId || updatedComment.historyChapterId || updatedComment.prayerRequestId;
+        const itemId = updatedComment.sermonId || updatedComment.eventId || updatedComment.blogPostId || updatedComment.newsItemId || updatedComment.historyChapterId || updatedComment.prayerRequestId || updatedComment.testimonialId;
         let itemType = "sermon";
         if (updatedComment.eventId) itemType = "event";
         else if (updatedComment.blogPostId) itemType = "blogPost";
         else if (updatedComment.newsItemId) itemType = "news";
         else if (updatedComment.historyChapterId) itemType = "historyChapter";
         else if (updatedComment.prayerRequestId) itemType = "prayerRequest";
+        else if (updatedComment.testimonialId) itemType = "testimonial";
 
         res.json({
             id: updatedComment.id,

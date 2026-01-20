@@ -378,8 +378,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
     const [content, setContent] = useState('');
     const [title, setTitle] = useState('');
     const [mediaUrls, setMediaUrls] = useState<string[]>([]);
-    const [incidentAt, setIncidentAt] = useState('');
-    
+        
     // Specific States
     const [prayerCategory, setPrayerCategory] = useState<typeof prayerRequestCategoriesList[number] | undefined>();
 
@@ -395,7 +394,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
     const resetFormState = () => {
         setContent(''); setTitle(''); setMediaUrls([]);
-        setIncidentAt('');
         setPrayerCategory(undefined);
         setError(''); setIsSubmitting(false);
         setIsUploading(false); setUploadStatus(null);
@@ -492,7 +490,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
 
         const commonData = {
             mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
-            incidentAt: incidentAt || undefined,
         };
 
         let formData: any;
@@ -604,23 +601,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, init
                             onChange={e => setTitle(e.target.value)}
                             className="w-full text-base font-semibold px-3 py-2 border border-slate-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white text-slate-900"
                         />
-                        <div>
-                            <label className="block text-xs font-medium text-slate-500 mb-1">
-                                📅 Incident date (optional)
-                            </label>
-                            <input
-                                type="date"
-                                value={incidentAt}
-                                onChange={(e) => setIncidentAt(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white text-slate-900"
-                            />
-                        </div>
                         <div className="relative">
                             <textarea
                                 ref={contentTextareaRef}
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                placeholder={postType === 'testimonial' ? "✨ Share what God has done..." : "🙏 Share your prayer request..."}
+                                placeholder={postType === 'testimonial' ? " Share what God has done..." : "🙏 Share your prayer request..."}
                                 className="w-full text-sm px-3 py-3 border border-slate-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 resize-none min-h-[130px] bg-white text-slate-900"
                                 rows={6}
                             />

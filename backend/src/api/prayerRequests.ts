@@ -1,43 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Prisma, prayerrequest, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
+import { Prisma, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -53,7 +17,7 @@ const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
 };
 
 const shapePrayerRequestForFrontend = (item: any): any => {
-    const { comment, ...rest } = item;
+    const { comment, prayer, ...rest } = item;
     const comments = Array.isArray(comment) ? comment.map((c: any) => ({
         id: c.id,
         itemId: rest.id,
@@ -69,9 +33,18 @@ const shapePrayerRequestForFrontend = (item: any): any => {
         editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
     })) : [];
     comments.sort((a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    const prayers = Array.isArray(prayer)
+        ? prayer.map((p: any) => ({
+            userId: p.userId,
+            userName: p.userName,
+            timestamp: p.timestamp ? new Date(p.timestamp).toISOString() : new Date().toISOString(),
+        }))
+        : [];
     return {
         ...rest,
         comments,
+        prayers,
+        submittedAt: rest.submittedAt ? new Date(rest.submittedAt).toISOString() : null,
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
     };
@@ -162,32 +135,46 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
 // POST to toggle a prayer on a request
 router.post('/:id/toggle-prayer', async (req, res) => {
     const { id: prayerRequestId } = req.params;
-    const { userId, userName } = req.body;
+    const { userId, userName, guestEmail, guestPhone } = req.body;
 
-    if (!userId || !userName) {
-        return res.status(400).json({ error: 'User ID and User Name are required.' });
+    const isLoggedIn = Boolean(userId);
+    const isGuest = !isLoggedIn && Boolean(guestEmail || guestPhone);
+
+    if (!isLoggedIn && !isGuest) {
+        return res.status(400).json({ error: 'User ID or guest email/phone is required to pray.' });
+    }
+
+    if (isLoggedIn && !userName) {
+        return res.status(400).json({ error: 'User Name is required.' });
     }
 
     try {
-        const existingPrayer = await prisma.prayer.findUnique({
-            where: {
-                userId_prayerRequestId: {
-                    userId,
-                    prayerRequestId,
+         const existingPrayer = isLoggedIn
+            ? await prisma.prayer.findUnique({
+                where: {
+                    userId_prayerRequestId: {
+                        userId,
+                        prayerRequestId,
+                    },
                 },
-            },
-        });
+            })
+            : await prisma.prayer.findFirst({
+                where: {
+                    prayerRequestId,
+                    ...(guestEmail ? { guestEmail } : {}),
+                    ...(guestPhone ? { guestPhone } : {}),
+                },
+            }); 
 
-        if (existingPrayer) {
-            // User has already prayed, so we "un-pray" by deleting the record
-            await prisma.prayer.delete({ where: { id: existingPrayer.id } });
-        } else {
-            // User has not prayed, so we create a new prayer record
+        if (!existingPrayer) {
             await prisma.prayer.create({
                 data: {
-                    id: crypto.randomUUID(), // REQUIRED in your schema
-                    userId,
-                    userName, // Storing userName for convenience, though it could be denormalized
+                    id: crypto.randomUUID(),
+                    userId: isLoggedIn ? userId : null,
+                    userName: isLoggedIn ? userName : 'Guest',
+                    guestEmail: isGuest ? (guestEmail || null) : null,
+                    guestPhone: isGuest ? (guestPhone || null) : null,
+                    isGuest,
                     prayerRequestId,
                 },
             });

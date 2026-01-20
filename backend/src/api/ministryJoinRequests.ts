@@ -30,18 +30,42 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        const newRequest = await prisma.ministryjoinrequest.create({
-            data: {
-                id: crypto.randomUUID(),
-                userId,
-                userName,
-                userEmail,
-                ministryId,
-                ministryName,
-                message: message || '',
-                ministryGuidelines: ministryGuidelines || '',
-                status: 'pending',
-            }
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(400).json({ error: 'User must be a registered account to submit a join request.' });
+        }
+
+        const requestId = crypto.randomUUID();
+        const newRequest = await prisma.$transaction(async (tx) => {
+            const created = await tx.ministryjoinrequest.create({
+                data: {
+                    id: requestId,
+                    userId,
+                    userName,
+                    userEmail,
+                    ministryId,
+                    ministryName,
+                    message: message || '',
+                    ministryGuidelines: ministryGuidelines || '',
+                    status: 'pending',
+                }
+            });
+
+            await tx.ministryjoinrequesthistory.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    requestId: created.id,
+                    userId: created.userId,
+                    userName: created.userName,
+                    userEmail: created.userEmail,
+                    ministryId: created.ministryId,
+                    ministryName: created.ministryName,
+                    status: created.status,
+                    action: 'submitted',
+                },
+            });
+
+            return created;
         });
         res.status(201).json(newRequest);
     } catch (error) {
@@ -52,20 +76,120 @@ router.post('/', async (req, res) => {
 // PUT to update a request's status
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
+    const { status, adminNotes, processedByAdminId, processedByAdminName } = req.body;
 
     if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
         return res.status(400).json({ error: 'A valid status is required.' });
     }
 
     try {
-        const updatedRequest = await prisma.ministryjoinrequest.update({
-            where: { id },
-            data: {
-                status,
-                adminNotes: adminNotes || undefined,
-                processedDate: new Date(),
+        const existingRequest = await prisma.ministryjoinrequest.findUnique({ where: { id } });
+        if (!existingRequest) {
+            return res.status(404).json({ error: 'Ministry join request not found.' });
+        }
+
+        const updatedRequest = await prisma.$transaction(async (tx) => {
+            const updated = await tx.ministryjoinrequest.update({
+                where: { id },
+                data: {
+                    status,
+                    adminNotes: adminNotes || undefined,
+                    processedDate: new Date(),
+                    processedByAdminId: processedByAdminId || undefined,
+                    processedByAdminName: processedByAdminName || undefined,
+                }
+            });
+
+            await tx.ministryjoinrequesthistory.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    requestId: updated.id,
+                    userId: updated.userId,
+                    userName: updated.userName,
+                    userEmail: updated.userEmail,
+                    ministryId: updated.ministryId,
+                    ministryName: updated.ministryName,
+                    status: updated.status,
+                    action: 'status_updated',
+                    adminNotes: adminNotes || undefined,
+                    performedByAdminId: processedByAdminId || undefined,
+                    performedByAdminName: processedByAdminName || undefined,
+                },
+            });
+
+            if (status === 'approved') {
+                const existingMember = await tx.ministrymember.findFirst({
+                    where: { userId: updated.userId },
+                });
+
+                if (!existingMember) {
+                    const createdMember = await tx.ministrymember.create({
+                        data: {
+                            id: crypto.randomUUID(),
+                            userId: updated.userId,
+                            userName: updated.userName,
+                            userEmail: updated.userEmail,
+                            ministryId: updated.ministryId,
+                            ministryName: updated.ministryName,
+                            membershipType: 'member',
+                            joinedAt: new Date(),
+                            updatedAt: new Date(),
+                        },
+                    });
+
+                    await tx.ministrymemberhistory.create({
+                        data: {
+                            id: crypto.randomUUID(),
+                            memberId: createdMember.id,
+                            userId: createdMember.userId,
+                            userName: createdMember.userName,
+                            userEmail: createdMember.userEmail,
+                            ministryId: createdMember.ministryId,
+                            ministryName: createdMember.ministryName,
+                            action: 'created',
+                            details: 'Approved join request.',
+                            performedByAdminId: processedByAdminId || undefined,
+                            performedByAdminName: processedByAdminName || undefined,
+                        },
+                    });
+                } else {
+                    const previousMinistryId = existingMember.ministryId;
+                    const previousMinistryName = existingMember.ministryName;
+                    const isMove = Boolean(previousMinistryId && previousMinistryId !== updated.ministryId);
+                    const updatedMember = await tx.ministrymember.update({
+                        where: { id: existingMember.id },
+                        data: {
+                            userId: updated.userId,
+                            userName: updated.userName,
+                            userEmail: updated.userEmail,
+                            ministryId: updated.ministryId,
+                            ministryName: updated.ministryName,
+                            membershipType: existingMember.membershipType || 'member',
+                            updatedAt: new Date(),
+                        },
+                    });
+
+                    await tx.ministrymemberhistory.create({
+                        data: {
+                            id: crypto.randomUUID(),
+                            memberId: updatedMember.id,
+                            userId: updatedMember.userId,
+                            userName: updatedMember.userName,
+                            userEmail: updatedMember.userEmail,
+                            ministryId: updatedMember.ministryId,
+                            ministryName: updatedMember.ministryName,
+                            previousMinistryId,
+                            previousMinistryName,
+                            action: isMove ? 'moved' : 'updated',
+                            details: isMove ? 'Approved join request and moved member.' : 'Approved join request.',
+                            performedByAdminId: processedByAdminId || undefined,
+                            performedByAdminName: processedByAdminName || undefined,
+                        },
+                    });
+                }
             }
+
+            return updated;
         });
         res.json(updatedRequest);
     } catch (error) {

@@ -25,7 +25,7 @@ const BlogPage: React.FC = () => {
         )}
 
         {!loadingContent && blogPosts.length > 0 && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="mx-auto flex max-w-4xl flex-col gap-8">
             {blogPosts.map((post: BlogPost) => ( 
               <BlogPostCard key={post.id} post={post} />
             ))}

@@ -2,6 +2,7 @@
 import { jsPDF } from 'jspdf';
 import { HistoryChapter } from '../../types';
 import { formatTimestampADBS, formatDateADBS } from '../../dateConverter';
+import { getMediaKindFromUrl } from '../../utils/media';
 
 const NotoSansDevanagariBase64: string = "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE"; 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustom'; 
@@ -160,7 +161,9 @@ export const generateChapterPdf = async (
   }
   yPos += 6;
 
-  if (chapter.imageUrl) {
+  const chapterMediaKind = getMediaKindFromUrl(chapter.imageUrl);
+
+  if (chapter.imageUrl && chapterMediaKind === 'image') {
     const imageData = await fetchImageAsBase64(chapter.imageUrl);
     if (imageData) {
       try {

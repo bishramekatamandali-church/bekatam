@@ -6,8 +6,9 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { HistoryChapter, HistoryChapterFormData, GenericContentFormData } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
+import { formatTimestampADBS } from '../../dateConverter';
 import { Link } from "react-router-dom";
+import { getMediaKindFromUrl } from '../../utils/media';
 
 const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${className}`}>
@@ -27,6 +28,10 @@ const ManageChurchHistoryPage: React.FC = () => {
   const sortedChapters = useMemo(() => 
     [...historyChapters].sort((a, b) => a.chapterNumber - b.chapterNumber), 
   [historyChapters]);
+  const nextChapterNumber = useMemo(() => {
+    if (historyChapters.length === 0) return 1;
+    return Math.max(...historyChapters.map((chapter) => chapter.chapterNumber || 0)) + 1;
+  }, [historyChapters]);
 
   const handleOpenModal = (chapter?: HistoryChapter) => {
     setEditingChapter(chapter || null);
@@ -73,11 +78,45 @@ const ManageChurchHistoryPage: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        {sortedChapters.map((chapter) => (
-          <Card key={chapter.id} className="flex flex-col sm:flex-row items-start">
-            {chapter.imageUrl && (
-                <img src={chapter.imageUrl} alt={chapter.title} className="w-full sm:w-48 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none"/>
-            )}
+        {sortedChapters.map((chapter) => {
+          const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
+          return (
+            <Card key={chapter.id} className="flex flex-col sm:flex-row items-start">
+              {chapter.imageUrl && (
+                <>
+                  {mediaKind === 'image' && (
+                    <img
+                      src={chapter.imageUrl}
+                      alt={chapter.title}
+                      className="w-full sm:w-48 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none"
+                    />
+                  )}
+                  {mediaKind === 'video' && (
+                    <video
+                      src={chapter.imageUrl}
+                      controls
+                      className="w-full sm:w-48 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none"
+                    />
+                  )}
+                  {mediaKind === 'audio' && (
+                    <div className="w-full sm:w-48 h-32 sm:h-auto flex items-center justify-center bg-slate-100 sm:rounded-l-xl sm:rounded-r-none">
+                      <audio src={chapter.imageUrl} controls className="w-full px-2" />
+                    </div>
+                  )}
+                  {mediaKind === 'other' && (
+                    <div className="w-full sm:w-48 h-32 sm:h-auto flex items-center justify-center bg-slate-100 sm:rounded-l-xl sm:rounded-r-none">
+                      <a
+                        href={chapter.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-purple-600 underline"
+                      >
+                        View uploaded file
+                      </a>
+                    </div>
+                  )}
+                </>
+              )}
             <div className="flex-grow p-4">
               <div className="flex justify-between items-start mb-1">
                 <h2 className="text-lg font-semibold text-slate-700" title={chapter.title}>
@@ -108,8 +147,9 @@ const ManageChurchHistoryPage: React.FC = () => {
               <Button variant="outline" size="sm" onClick={() => handleOpenModal(chapter)}>Edit</Button>
               <Button variant="secondary" size="sm" onClick={() => handleDelete(chapter.id)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
             </CardFooter>
-          </Card>
-        ))}
+           </Card>
+          );
+        })}
       </div>
 
       {isModalOpen && (
@@ -119,6 +159,7 @@ const ManageChurchHistoryPage: React.FC = () => {
           onSubmit={handleSubmit}
           contentType="historyChapter"
           initialData={editingChapter}
+          createDefaults={editingChapter ? undefined : { chapterNumber: nextChapterNumber }}
           isLoading={loadingContent}
         />
       )}

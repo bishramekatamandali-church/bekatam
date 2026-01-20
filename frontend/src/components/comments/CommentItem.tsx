@@ -6,39 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Comment } from '../../types';
 import { useContent } from '../../contexts/ContentContext';
@@ -50,7 +17,7 @@ import Button from '../ui/Button';
 
 interface CommentItemProps {
   comment: Comment;
-  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest';
+  itemType: 'event' | 'sermon' | 'blogPost' | 'historyChapter' | 'news' | 'prayerRequest' | 'testimonial';
   itemId: string;
 }
 

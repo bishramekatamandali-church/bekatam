@@ -5,7 +5,7 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { AboutSection, AboutSectionFormData, GenericContentFormData, CoreAboutSectionId, coreAboutSectionIds } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter'; 
+import { formatTimestampADBS } from '../../dateConverter'; 
 
 const EditIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-5 h-5 ${className}`}>
@@ -20,6 +20,34 @@ const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
 const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className || "w-5 h-5"}><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75H4.5a.75.75 0 000 1.5h11a.75.75 0 000-1.5H14A2.75 2.75 0 0011.25 1H8.75zM10 4.75a.75.75 0 01.75.75v7.5a.75.75 0 01-1.5 0v-7.5A.75.75 0 0110 4.75zM6.53 4.5c-.16 0-.313.006-.462.017L4.96 16.02A2.25 2.25 0 007.197 18.5h5.606a2.25 2.25 0 002.237-2.48l-1.108-11.504A3.001 3.001 0 0013.47 4.5H6.53z" clipRule="evenodd" /></svg>
 );
+
+const getMediaTypeFromUrl = (url: string) => {
+  const lower = url.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(lower)) {
+    return 'audio';
+  }
+  if (/\.(mp4|webm|mov|m4v)$/i.test(lower) || lower.includes('/video/')) {
+    return 'video';
+  }
+  return 'image';
+};
+
+const renderMediaPreview = (url: string, alt: string) => {
+  const mediaType = getMediaTypeFromUrl(url);
+  const sharedClassName = "w-full sm:w-48 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none";
+
+  if (mediaType === 'video') {
+    return <video src={url} controls className={sharedClassName} aria-label={alt} />;
+  }
+  if (mediaType === 'audio') {
+    return (
+      <div className="w-full sm:w-48 sm:h-auto sm:rounded-l-xl sm:rounded-r-none bg-slate-100 flex items-center justify-center p-2">
+        <audio src={url} controls className="w-full" aria-label={alt} />
+      </div>
+    );
+  }
+  return <img src={url} alt={alt} className={sharedClassName} />;
+};
 
 
 const ManageAboutSectionsPage: React.FC = () => {
@@ -92,7 +120,7 @@ const ManageAboutSectionsPage: React.FC = () => {
         {sortedSections.map((section) => (
           <Card key={section.id} className="flex flex-col sm:flex-row items-start">
             {section.imageUrl && (
-                <img src={section.imageUrl} alt={section.title} className="w-full sm:w-48 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none"/>
+                 renderMediaPreview(section.imageUrl, section.title)
             )}
             <div className="flex-grow p-4">
               <h2 className="text-lg font-semibold text-slate-700">{section.title}</h2>

@@ -113,7 +113,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen text-slate-800 font-sans">
       <Header installPrompt={installPrompt} onInstallClick={handleInstallClick} />
-      <div className="flex-grow container mx-auto flex flex-row">
+      <div className="flex-grow container mx-auto flex flex-row pt-4 lg:pt-0">
         {showSidebar && <Sidebar />}
         <main className="flex-grow min-w-0 p-0 sm:p-4">
           <Routes>

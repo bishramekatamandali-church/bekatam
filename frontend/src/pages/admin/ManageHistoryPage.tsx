@@ -6,13 +6,41 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { HistoryMilestone, HistoryMilestoneFormData, GenericContentFormData } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter'; 
+import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 
 const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${className}`}>
     <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H3.75a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
   </svg>
 );
+
+const getMediaTypeFromUrl = (url: string) => {
+  const lower = url.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(lower)) {
+    return 'audio';
+  }
+  if (/\.(mp4|webm|mov|m4v)$/i.test(lower) || lower.includes('/video/')) {
+    return 'video';
+  }
+  return 'image';
+};
+
+const renderMediaPreview = (url: string, alt: string) => {
+  const mediaType = getMediaTypeFromUrl(url);
+  const sharedClassName = "w-full sm:w-40 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none";
+
+  if (mediaType === 'video') {
+    return <video src={url} controls className={sharedClassName} aria-label={alt} />;
+  }
+  if (mediaType === 'audio') {
+    return (
+      <div className="w-full sm:w-40 sm:h-auto sm:rounded-l-xl sm:rounded-r-none bg-slate-100 flex items-center justify-center p-2">
+        <audio src={url} controls className="w-full" aria-label={alt} />
+      </div>
+    );
+  }
+  return <img src={url} alt={alt} className={sharedClassName} />;
+};
 
 const ManageHistoryPage: React.FC = () => {
   const { historyMilestones, addContent, updateContent, deleteContent, loadingContent } = useContent();
@@ -78,7 +106,7 @@ const ManageHistoryPage: React.FC = () => {
         {sortedMilestones.map((milestone) => (
           <Card key={milestone.id} className="flex flex-col sm:flex-row items-start">
             {milestone.imageUrl && (
-                <img src={milestone.imageUrl} alt={milestone.title} className="w-full sm:w-40 h-32 sm:h-auto object-cover sm:rounded-l-xl sm:rounded-r-none"/>
+                 renderMediaPreview(milestone.imageUrl, milestone.title)
             )}
             <div className="flex-grow p-4">
               <h2 className="text-lg font-semibold text-slate-700">{milestone.title} <span className="text-sm text-amber-600">({milestone.year})</span></h2>

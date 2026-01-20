@@ -152,12 +152,14 @@ model comment {
   newsItemId          String?
   historyChapterId    String?
   prayerRequestId     String?
+  testimonialId       String?
   blogpost            blogpost?       @relation(fields: [blogPostId], references: [id], onDelete: Cascade, map: "Comment_blogPostId_fkey")
   eventitem           eventitem?      @relation(fields: [eventId], references: [id], onDelete: Cascade, map: "Comment_eventId_fkey")
   historychapter      historychapter? @relation(fields: [historyChapterId], references: [id], onDelete: Cascade, map: "Comment_historyChapterId_fkey")
   newsitem            newsitem?       @relation(fields: [newsItemId], references: [id], onDelete: Cascade, map: "Comment_newsItemId_fkey")
   prayerrequest       prayerrequest?  @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Comment_prayerRequestId_fkey")
   sermon              sermon?         @relation(fields: [sermonId], references: [id], onDelete: Cascade, map: "Comment_sermonId_fkey")
+  testimonial         testimonial?    @relation(fields: [testimonialId], references: [id], onDelete: Cascade, map: "Comment_testimonialId_fkey")
   user                user?           @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Comment_userId_fkey")
 
   @@index([blogPostId], map: "Comment_blogPostId_fkey")
@@ -166,6 +168,7 @@ model comment {
   @@index([newsItemId], map: "Comment_newsItemId_fkey")
   @@index([prayerRequestId], map: "Comment_prayerRequestId_fkey")
   @@index([sermonId], map: "Comment_sermonId_fkey")
+  @@index([testimonialId], map: "Comment_testimonialId_fkey")
   @@index([userId], map: "Comment_userId_fkey")
 }
 
@@ -512,6 +515,7 @@ model ministry {
   leader              String?
   meetingTime         String?
   ministryjoinrequest ministryjoinrequest[]
+  ministrymember      ministrymember[]
 }
 
 model ministryjoinrequest {
@@ -527,11 +531,63 @@ model ministryjoinrequest {
   status             ministryjoinrequest_status @default(pending)
   processedDate      DateTime?
   adminNotes         String?                    @db.Text
+  processedByAdminId String?
+  processedByAdminName String?
   ministry           ministry                   @relation(fields: [ministryId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_ministryId_fkey")
   user               user                       @relation(fields: [userId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_userId_fkey")
 
   @@index([ministryId], map: "MinistryJoinRequest_ministryId_fkey")
   @@index([userId], map: "MinistryJoinRequest_userId_fkey")
+}
+
+model ministrymember {
+  id               String   @id
+  userId           String?
+  userName         String
+  userEmail        String
+  ministryId       String?
+  ministryName     String
+  membershipType   String
+  joinedAt         DateTime @default(now())
+  updatedAt        DateTime
+  user             user?    @relation(fields: [userId], references: [id], onDelete: SetNull, map: "MinistryMember_userId_fkey")
+  ministry         ministry? @relation(fields: [ministryId], references: [id], onDelete: SetNull, map: "MinistryMember_ministryId_fkey")
+
+  @@index([userId], map: "MinistryMember_userId_fkey")
+  @@index([ministryId], map: "MinistryMember_ministryId_fkey")
+}
+
+model ministrymemberhistory {
+  id                    String                       @id
+  timestamp             DateTime                     @default(now())
+  memberId              String?
+  userId                String?
+  userName              String
+  userEmail             String
+  ministryId            String?
+  ministryName          String
+  previousMinistryId    String?
+  previousMinistryName  String?
+  action                ministrymemberhistory_action
+  details               String?                      @db.Text
+  performedByAdminId    String?
+  performedByAdminName  String?
+}
+
+model ministryjoinrequesthistory {
+  id                    String                            @id
+  timestamp             DateTime                          @default(now())
+  requestId             String
+  userId                String?
+  userName              String
+  userEmail             String
+  ministryId            String?
+  ministryName          String
+  status                ministryjoinrequest_status
+  action                ministryjoinrequesthistory_action
+  adminNotes            String?                           @db.Text
+  performedByAdminId    String?
+  performedByAdminName  String?
 }
 
 model newsitem {
@@ -567,14 +623,19 @@ model notification {
 
 model prayer {
   id              String        @id
-  userId          String
+  userId          String?
   userName        String
+  guestEmail      String?
+  guestPhone      String?
+  isGuest         Boolean       @default(false)
   timestamp       DateTime      @default(now())
   prayerRequestId String
   prayerrequest   prayerrequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade, map: "Prayer_prayerRequestId_fkey")
-  user            user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Prayer_userId_fkey")
+  user            user?         @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Prayer_userId_fkey")
 
   @@unique([userId, prayerRequestId], map: "Prayer_userId_prayerRequestId_key")
+  @@unique([guestEmail, prayerRequestId], map: "Prayer_guestEmail_prayerRequestId_key")
+  @@unique([guestPhone, prayerRequestId], map: "Prayer_guestPhone_prayerRequestId_key")
   @@index([prayerRequestId], map: "Prayer_prayerRequestId_fkey")
 }
 
@@ -654,8 +715,10 @@ model testimonial {
   postedByAdminName   String?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime
+  likes               Int                    @default(0)
   mediaUrls           Json?
   location            String?
+  comment             comment[]
   user                user                   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Testimonial_userId_fkey")
 
   @@index([userId], map: "Testimonial_userId_fkey")
@@ -697,6 +760,7 @@ model user {
   prayerrequest                     prayerrequest[]
   testimonial                       testimonial[]
   contentlike                       contentlike[]
+  ministrymember                    ministrymember[]
 }
 
 enum fellowshiprosteritem_rosterType {
@@ -949,6 +1013,18 @@ enum ministryjoinrequest_status {
   pending
   approved
   rejected
+}
+
+enum ministrymemberhistory_action {
+  created
+  updated
+  moved
+  deleted
+}
+
+enum ministryjoinrequesthistory_action {
+  submitted
+  status_updated
 }
 
 enum donationrecord_paymentMethod {
