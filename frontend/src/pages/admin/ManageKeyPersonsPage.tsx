@@ -4,13 +4,39 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { KeyPerson, KeyPersonFormData, GenericContentFormData } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter'; 
 
 const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${className}`}>
     <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H3.75a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
   </svg>
 );
+
+const getMediaTypeFromUrl = (url: string) => {
+  const lower = url.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(lower)) {
+    return 'audio';
+  }
+  if (/\.(mp4|webm|mov|m4v)$/i.test(lower) || lower.includes('/video/')) {
+    return 'video';
+  }
+  return 'image';
+};
+
+const renderMediaPreview = (url: string, alt: string) => {
+  const mediaType = getMediaTypeFromUrl(url);
+
+  if (mediaType === 'video') {
+    return <video src={url} controls className="w-full h-48 object-cover" aria-label={alt} />;
+  }
+  if (mediaType === 'audio') {
+    return (
+      <div className="w-full bg-slate-100 p-2">
+        <audio src={url} controls className="w-full" aria-label={alt} />
+      </div>
+    );
+  }
+  return <img src={url} alt={alt} className="w-full h-48 object-cover" />;
+};
 
 const ManageKeyPersonsPage: React.FC = () => {
   const { keyPersons, addContent, updateContent, deleteContent, loadingContent } = useContent();
@@ -64,7 +90,7 @@ const ManageKeyPersonsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {keyPersons.map((person) => (
           <Card key={person.id} className="flex flex-col">
-            {person.imageUrl && <img src={person.imageUrl} alt={person.name} className="w-full h-48 object-cover"/>}
+            {person.imageUrl && renderMediaPreview(person.imageUrl, person.name)}
             <CardHeader className="flex-grow">
               <h2 className="text-lg font-semibold text-slate-700 truncate" title={person.name}>{person.name}</h2>
               <p className="text-sm text-amber-600">{person.role}</p>

@@ -115,7 +115,7 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
       case 'image': return 'image/png, image/jpeg, image/gif, image/webp';
       case 'video': return 'video/mp4,video/webm,video/quicktime';
       case 'audio': return 'audio/mpeg,audio/wav,audio/webm,audio/mp3';
-      case 'any': return 'image/png, image/jpeg, image/gif, image/webp,video/mp4,video/webm,video/quicktime';
+      case 'any': return 'image/png, image/jpeg, image/gif, image/webp,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/webm,audio/mp3';
       default: return '*/*';
     }
   };

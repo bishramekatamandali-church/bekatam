@@ -1,12 +1,10 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useContent } from '../contexts/ContentContext';
-import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
-import SocialIcons from '../components/ui/SocialIcons'; 
+import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import { AboutSection, KeyPerson, HistoryMilestone, CoreAboutSectionId, coreAboutSectionIds, HistoryChapter } from '../types';
 import Button from '../components/ui/Button';
-import { Link, useLocation } from "react-router-dom";
-import { formatTimestampADBS, formatDateADBS } from '../dateConverter';
+import { useLocation } from "react-router-dom";
 
 // --- Icons ---
 const BookOpenIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -14,11 +12,61 @@ const BookOpenIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 // --- End Icons ---
 
+const getMediaTypeFromUrl = (url: string) => {
+  const lower = url.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(lower)) {
+    return 'audio';
+  }
+  if (/\.(mp4|webm|mov|m4v)$/i.test(lower) || lower.includes('/video/')) {
+    return 'video';
+  }
+  return 'image';
+};
+
+const AboutMedia: React.FC<{
+  url: string;
+  alt: string;
+  className?: string;
+  mediaClassName?: string;
+  rounded?: boolean;
+}> = ({ url, alt, className, mediaClassName, rounded }) => {
+  const mediaType = getMediaTypeFromUrl(url);
+  const roundedClass = rounded ? 'rounded-full' : 'rounded-lg';
+
+  if (mediaType === 'video') {
+    return (
+      <div className={className}>
+        <video src={url} controls className={`${roundedClass} ${mediaClassName || ''}`} aria-label={alt} />
+      </div>
+    );
+  }
+
+  if (mediaType === 'audio') {
+    return (
+      <div className={className}>
+        <audio src={url} controls className={mediaClassName || 'w-full'} aria-label={alt} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <img src={url} alt={alt} className={`${roundedClass} ${mediaClassName || ''}`} />
+    </div>
+  );
+};
+
 const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => (
   <Card className="text-center h-full flex flex-col">
     <CardContent className="flex-grow flex flex-col">
       {person.imageUrl && (
-        <img src={person.imageUrl} alt={person.name} className="w-24 h-24 rounded-full mx-auto mb-4 object-cover shadow-lg" />
+        <AboutMedia
+          url={person.imageUrl}
+          alt={person.name}
+          className="mx-auto mb-4"
+          mediaClassName="w-24 h-24 object-cover shadow-lg"
+          rounded
+        />
       )}
       <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
       <p className="text-purple-600 font-medium mb-2">{person.role}</p>
@@ -26,12 +74,6 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => (
     </CardContent>
   </Card>
 );
-
-const connectSocialLinks = [
-    { platform: 'facebook', url: 'https://facebook.com/yourchurchpage', label: 'BEM Church on Facebook' },
-    { platform: 'youtube', url: 'https://youtube.com/yourchurchchannel', label: 'BEM Church on YouTube' },
-    { platform: 'instagram', url: 'https://instagram.com/yourchurchprofile', label: 'BEM Church on Instagram' },
-];
 
 const AboutPage: React.FC = () => {
   const { aboutSections, keyPersons, historyMilestones, loadingContent, historyChapters } = useContent();
@@ -93,7 +135,12 @@ const AboutPage: React.FC = () => {
                   </div>
                   {section.imageUrl && (
                     <div className={`h-64 md:h-full ${isImageRight ? 'md:order-1' : ''}`}>
-                      <img src={section.imageUrl} alt={section.title} className="w-full h-full object-cover"/>
+                      <AboutMedia
+                        url={section.imageUrl}
+                        alt={section.title}
+                        className="h-full"
+                        mediaClassName="w-full h-full object-cover"
+                      />
                     </div>
                   )}
                 </div>
@@ -156,25 +203,6 @@ const AboutPage: React.FC = () => {
         )}
       </div>
 
-      <section id="connect-with-us" className="scroll-mt-20 text-center py-16">
-        <div className="max-w-2xl mx-auto">
-            <Card>
-                <CardHeader className="border-b-0 pb-2">
-                    <h2 className="text-3xl font-bold text-slate-800">Connect With Us</h2>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="text-slate-600">
-                        <p>Gauri Marg, Sinamangal, Kathmandu</p>
-                        <p><a href="mailto:shahidsingh1432@gmail.com" className="hover:text-purple-600 transition-colors">shahidsingh1432@gmail.com</a></p>
-                        <p><a href="tel:+9779865272258" className="hover:text-purple-600 transition-colors">+977-9865272258</a></p>
-                    </div>
-                    <div className="mt-4 flex justify-center">
-                        <SocialIcons links={connectSocialLinks} iconClassName="text-slate-500 hover:text-purple-600 transition-colors w-8 h-8" />
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-      </section>
     </div>
   );
 };
