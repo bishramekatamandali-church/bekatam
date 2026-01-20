@@ -5,14 +5,13 @@ import { BlogPost } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import ShareModal from '../ui/ShareModal';
-import CommentModal from '../ui/CommentModal'; 
 import AuthModal from '../auth/AuthModal'; 
 import { useAuth } from '../../contexts/AuthContext'; 
 import { useContent } from '../../contexts/ContentContext'; 
 import { formatDateADBS } from '../../dateConverter'; 
 import useAITranslate from '../../../src/hooks/useAITranslate';
 import CommentItem from '../comments/CommentItem';
-import { ChatBubbleLeftRightIcon, HandThumbUpIcon as HandThumbUpIconOutline, ShareIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftEllipsisIcon, HandThumbUpIcon as HandThumbUpIconOutline, ShareIcon } from '@heroicons/react/24/outline';
 import { HandThumbUpIcon as HandThumbUpIconSolid } from '@heroicons/react/24/solid';
 
 // Icons
@@ -32,12 +31,14 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
   const { logContentActivity, addCommentToItem, toggleLikeOnItem } = useContent(); 
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [likeCount, setLikeCount] = useState(post.likes || 0);
   const [isLiked, setIsLiked] = useState(post.likedByMe ?? false); 
   const [showComments, setShowComments] = useState(false); 
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const { translatedText: title } = useAITranslate(post.title, 'en'); // Target language doesn't matter now
   const { translatedText: description } = useAITranslate(post.description, 'en');
@@ -78,22 +79,25 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
      setShowComments(prev => !prev);
   };
 
-  const handleAddCommentClick = () => {
-    if (!isAuthenticated) {
+  const handleSubmitComment = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!currentUser) {
       setIsAuthModalOpen(true);
       return;
     }
-    setIsCommentModalOpen(true);
-  };
-
-  const handleSubmitComment = async (commentText: string) => {
-    if (!currentUser) return;
-    const newComment = await addCommentToItem(post.id, 'blogPost', commentText);
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) {
+      setCommentError('Please enter a comment before submitting.');
+      return;
+    }
+    setIsSubmittingComment(true);
+    setCommentError(null);
+    const newComment = await addCommentToItem(post.id, 'blogPost', trimmedComment);
+    setIsSubmittingComment(false);
     if (newComment) {
-      alert(`Comment submitted for "${post.title}"`);
-      setIsCommentModalOpen(false);
+      setCommentText('');
     } else {
-      alert(`Failed to submit comment for "${post.title}"`);
+      setCommentError('Failed to submit comment. Please try again.');
     }
   };
   
@@ -136,7 +140,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
                 {likeCount} <span className="ml-1 hidden sm:inline">Like</span>
             </Button>
             <Button variant="ghost" onClick={handleCommentClick} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-slate-200" aria-label="Comment on post">
-                <ChatBubbleLeftRightIcon className="w-5 h-5 mr-1.5" />
+                <ChatBubbleLeftEllipsisIcon className="w-5 h-5 mr-1.5" />
                 {commentCount} <span className="ml-1 hidden sm:inline">Comment</span>
             </Button>
             <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-slate-200" aria-label="Share post">
@@ -155,9 +159,31 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
               )}
             </div>
             <div className="mt-3 pt-3 border-t border-slate-200">
-              <Button onClick={handleAddCommentClick} size="sm" variant="primary" className="w-full">
-                Add a Comment
-              </Button>
+              <form onSubmit={handleSubmitComment} className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-600">Add a comment</label>
+                <textarea
+                  value={commentText}
+                  onChange={(event) => {
+                    setCommentText(event.target.value);
+                    if (commentError) {
+                      setCommentError(null);
+                    }
+                  }}
+                  rows={3}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="Write your comment here..."
+                />
+                {commentError && <p className="text-xs text-red-500">{commentError}</p>}
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="primary"
+                  className="w-full"
+                  disabled={isSubmittingComment}
+                >
+                  {isSubmittingComment ? 'Submitting...' : 'Submit Comment'}
+                </Button>
+              </form>
             </div>
           </div>
         )}
@@ -170,12 +196,6 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
         title={`Share "${title}"`}
         url={detailUrl} 
         eventTitle={title} 
-      />
-      <CommentModal
-        isOpen={isCommentModalOpen}
-        onClose={() => setIsCommentModalOpen(false)}
-        eventTitle={title} 
-        onSubmitComment={handleSubmitComment}
       />
     </>
   );
