@@ -132,8 +132,10 @@ const ChurchHistoryPage: React.FC = () => {
             </p>
         ) : (
           <div className="space-y-12">
-            {publishedChapters.map(chapter => (
-              <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
+            {publishedChapters.map(chapter => {
+              const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
+              return (
+                <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
                 <CardHeader className="dark:border-slate-700">
                     <div className="flex justify-between items-start">
                         <div>
@@ -241,6 +243,7 @@ import CommentItem from '../components/comments/CommentItem';
 import LoadingSpinner from './../components/ui/LoadingSpinner';
 import ChapterActions from '../components/history/ChapterActions';
 import useInteractionHandlers from './../hooks/useInteractionHandlers';
+import { getMediaKindFromUrl } from '../utils/media';
 
 const ChurchHistoryPage: React.FC = () => {
   const { historyChapters, loadingContent } = useContent();
@@ -304,8 +307,10 @@ const ChurchHistoryPage: React.FC = () => {
           </p>
         ) : (
           <div className="space-y-12">
-            {publishedChapters.map(chapter => (
-              <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
+            {publishedChapters.map(chapter => {
+              const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
+              return (
+                <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
                 <Card.Header>
                   <div className="flex justify-between items-start">
                     <div>
@@ -334,7 +339,35 @@ const ChurchHistoryPage: React.FC = () => {
                 </Card.Header>
                 <Card.Content>
                   {chapter.imageUrl && (
-                    <img src={chapter.imageUrl} alt={chapter.title} className="w-full max-h-[450px] object-cover rounded-lg shadow mb-6" />
+                    <>
+                      {mediaKind === 'image' && (
+                        <img
+                          src={chapter.imageUrl}
+                          alt={chapter.title}
+                          className="w-full max-h-[450px] object-cover rounded-lg shadow mb-6"
+                        />
+                      )}
+                      {mediaKind === 'video' && (
+                        <video
+                          src={chapter.imageUrl}
+                          controls
+                          className="w-full max-h-[450px] rounded-lg shadow mb-6"
+                        />
+                      )}
+                      {mediaKind === 'audio' && (
+                        <audio src={chapter.imageUrl} controls className="w-full mb-6" />
+                      )}
+                      {mediaKind === 'other' && (
+                        <a
+                          href={chapter.imageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center text-sm text-purple-600 underline mb-6"
+                        >
+                          View uploaded file
+                        </a>
+                      )}
+                    </>
                   )}
                   <div className="prose dark:prose-invert max-w-none whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">
                     {chapter.content}
@@ -371,8 +404,9 @@ const ChurchHistoryPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
             {commentSuccessMessage && (
               <div className="text-green-600 dark:text-green-400 text-center mt-6">{commentSuccessMessage}</div>
             )}
