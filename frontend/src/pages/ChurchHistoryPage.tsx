@@ -231,7 +231,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useContent } from '../contexts/ContentContext';
 import { useAuth } from '../contexts/AuthContext';
 import { HistoryChapter } from '../types';
-import Card from '../components/ui/Card';
+import Card, { CardContent, CardFooter, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AuthModal from '../components/auth/AuthModal';
 import CommentModal from '../components/ui/CommentModal';
@@ -311,7 +311,7 @@ const ChurchHistoryPage: React.FC = () => {
               const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
               return (
                 <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
-                <Card.Header>
+                <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">Chapter {chapter.chapterNumber}</span>
@@ -336,8 +336,8 @@ const ChurchHistoryPage: React.FC = () => {
                       <span>Published: {formatDateADBS(chapter.lastPublishedAt)}</span>
                     )}
                   </div>
-                </Card.Header>
-                <Card.Content>
+                </CardHeader>
+                <CardContent>
                   {chapter.imageUrl && (
                     <>
                       {mediaKind === 'image' && (
@@ -372,8 +372,8 @@ const ChurchHistoryPage: React.FC = () => {
                   <div className="prose dark:prose-invert max-w-none whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">
                     {chapter.content}
                   </div>
-                </Card.Content>
-                <Card.Footer>
+                </CardContent>
+                <CardFooter>
                   <ChapterActions
                     chapter={chapter}
                     isAuthenticated={isAuthenticated}
@@ -391,7 +391,7 @@ const ChurchHistoryPage: React.FC = () => {
                     isLiked={tempIsLiked[chapter.id]}
                     commentsCount={chapter.comments.length}
                   />
-                </Card.Footer>
+                </CardFooter>
                 {chapter.comments.length > 0 && (
                   <div className="p-4 sm:p-6 border-t dark:border-slate-700">
                     <h4 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-3">
