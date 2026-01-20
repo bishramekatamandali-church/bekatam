@@ -1,16 +1,14 @@
-
-
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { EventItem } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
 import ShareModal from '../ui/ShareModal';
-import CommentModal from '../ui/CommentModal'; 
 import AuthModal from '../auth/AuthModal'; 
 import { useAuth } from '../../contexts/AuthContext'; 
 import { useContent } from '../../contexts/ContentContext'; 
 import { formatDateADBS } from '../../dateConverter'; 
+import { ChatBubbleLeftRightIcon, ShareIcon } from '@heroicons/react/24/outline';
 
 // Icon components
 export const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -27,12 +25,6 @@ export const MapPinIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ChatBubbleOvalLeftEllipsisIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25a9.765 9.765 0 01-1.935-.274A7.707 7.707 0 0012 15.75a7.71 7.71 0 00-3.935 1.085A9.754 9.754 0 013 12c0-4.556-3.86-8.25 8.625-8.25S21 7.444 21 12z" /></svg>
-);
-const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.195.025.383.05.571.078m-1.571 2.032c.195.025.383.05.571.078m13.48 0a2.25 2.25 0 01-.621 1.628l-3.029 3.028a2.25 2.25 0 01-3.182 0l-3.029-3.028a2.25 2.25 0 01-.621-1.628m13.48 0L19.25 12l-1.521-.078m13.48 0c0 2.042-.832 3.901-2.186 5.256L16.5 21.75m1.217-9.843c-.195-.025-.383-.05-.571-.078m-1.571-2.032c-.195-.025-.383-.05-.571-.078m-1.412 5.690c.195.025.383.05.571.078" /></svg>
-);
 
 const getYouTubeEmbedUrl = (url?: string): string | null => {
     if (!url) return null;
@@ -66,8 +58,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
   const { addCommentToItem, getContentById } = useContent(); 
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isCommentFormOpen, setIsCommentFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   
   const [currentEventData, setCurrentEventData] = useState(event); 
   const locationDisplay =
@@ -81,16 +75,22 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
       setIsAuthModalOpen(true);
       return;
     }
-    setIsCommentModalOpen(true);
+    setIsCommentFormOpen((prev) => !prev);
   };
 
-  const handleSubmitComment = async (commentText: string) => {
+  const handleSubmitComment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) return;
     if (!currentUser) return;
-    const newComment = await addCommentToItem(currentEventData.id, 'event', commentText);
+    setIsSubmittingComment(true);
+    const newComment = await addCommentToItem(currentEventData.id, 'event', trimmedComment);
+    setIsSubmittingComment(false);
     if (newComment) {
       const updatedEvent = getContentById('event', currentEventData.id) as EventItem | undefined;
       if(updatedEvent) setCurrentEventData(updatedEvent);
-      setIsCommentModalOpen(false);
+      setCommentText('');
+      setIsCommentFormOpen(false);
     } else {
       alert(`Failed to submit comment for "${currentEventData.title}"`);
     }
@@ -166,8 +166,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
         <CardFooter className={`flex ${isPastEvent ? 'justify-between items-center flex-wrap gap-1 sm:gap-2' : 'justify-start'} bg-purple-100 border-t border-purple-200`}>
           {isPastEvent ? (
             <>
-              <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Comment on event">
-                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1" /> 
+              <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Comment on event" aria-expanded={isCommentFormOpen}>
+                <ChatBubbleLeftRightIcon className="w-5 h-5 mr-1" /> 
                 {commentCount > 0 ? commentCount : ''} <span className="sr-only sm:not-sr-only ml-1">Comment</span>
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Share event">
@@ -181,6 +181,36 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
             </Button>
           )}
         </CardFooter>
+        {isPastEvent && isCommentFormOpen && (
+          <div className="border-t border-purple-200 bg-white px-4 pb-4 pt-3 dark:border-slate-700 dark:bg-slate-900">
+            <form onSubmit={handleSubmitComment} className="space-y-3">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300" htmlFor={`event-comment-${currentEventData.id}`}>
+                Add a comment
+              </label>
+              <textarea
+                id={`event-comment-${currentEventData.id}`}
+                value={commentText}
+                onChange={(event) => setCommentText(event.target.value)}
+                rows={3}
+                className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                placeholder="Share your thoughts about this event."
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => setIsCommentFormOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit" disabled={isSubmittingComment}>
+                  {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
       </Card>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
@@ -193,12 +223,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isFeatured = false, isPast
             title={`Share "${currentEventData.title}"`}
             url={detailUrl} 
             eventTitle={currentEventData.title}
-          />
-          <CommentModal
-            isOpen={isCommentModalOpen}
-            onClose={() => setIsCommentModalOpen(false)}
-            eventTitle={currentEventData.title}
-            onSubmitComment={handleSubmitComment}
           />
         </>
       )}

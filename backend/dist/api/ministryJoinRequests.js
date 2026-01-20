@@ -35,6 +35,22 @@ router.post('/', async (req, res) => {
         if (!user) {
             return res.status(400).json({ error: 'User must be a registered account to submit a join request.' });
         }
+        const existingRequest = await db_1.prisma.ministryjoinrequest.findFirst({
+            where: {
+                userId,
+                ministryId,
+                status: {
+                    in: ['pending', 'approved'],
+                },
+            },
+            orderBy: { requestDate: 'desc' },
+        });
+        if (existingRequest) {
+            const message = existingRequest.status === 'approved'
+                ? 'Your ministry join request has already been approved.'
+                : 'Your ministry join request is already submitted and under review.';
+            return res.status(409).json({ error: message, existingRequest });
+        }
         const requestId = crypto_1.default.randomUUID();
         const newRequest = await db_1.prisma.$transaction(async (tx) => {
             const created = await tx.ministryjoinrequest.create({

@@ -1380,7 +1380,7 @@ export interface ContentContextType {
   addMinistryJoinRequest: (
     data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>, 
     ministry: Ministry
-  ) => Promise<MinistryJoinRequest | null>;
+  ) => Promise<{ request: MinistryJoinRequest | null; message?: string }>;
   updateMinistryJoinRequestStatus: (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => Promise<boolean>;
   getMinistryJoinRequestsForUser: (userId: string) => MinistryJoinRequest[];
 
@@ -1433,7 +1433,14 @@ export type NotificationAddData = Omit<Notification, 'id' | 'timestamp' | 'read'
 export interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  activeUserId: string;
+  isGuest: boolean;
+  lastSeenContent: string | null;
   addNotification: (notificationData: NotificationAddData) => void;
+  addGuestNotification: (notificationData: NotificationAddData) => void;
+  replaceNotificationsForUser: (userId: string, notifications: Notification[]) => void;
+  updateLastSeenContent: (timestamp: string) => void;
+  pruneSeenNotifications: (sinceTimestamp?: string | null) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void; 
   loadingNotifications: boolean;

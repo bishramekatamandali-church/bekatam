@@ -1,17 +1,17 @@
+ 
 import React, { useState } from 'react';
 import { useParams, Link } from "react-router-dom"; 
 import { useContent } from '../contexts/ContentContext';
 import { useAuth } from '../contexts/AuthContext';
-import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
+import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AuthModal from '../components/auth/AuthModal';
-import CommentModal from '../components/ui/CommentModal'; 
 import ShareModal from '../components/ui/ShareModal';
 import { EventItem, Comment as CommentType } from '../types'; 
-import { formatDateADBS, formatTimestampADBS } from '../dateConverter';
+import { formatDateADBS } from '../dateConverter';
 import AdSlot from '../components/ads/AdSlot';
 import CommentItem from '../components/comments/CommentItem';
-import { ChatBubbleOvalLeftEllipsisIcon } from '../components/icons/GenericIcons';
+import { ChatBubbleLeftRightIcon, ShareIcon } from '@heroicons/react/24/outline';
 
 // Icons (can be centralized)
 const CalendarDaysIconSolid: React.FC<{ className?: string }> = ({ className }) => (
@@ -31,9 +31,6 @@ const UserCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${className}`}><path d="M1.5 8.67v.58a3 3 0 003 3V15a3 3 0 003 3h12a3 3 0 003-3v-2.75a3 3 0 003-3V8.67L19.09 12l-2.56 3.33a.75.75 0 01-1.11-.09l-1.301-1.71a.75.75 0 00-1.11-.09L10.5 16.94a.75.75 0 01-1.11-.09L6.09 12l-2.677-3.33A3.001 3.001 0 001.5 8.67z" /><path d="M1.5 6.75a3 3 0 013-3h15a3 3 0 013 3v.089c-.54-.393-1.13-.69-1.78-.907L19.5 3.75h-15l-.97.974A2.983 2.983 0 001.5 6.75z" /></svg>
-);
-const ShareIconUI: React.FC<{ className?: string }> = ({ className }) => ( 
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.195.025.383.05.571.078m-1.571 2.032c.195.025.383.05.571.078m13.48 0a2.25 2.25 0 01-.621 1.628l-3.029 3.028a2.25 2.25 0 01-3.182 0l-3.029-3.028a2.25 2.25 0 01-.621-1.628m13.48 0L19.25 12l-1.521-.078m13.48 0c0 2.042-.832 3.901-2.186 5.256L16.5 21.75m1.217-9.843c-.195-.025-.383-.05-.571-.078m-1.571-2.032c-.195-.025-.383-.05-.571-.078m-1.412 5.690c.195.025.383.05.571.078" /></svg>
 );
 const getYouTubeEmbedUrl = (url?: string): string | null => {
   if (!url) return null;
@@ -59,9 +56,10 @@ const SingleEventPage: React.FC = () => {
 
   const [event, setEvent] = React.useState<EventItem | undefined>(undefined);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isCommentFormOpen, setIsCommentFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentText, setCommentText] = useState('');
 
   React.useEffect(() => {
     if (eventId && !loadingContent) {
@@ -72,15 +70,21 @@ const SingleEventPage: React.FC = () => {
 
   const handleAddCommentClick = () => {
     if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
-    setIsCommentModalOpen(true);
+    setIsCommentFormOpen((prev) => !prev);
   };
 
-  const handleSubmitComment = async (commentText: string) => {
+  const handleSubmitComment = async (formEvent: React.FormEvent) => {
+    formEvent.preventDefault();
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) return;
     if (!event || !currentUser) return;
     setIsSubmittingComment(true);
-    const newComment = await addCommentToItem(event.id, 'event', commentText);
+    const newComment = await addCommentToItem(event.id, 'event', trimmedComment);
     setIsSubmittingComment(false);
-    if (newComment) { setIsCommentModalOpen(false); } 
+    if (newComment) {
+      setCommentText('');
+      setIsCommentFormOpen(false);
+    } 
     else { alert("There was an issue submitting your comment. Please try again."); }
   };
 
@@ -243,9 +247,39 @@ const SingleEventPage: React.FC = () => {
               </div>
             )}
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex justify-around items-center">
-                <Button variant="ghost" onClick={handleAddCommentClick} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
-                <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ShareIconUI className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span></Button>
+                <Button variant="ghost" onClick={handleAddCommentClick} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400" aria-expanded={isCommentFormOpen}><ChatBubbleLeftRightIcon className="w-5 h-5 mr-1.5" /> {currentCommentCount} <span className="ml-1 hidden sm:inline">Comment</span></Button>
+                <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 dark:text-slate-300 hover:text-purple-500 dark:hover:text-purple-400"><ShareIcon className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span></Button>
             </div>
+            {isCommentFormOpen && (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <form onSubmit={handleSubmitComment} className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-300" htmlFor="event-comment-input">
+                    Add a comment
+                  </label>
+                  <textarea
+                    id="event-comment-input"
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    rows={4}
+                    className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Share your thoughts about this event."
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={() => setIsCommentFormOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" type="submit" disabled={isSubmittingComment}>
+                      {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
             <div className="mt-8 pt-6 border-t dark:border-slate-700"><h3 className="text-xl font-semibold text-gray-700 dark:text-slate-200 mb-4">Comments ({currentCommentCount})</h3>{event.comments && event.comments.length > 0 ? (<div className="space-y-4">{event.comments.slice().sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((comment: CommentType) => (<CommentItem key={comment.id} comment={comment} itemType="event" itemId={event.id} />))}</div>) : (<p className="text-slate-500 dark:text-slate-400 text-center py-4">No comments yet. Be the first to share your thoughts!</p>)}</div>
             <AdSlot placementKey="single_page_bottom" className="mt-8" />
           </CardContent>
@@ -254,9 +288,8 @@ const SingleEventPage: React.FC = () => {
       </div>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title={`Share "${event.title}"`} url={detailUrl} eventTitle={event.title}/>
-      {isCommentModalOpen && event && (<CommentModal isOpen={isCommentModalOpen} onClose={() => setIsCommentModalOpen(false)} eventTitle={event.title} onSubmitComment={handleSubmitComment} isSubmitting={isSubmittingComment}/>)}
     </div>
   );
 };
 
-export default SingleEventPage;
+export default SingleEventPage; 

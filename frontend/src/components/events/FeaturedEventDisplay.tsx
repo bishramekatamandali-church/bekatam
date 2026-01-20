@@ -1,12 +1,8 @@
-
-
-
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { EventItem } from '../../types';
 import Button from '../ui/Button';
 import ShareModal from '../ui/ShareModal';
-import CommentModal from '../ui/CommentModal';
 import AuthModal from '../auth/AuthModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
@@ -16,7 +12,7 @@ import {
   CalendarDaysIcon as CalendarIconOutline,
   MapPinIcon as LocationIconOutline,
   HeartIcon as HeartIconOutline,
-  ChatBubbleOvalLeftEllipsisIcon as CommentIconOutline,
+  ChatBubbleLeftRightIcon as CommentIconOutline,
   ShareIcon as ShareIconOutline,
   TicketIcon as TicketIconOutline,
   UsersIcon as GuestsIconOutline,
@@ -48,10 +44,12 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
 
   const [currentEventState, setCurrentEventState] = useState(event);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isCommentFormOpen, setIsCommentFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false); 
   const [likeCount, setLikeCount] = useState(currentEventState.likes || 0);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const locationDisplay =
     currentEventState.location ||
     (currentEventState.locations && currentEventState.locations.length > 0
@@ -85,16 +83,22 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
 
   const handleCommentClick = () => {
     if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
-    setIsCommentModalOpen(true);
+    setIsCommentFormOpen((prev) => !prev);
   };
 
-  const handleSubmitComment = async (commentText: string) => {
+  const handleSubmitComment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) return;
     if (!currentUser) return;
-    const newComment = await addCommentToItem(currentEventState.id, 'event', commentText);
+    setIsSubmittingComment(true);
+    const newComment = await addCommentToItem(currentEventState.id, 'event', trimmedComment);
+    setIsSubmittingComment(false);
     if (newComment) {
       const updatedEvent = getContentById('event', currentEventState.id) as EventItem | undefined;
       if (updatedEvent) setCurrentEventState(updatedEvent);
-      setIsCommentModalOpen(false);
+      setCommentText('');
+      setIsCommentFormOpen(false);
     } else {
       alert("Failed to submit comment.");
     }
@@ -160,12 +164,42 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
                 <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500 px-1.5" aria-pressed={isLiked}>
                   <HeartIconOutline className="w-5 h-5 mr-1.5" /> {likeCount}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5">
+                <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5" aria-expanded={isCommentFormOpen}>
                   <CommentIconOutline className="w-5 h-5 mr-1.5" /> {currentCommentCount}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5">
                   <ShareIconOutline className="w-5 h-5 mr-1.5" />
                 </Button>
+              </div>
+            )}
+            {isPastEvent && isCommentFormOpen && (
+              <div className="mb-4 rounded-lg border border-purple-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <form onSubmit={handleSubmitComment} className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-300" htmlFor={`featured-event-comment-${currentEventState.id}`}>
+                    Add a comment
+                  </label>
+                  <textarea
+                    id={`featured-event-comment-${currentEventState.id}`}
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    rows={3}
+                    className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Share your thoughts about this event."
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={() => setIsCommentFormOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" type="submit" disabled={isSubmittingComment}>
+                      {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                    </Button>
+                  </div>
+                </form>
               </div>
             )}
             <Button asLink to={detailUrl} variant="primary" size="md" className="w-full sm:w-auto">
@@ -182,12 +216,6 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
         title={`Share "${isLoadingTitle ? currentEventState.title : title}"`}
         url={detailUrl} 
         eventTitle={isLoadingTitle ? currentEventState.title : title}
-      />
-      <CommentModal
-        isOpen={isCommentModalOpen}
-        onClose={() => setIsCommentModalOpen(false)}
-        eventTitle={isLoadingTitle ? currentEventState.title : title}
-        onSubmitComment={handleSubmitComment}
       />
     </>
   );

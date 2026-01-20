@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `bem-static-${CACHE_VERSION}`;
 const API_CACHE = `bem-api-${CACHE_VERSION}`;
 
@@ -7,6 +7,12 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/icons/brand.svg',
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png',
+  '/apple-touch-icon.png',
+  '/favicon.ico',
+  '/maskable/maskable-icon-192x192.png',
+  '/maskable/maskable-icon-512x512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -33,6 +39,25 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  const link = event.notification?.data?.link || '/';
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.navigate(link);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(link);
+      }
+      return undefined;
+    }),
+  );
 });
 
 self.addEventListener('fetch', (event) => {

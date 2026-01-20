@@ -118,8 +118,50 @@ const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser, isAdmin } = useAuth();
-  const { addNotification } = useNotification();
+  const {
+    addNotification,
+    addGuestNotification,
+    updateLastSeenContent,
+    lastSeenContent,
+    activeUserId,
+    isGuest,
+  } = useNotification();
   const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
+  const lastSeenContentRef = useRef<string | null>(lastSeenContent);
+
+  useEffect(() => {
+    lastSeenContentRef.current = lastSeenContent;
+  }, [lastSeenContent]);
+
+  const contentNotificationConfig = useMemo(
+    () => ({
+      sermon: { label: 'Sermon', linkPrefix: '/sermons' },
+      event: { label: 'Event', linkPrefix: '/events' },
+      blogPost: { label: 'Blog', linkPrefix: '/blog' },
+      news: { label: 'News', linkPrefix: '/news' },
+    }) satisfies Partial<Record<ContentType, { label: string; linkPrefix: string }>>,
+    [],
+  );
+
+  const sendContentUpdateNotification = useCallback(
+    (action: 'added' | 'updated', type: ContentType, item: ContentItem) => {
+      const config = contentNotificationConfig[type];
+      if (!config) return;
+      const title = (item as any).title || (item as any).name || config.label;
+      const message =
+        action === 'added'
+          ? `New ${config.label} published: "${title}"`
+          : `${config.label} updated: "${title}"`;
+      const link = (item as any).linkPath || `${config.linkPrefix}/${item.id}`;
+      addNotification({
+        targetUserId: 'all_users_for_content',
+        message,
+        link,
+        type: 'new_content_published',
+      });
+    },
+    [addNotification, contentNotificationConfig],
+  );
 
   const [sermons, setSermons] = useState<Sermon[]>(() => getStoredData('bem_sermons', []));
   const [events, setEvents] = useState<EventItem[]>(() => getStoredData('bem_events', []));
@@ -194,6 +236,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
   if (setLoading) setLoadingContent(true);
   lastFetchTimestampRef.current = new Date().toISOString();
+  const latestContent = new Map<string, any[]>();
+  let didUpdateContent = false;
 
   const fetchPromises = dataFetchConfig.map(async (config) => {
     const hasExistingContent = Array.isArray(config.getCurrent?.())
@@ -259,7 +303,11 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         : data;
 
       config.setter(normalized);
+      if (Array.isArray(normalized)) {
+        latestContent.set(config.key, normalized);
+      }
       if (config.storageKey) saveStoredData(config.storageKey, normalized);
+      didUpdateContent = true;
     } catch (error) {
       console.error(`Failed to load ${config.key}:`, error);
     }
@@ -268,7 +316,68 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   await Promise.all(fetchPromises).finally(() => {
     if (setLoading) setLoadingContent(false);
   });
-}, [dataFetchConfig]);
+
+const nowTimestamp = new Date().toISOString();
+  const lastSeenTimestamp = lastSeenContentRef.current;
+  if (lastSeenTimestamp) {
+    const lastSeenTime = new Date(lastSeenTimestamp).getTime();
+    const contentConfig: Record<string, { label: string; fallbackLink: string }> = {
+      sermons: { label: 'Sermon', fallbackLink: '/sermons' },
+      events: { label: 'Event', fallbackLink: '/events' },
+      blogposts: { label: 'Blog', fallbackLink: '/blog' },
+      newsitems: { label: 'News', fallbackLink: '/news' },
+    };
+
+    const recentUpdates: Array<{ message: string; link: string; timestamp: string }> = [];
+
+    Array.from(latestContent.entries()).forEach(([key, items]) => {
+      const config = contentConfig[key];
+      if (!config) return;
+      items.forEach((item) => {
+        const timestamp =
+          item?.updatedAt ||
+          item?.publishedAt ||
+          item?.createdAt ||
+          item?.incidentAt ||
+          item?.date;
+        if (!timestamp) return;
+        const itemTime = new Date(timestamp).getTime();
+        if (itemTime <= lastSeenTime) return;
+        const title = item?.title || item?.name || 'New update';
+        recentUpdates.push({
+          message: `New ${config.label} update: "${title}"`,
+          link: item?.linkPath || `${config.fallbackLink}/${item?.id ?? ''}`.replace(/\/$/, ''),
+          timestamp,
+        });
+      });
+    });
+
+    recentUpdates
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10)
+      .forEach((update) => {
+        if (isGuest) {
+          addGuestNotification({
+            targetUserId: activeUserId,
+            message: update.message,
+            link: update.link,
+            type: 'new_content_published',
+          });
+        } else if (currentUser && (currentUser.receiveContentUpdateNotifications ?? true)) {
+          addNotification({
+            targetUserId: currentUser.id,
+            message: update.message,
+            link: update.link,
+            type: 'new_content_published',
+          });
+        }
+      });
+  }
+
+  if (didUpdateContent) {
+    updateLastSeenContent(nowTimestamp);
+  }
+}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId]);
 
   useEffect(() => {
     fetchContentBatch(true);
@@ -436,7 +545,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userProfileImageUrl: currentUser?.profileImageUrl }) });
+            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const normalizedNewItem =
@@ -445,10 +554,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             const setter = setterMap[type];
             if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
             logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
+            sendContentUpdateNotification('added', type, normalizedNewItem);           
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
-          return { success: false, message: `Failed to create ${type}. Please try again.` };
+          const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
+          return { success: false, message };
         }
     }
     let newItem: ContentItem | null = null;
@@ -612,7 +723,10 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       case 'fellowshipRoster': { const newRoster: FellowshipRosterItem = { id: newItemId, ...(data as FellowshipRosterFormData), linkPath: `/fellowship-program/roster/${newItemId}`, createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setFellowshipRosters(prev => [newRoster, ...prev]); newItem = newRoster; success = true; break; }
       case 'advertisement': { const newAd: Advertisement = { id: newItemId, ...(data as AdvertisementFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setAdvertisements(prev => [newAd, ...prev]); newItem = newAd; success = true; break; }
       }
-    if (success && newItem) logContentActivity(`${type} created: "${(newItem as any).title || (newItem as any).name}"`, 'content_creation', type, newItemId);
+    if (success && newItem) {
+      logContentActivity(`${type} created: "${(newItem as any).title || (newItem as any).name}"`, 'content_creation', type, newItemId);
+      sendContentUpdateNotification('added', type, newItem);
+    }
     return { success, newItem: newItem || undefined, message: success ? 'Content added successfully.' : message };
   };
 
@@ -663,6 +777,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           type,
           id,
         );
+        sendContentUpdateNotification('updated', type, normalizedUpdatedItem);
         return { success: true, updatedItem: normalizedUpdatedItem };
       } catch (error) {
         console.error(`Error updating ${type}:`, error);
@@ -693,6 +808,9 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             logContentActivity(`Donate page content updated`, 'content_update', 'donatePageContent', 'singleton');
             break;
         default: return { success: false, message: "Content type not found for update." };
+    }
+    if (success && updatedItem) {
+      sendContentUpdateNotification('updated', type, updatedItem);
     }
     return { success, updatedItem, message };
   }
@@ -886,7 +1004,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         type: 'ministry_request_update',
       });
     }
-    return newItem || null;
+    return { request: newItem || null, message: result.message };
   };
   const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
     try {
@@ -900,9 +1018,24 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           processedByAdminName: currentUser?.fullName,
         }),
       });
-      if (!response.ok) throw new Error('Failed to update ministry join request');
-      const updated = await response.json();
-      setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
+      const responseText = await response.text();
+      let updated: MinistryJoinRequest | null = null;
+      if (responseText) {
+        try {
+          updated = JSON.parse(responseText) as MinistryJoinRequest;
+        } catch (parseError) {
+          if (!response.ok) {
+            throw parseError;
+          }
+        }
+      }
+      if (!response.ok) {
+        const errorMessage = (updated as { error?: string } | null)?.error || responseText || 'Failed to update ministry join request';
+        throw new Error(errorMessage);
+      }
+      if (updated) {
+        setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
+      }
       logContentActivity(`ministryJoinRequest updated`, 'content_update', 'ministryJoinRequest', id);
       if (updated?.userId) {
         addNotification({
