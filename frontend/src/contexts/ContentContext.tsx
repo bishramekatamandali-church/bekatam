@@ -852,7 +852,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       return false;
     }
   };
-  const addMinistryJoinRequest = (
+  const addMinistryJoinRequest = async (
     data: Omit<
       MinistryJoinRequest,
       | 'id'
@@ -869,25 +869,49 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       | 'ministryGuidelines'
     >,
     ministry: Ministry
-  ) =>
-    addContent('ministryJoinRequest', {
+  ) => {
+    const result = await addContent('ministryJoinRequest', {
       ministryId: ministry.id,
       ministryName: ministry.title,
       ministryGuidelines: ministry.description || '',
       membershipType: 'member',
       ...data,
-    } as any).then(res => res.newItem as MinistryJoinRequest || null);
+    } as any);
+    const newItem = result.newItem as MinistryJoinRequest | undefined;
+    if (newItem) {
+      addNotification({
+        targetUserId: 'admin_group',
+        message: `New ministry join request from ${newItem.userName} for ${newItem.ministryName}.`,
+        link: '/admin/ministry-join-requests',
+        type: 'ministry_request_update',
+      });
+    }
+    return newItem || null;
+  };
   const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/ministry-join-requests/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ status, adminNotes }),
+        body: JSON.stringify({
+          status,
+          adminNotes,
+          processedByAdminId: currentUser?.id,
+          processedByAdminName: currentUser?.fullName,
+        }),
       });
       if (!response.ok) throw new Error('Failed to update ministry join request');
       const updated = await response.json();
       setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
       logContentActivity(`ministryJoinRequest updated`, 'content_update', 'ministryJoinRequest', id);
+      if (updated?.userId) {
+        addNotification({
+          targetUserId: updated.userId,
+          message: `Your ministry join request for ${updated.ministryName} was ${updated.status}.`,
+          link: `/ministries/${updated.ministryId}`,
+          type: 'ministry_request_update',
+        });
+      }
       return true;
     } catch (error) {
       console.error('Error updating ministry join request status:', error);

@@ -486,6 +486,8 @@ export interface MinistryJoinRequest {
   status: MinistryJoinRequestStatus;
   processedDate?: string; // ISO timestamp, when approved/rejected
   adminNotes?: string; // Admin's notes on processing
+  processedByAdminId?: string;
+  processedByAdminName?: string;
 }
 // --- End Ministry JoinRequest Types ---
 

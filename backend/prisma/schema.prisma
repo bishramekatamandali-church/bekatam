@@ -515,6 +515,7 @@ model ministry {
   leader              String?
   meetingTime         String?
   ministryjoinrequest ministryjoinrequest[]
+  ministrymember      ministrymember[]
 }
 
 model ministryjoinrequest {
@@ -530,11 +531,63 @@ model ministryjoinrequest {
   status             ministryjoinrequest_status @default(pending)
   processedDate      DateTime?
   adminNotes         String?                    @db.Text
+  processedByAdminId String?
+  processedByAdminName String?
   ministry           ministry                   @relation(fields: [ministryId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_ministryId_fkey")
   user               user                       @relation(fields: [userId], references: [id], onDelete: Cascade, map: "MinistryJoinRequest_userId_fkey")
 
   @@index([ministryId], map: "MinistryJoinRequest_ministryId_fkey")
   @@index([userId], map: "MinistryJoinRequest_userId_fkey")
+}
+
+model ministrymember {
+  id               String   @id
+  userId           String?
+  userName         String
+  userEmail        String
+  ministryId       String?
+  ministryName     String
+  membershipType   String
+  joinedAt         DateTime @default(now())
+  updatedAt        DateTime
+  user             user?    @relation(fields: [userId], references: [id], onDelete: SetNull, map: "MinistryMember_userId_fkey")
+  ministry         ministry? @relation(fields: [ministryId], references: [id], onDelete: SetNull, map: "MinistryMember_ministryId_fkey")
+
+  @@index([userId], map: "MinistryMember_userId_fkey")
+  @@index([ministryId], map: "MinistryMember_ministryId_fkey")
+}
+
+model ministrymemberhistory {
+  id                    String                       @id
+  timestamp             DateTime                     @default(now())
+  memberId              String?
+  userId                String?
+  userName              String
+  userEmail             String
+  ministryId            String?
+  ministryName          String
+  previousMinistryId    String?
+  previousMinistryName  String?
+  action                ministrymemberhistory_action
+  details               String?                      @db.Text
+  performedByAdminId    String?
+  performedByAdminName  String?
+}
+
+model ministryjoinrequesthistory {
+  id                    String                            @id
+  timestamp             DateTime                          @default(now())
+  requestId             String
+  userId                String?
+  userName              String
+  userEmail             String
+  ministryId            String?
+  ministryName          String
+  status                ministryjoinrequest_status
+  action                ministryjoinrequesthistory_action
+  adminNotes            String?                           @db.Text
+  performedByAdminId    String?
+  performedByAdminName  String?
 }
 
 model newsitem {
@@ -707,6 +760,7 @@ model user {
   prayerrequest                     prayerrequest[]
   testimonial                       testimonial[]
   contentlike                       contentlike[]
+  ministrymember                    ministrymember[]
 }
 
 enum fellowshiprosteritem_rosterType {
@@ -959,6 +1013,18 @@ enum ministryjoinrequest_status {
   pending
   approved
   rejected
+}
+
+enum ministrymemberhistory_action {
+  created
+  updated
+  moved
+  deleted
+}
+
+enum ministryjoinrequesthistory_action {
+  submitted
+  status_updated
 }
 
 enum donationrecord_paymentMethod {
