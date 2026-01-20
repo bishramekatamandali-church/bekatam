@@ -3,6 +3,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import Button from '../ui/Button';
 import { CameraIcon, FolderIcon, MicrophoneIcon, XCircleIcon, StopCircleIcon, ArrowUpOnSquareIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { getCloudinaryFileSizeError, getCloudinaryLimitLabel } from '../../utils/cloudinary';
+import { getMediaKindFromUrl } from '../../utils/media';
 
 interface AdvancedMediaUploaderProps {
   label: string;
@@ -115,7 +116,7 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
       case 'image': return 'image/png, image/jpeg, image/gif, image/webp';
       case 'video': return 'video/mp4,video/webm,video/quicktime';
       case 'audio': return 'audio/mpeg,audio/wav,audio/webm,audio/mp3';
-      case 'any': return 'image/png, image/jpeg, image/gif, image/webp,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/webm,audio/mp3';
+      case 'any': return '*/*';
       default: return '*/*';
     }
   };
@@ -142,6 +143,7 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
   };
 
   const handleDragLeave = () => setIsDragOver(false); 
+  const resolvedPreviewKind = mediaType === 'any' ? getMediaKindFromUrl(currentUrl) : mediaType;
 
   if (childrenAsTrigger) {
     const childElement = React.Children.only(children);
@@ -178,9 +180,20 @@ const AdvancedMediaUploader: React.FC<AdvancedMediaUploaderProps> = ({
       >
         {currentUrl ? (
           <div className="flex flex-col md:flex-row items-center gap-3">
-            {mediaType === 'image' && <img src={currentUrl} alt="Preview" className="max-h-36 w-auto rounded shadow-sm" />}
-            {mediaType === 'video' && <video src={currentUrl} controls className="max-h-36 w-full rounded" />}
-            {mediaType === 'audio' && <audio src={currentUrl} controls className="w-full" />}
+            {resolvedPreviewKind === 'image' && (
+              <img src={currentUrl} alt="Preview" className="max-h-36 w-auto rounded shadow-sm" />
+            )}
+            {resolvedPreviewKind === 'video' && (
+              <video src={currentUrl} controls className="max-h-36 w-full rounded" />
+            )}
+            {resolvedPreviewKind === 'audio' && (
+              <audio src={currentUrl} controls className="w-full" />
+            )}
+            {mediaType === 'any' && resolvedPreviewKind === 'other' && (
+              <a href={currentUrl} target="_blank" rel="noreferrer" className="text-sm text-purple-600 underline">
+                View uploaded file
+              </a>
+            )}
             <p className="text-sm text-slate-500 dark:text-slate-400">Drop a new file to replace or tap to upload.</p>
           </div>
         ) : (

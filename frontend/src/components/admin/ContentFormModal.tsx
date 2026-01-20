@@ -2395,6 +2395,113 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         );
       }
 
+      case 'historyChapter': {
+        const data = formData as HistoryChapterFormData;
+
+        return (
+          <>
+            <FormSection title="Chapter Details">
+              <div>
+                <label htmlFor="chapterNumber" className={resolvedLabelClasses}>
+                  Chapter Number
+                </label>
+                <input
+                  type="number"
+                  id="chapterNumber"
+                  name="chapterNumber"
+                  min={1}
+                  value={data.chapterNumber}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Auto-detected from existing chapters. Adjust if needed.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="status" className={resolvedLabelClasses}>
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={data.status}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Chapter Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={data.title}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Enter the chapter title"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="summary" className={resolvedLabelClasses}>
+                  Summary (Optional)
+                </label>
+                <textarea
+                  id="summary"
+                  name="summary"
+                  value={data.summary || ''}
+                  onChange={handleChange}
+                  rows={3}
+                  className={resolvedInputClasses}
+                  placeholder="Short teaser for this chapter"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="content" className={resolvedLabelClasses}>
+                  Chapter Content
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  value={data.content}
+                  onChange={handleChange}
+                  rows={10}
+                  className={resolvedInputClasses}
+                  placeholder="Write the chapter content"
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Chapter Media (Optional)"
+                  mediaType="any"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as HistoryChapterFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
       case 'branchChurch': {
         const data = formData as BranchChurchFormData;
 
