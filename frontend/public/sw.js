@@ -35,6 +35,25 @@ self.addEventListener('message', (event) => {
   }
 });
 
+self.addEventListener('notificationclick', (event) => {
+  const link = event.notification?.data?.link || '/';
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.navigate(link);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(link);
+      }
+      return undefined;
+    }),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
