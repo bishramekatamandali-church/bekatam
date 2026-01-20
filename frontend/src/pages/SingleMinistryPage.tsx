@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams } from "react-router-dom";
 import { useContent } from '../contexts/ContentContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,7 +27,7 @@ const UserCircleIconSmall: React.FC<{ className?: string }> = ({ className }) =>
 
 const SingleMinistryPage: React.FC = () => {
   const { ministryId } = useParams<{ ministryId: string }>();
-  const { getContentById, loadingContent, addMinistryJoinRequest } = useContent();
+  const { getContentById, loadingContent, addMinistryJoinRequest, ministryJoinRequests } = useContent();
   const { currentUser, isAuthenticated } = useAuth();
 
   const [ministry, setMinistry] = React.useState<Ministry | undefined>(undefined);
@@ -37,7 +37,7 @@ const SingleMinistryPage: React.FC = () => {
   const [agreedToGuidelines, setAgreedToGuidelines] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [modalView, setModalView] = useState<'form' | 'status' | 'success'>('form');
 
 
   React.useEffect(() => {
@@ -47,15 +47,41 @@ const SingleMinistryPage: React.FC = () => {
     }
   }, [ministryId, loadingContent, getContentById]);
 
+  const existingRequest = useMemo(() => {
+    if (!currentUser || !ministry) return null;
+    return (
+      ministryJoinRequests
+        .filter((req) => req.userId === currentUser.id && req.ministryId === ministry.id)
+        .sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime())[0] ||
+      null
+    );
+  }, [currentUser, ministry, ministryJoinRequests]);
+
+  const getStatusMessage = (request: MinistryJoinRequest) => {
+    if (request.status === 'approved') {
+      return `Great news! Your request to join "${request.ministryName}" has been approved.`;
+    }
+    if (request.status === 'rejected') {
+      return `Thank you for your interest. Your request to join "${request.ministryName}" was not approved.`;
+    }
+    return `Your request to join "${request.ministryName}" has been submitted and is under review.`;
+  };
+
+  const getStatusBadgeClass = (status: MinistryJoinRequest['status']) => {
+    if (status === 'approved') return 'bg-green-100 text-green-700';
+    if (status === 'rejected') return 'bg-red-100 text-red-700';
+    return 'bg-yellow-100 text-yellow-700';
+  };
+
   const handleOpenJoinModal = () => {
     if (!isAuthenticated) {
         setIsAuthModalOpen(true);
         return;
     }
-    setShowSuccessMessage(false);
     setFormError('');
     setJoinMessage('');
     setAgreedToGuidelines(false);
+    setModalView(existingRequest ? 'status' : 'form');
     setIsJoinModalOpen(true);
   };
 
@@ -69,6 +95,11 @@ const SingleMinistryPage: React.FC = () => {
         setFormError("You must agree to the Ministry Guidelines & Expectations to submit your request.");
         return;
     }
+    if (existingRequest && existingRequest.status !== 'rejected') {
+        setFormError(getStatusMessage(existingRequest));
+        setModalView('status');
+        return;
+    }
     setFormError('');
     setIsSubmitting(true);
 
@@ -78,10 +109,10 @@ const SingleMinistryPage: React.FC = () => {
     
     const result = await addMinistryJoinRequest(formData, ministry);
     setIsSubmitting(false);
-    if (result) {
-        setShowSuccessMessage(true);
+    if (result.request) {
+        setModalView('success');
     } else {
-        setFormError("There was an issue submitting your request. Please try again.");
+        setFormError(result.message || "There was an issue submitting your request. Please try again.");
     }
   };
 
@@ -138,10 +169,27 @@ const SingleMinistryPage: React.FC = () => {
           </CardContent>
           <CardFooter>
              <Button variant="primary" onClick={handleOpenJoinModal}>
-                <UsersIcon className="mr-2"/> Get Involved / Join
+                <UsersIcon className="mr-2"/> {existingRequest ? 'View Request Status' : 'Get Involved / Join'}
              </Button>
           </CardFooter>
         </Card>
+        {existingRequest && (
+          <div className="max-w-4xl mx-auto mt-6 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-slate-700">Your latest request status</p>
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusBadgeClass(existingRequest.status)}`}>
+                {existingRequest.status}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">{getStatusMessage(existingRequest)}</p>
+            {existingRequest.adminNotes && (
+              <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                <p className="font-medium text-slate-700">Admin note</p>
+                <p className="mt-1 whitespace-pre-line">{existingRequest.adminNotes}</p>
+              </div>
+            )}
+          </div>
+        )}
          <div className="text-center mt-8">
             <Button asLink to="/ministries" variant="outline">Back to All Ministries</Button>
         </div>
@@ -156,12 +204,50 @@ const SingleMinistryPage: React.FC = () => {
             title={`Request to Join ${ministry.title} as a Member`} 
             size="lg"
         >
-            {showSuccessMessage ? (
+            {modalView === 'success' ? (
                 <div className="text-center py-4">
                     <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-700 mb-2">Request Submitted!</h3>
                     <p className="text-gray-600">Your request to join "{ministry.title}" as a member has been sent for review. You will be notified once it's processed.</p>
                     <Button onClick={() => setIsJoinModalOpen(false)} variant="primary" className="mt-6">Close</Button>
+                </div>
+            ) : modalView === 'status' && existingRequest ? (
+                <div className="space-y-4">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Request Status</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusBadgeClass(existingRequest.status)}`}>
+                            {existingRequest.status}
+                          </span>
+                          {existingRequest.processedDate && existingRequest.status !== 'pending' && (
+                            <span className="text-xs text-slate-500">Processed on {new Date(existingRequest.processedDate).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                        <p className="mt-3 text-sm text-slate-600">{getStatusMessage(existingRequest)}</p>
+                    </div>
+                    {existingRequest.adminNotes && (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-slate-700">
+                        <p className="font-medium text-slate-700">Admin note</p>
+                        <p className="mt-1 whitespace-pre-line">{existingRequest.adminNotes}</p>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap justify-end gap-3 pt-3 border-t">
+                      {existingRequest.status === 'rejected' && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setFormError('');
+                            setJoinMessage('');
+                            setAgreedToGuidelines(false);
+                            setModalView('form');
+                          }}
+                        >
+                          Submit a New Request
+                        </Button>
+                      )}
+                      <Button onClick={() => setIsJoinModalOpen(false)} variant="primary">Close</Button>
+                    </div>
                 </div>
             ) : (
                 <form 

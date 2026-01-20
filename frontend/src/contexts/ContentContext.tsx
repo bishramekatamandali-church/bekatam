@@ -448,7 +448,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
-          return { success: false, message: `Failed to create ${type}. Please try again.` };
+          const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
+          return { success: false, message };
         }
     }
     let newItem: ContentItem | null = null;
@@ -886,7 +887,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         type: 'ministry_request_update',
       });
     }
-    return newItem || null;
+    return { request: newItem || null, message: result.message };
   };
   const updateMinistryJoinRequestStatus = async (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => {
     try {
@@ -900,9 +901,24 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
           processedByAdminName: currentUser?.fullName,
         }),
       });
-      if (!response.ok) throw new Error('Failed to update ministry join request');
-      const updated = await response.json();
-      setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
+      const responseText = await response.text();
+      let updated: MinistryJoinRequest | null = null;
+      if (responseText) {
+        try {
+          updated = JSON.parse(responseText) as MinistryJoinRequest;
+        } catch (parseError) {
+          if (!response.ok) {
+            throw parseError;
+          }
+        }
+      }
+      if (!response.ok) {
+        const errorMessage = (updated as { error?: string } | null)?.error || responseText || 'Failed to update ministry join request';
+        throw new Error(errorMessage);
+      }
+      if (updated) {
+        setMinistryJoinRequests(prev => prev.map(req => req.id === id ? updated : req));
+      }
       logContentActivity(`ministryJoinRequest updated`, 'content_update', 'ministryJoinRequest', id);
       if (updated?.userId) {
         addNotification({

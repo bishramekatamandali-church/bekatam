@@ -1378,9 +1378,9 @@ export interface ContentContextType {
   updateContactMessageStatus: (id: string, status: 'replied' | 'pending', replyNote?: string) => Promise<boolean>;
 
   addMinistryJoinRequest: (
-    data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>, 
+    data: Omit<MinistryJoinRequest, 'id' | 'requestDate' | 'status' | 'processedDate' | 'adminNotes' | 'userId' | 'userName' | 'userEmail' | 'membershipType' | 'ministryId' | 'ministryName' | 'ministryGuidelines'>,
     ministry: Ministry
-  ) => Promise<MinistryJoinRequest | null>;
+  ) => Promise<{ request: MinistryJoinRequest | null; message?: string }>;
   updateMinistryJoinRequestStatus: (id: string, status: MinistryJoinRequestStatus, adminNotes?: string) => Promise<boolean>;
   getMinistryJoinRequestsForUser: (userId: string) => MinistryJoinRequest[];
 
