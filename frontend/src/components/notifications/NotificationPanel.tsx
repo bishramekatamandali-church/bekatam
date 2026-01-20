@@ -92,9 +92,20 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
                 <p className={`text-sm ${!notification.read ? 'font-medium text-slate-800' : 'text-slate-600'}`}>
                   {notification.message}
                 </p>
-                <p className={`text-xs mt-0.5 ${!notification.read ? 'text-purple-500' : 'text-slate-400'}`}>
-                  {formatTimeAgo(notification.timestamp)}
-                </p>
+                <div className="mt-1 flex items-center gap-2 text-xs">
+                  <span className={!notification.read ? 'text-purple-500' : 'text-slate-400'}>
+                    {formatTimeAgo(notification.timestamp)}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      notification.read
+                        ? 'bg-slate-100 text-slate-500'
+                        : 'bg-purple-100 text-purple-600'
+                    }`}
+                  >
+                    {notification.read ? 'Read' : 'Unread'}
+                  </span>
+                </div>
               </button>
             </li>
           ))}
