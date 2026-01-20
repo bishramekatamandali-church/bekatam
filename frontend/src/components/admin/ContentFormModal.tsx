@@ -819,7 +819,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       setIsFieldUploading({});
       setUploadingStatus({});
     }
-  }, [isOpen, initialData, contentType, createDefaults]);
+  }, [isOpen, initialData, contentType]);
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
