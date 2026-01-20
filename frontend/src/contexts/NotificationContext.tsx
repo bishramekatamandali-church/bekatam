@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { Notification, NotificationContextType, NotificationAddData, User } from '../types';
+import type { Notification as AppNotification, NotificationContextType, NotificationAddData, User } from '../types';
 import { useAuth } from './AuthContext';
 
 const NOTIFICATIONS_STORAGE_KEY_PREFIX = 'bem_notifications_';
@@ -33,9 +33,9 @@ const writeLastSeenContent = (timestamp: string) => {
   }
 };
 const pushNotification = (
-  notification: Notification,
+  notification: AppNotification,
   storageKey: string,
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>,
+  setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>,
 ) => {
   setNotifications(prev => {
     const next = [notification, ...prev].slice(0, 250);
@@ -47,7 +47,7 @@ const pushNotification = (
     return next;
   });
 };
-const readNotifications = (storageKey: string): Notification[] => {
+const readNotifications = (storageKey: string): AppNotification[] => {
   try {
     const stored = localStorage.getItem(storageKey);
     return stored ? JSON.parse(stored) : [];
@@ -56,16 +56,16 @@ const readNotifications = (storageKey: string): Notification[] => {
     return [];
   }
 };
-const writeNotifications = (storageKey: string, next: Notification[]) => {
+const writeNotifications = (storageKey: string, next: AppNotification[]) => {
   try {
     localStorage.setItem(storageKey, JSON.stringify(next));
   } catch (error) {
     console.error('Error saving notifications', error);
   }
 };
-const sendBrowserNotification = async (notification: Notification) => {
+const sendBrowserNotification = async (notification: AppNotification) => {
   if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
+  if (window.Notification.permission !== 'granted') return;
   try {
     const registration = await navigator.serviceWorker?.getRegistration();
     if (registration?.showNotification) {
@@ -75,7 +75,7 @@ const sendBrowserNotification = async (notification: Notification) => {
         data: { link: notification.link },
       });
     } else {
-      new Notification('BEM Update', { body: notification.message });
+      new window.Notification('BEM Update', { body: notification.message });
     }
   } catch (error) {
     console.error('Unable to show browser notification', error);
@@ -83,8 +83,8 @@ const sendBrowserNotification = async (notification: Notification) => {
 };
 const removeNotifications = (
   storageKey: string,
-  predicate: (notification: Notification) => boolean,
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>,
+  predicate: (notification: AppNotification) => boolean,
+  setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>,
 ) => {
   setNotifications(prev => {
     const next = prev.filter(predicate);
@@ -99,7 +99,7 @@ const removeNotifications = (
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser, getAllUsers } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [lastSeenContent, setLastSeenContent] = useState<string | null>(readLastSeenContent());
 
@@ -129,7 +129,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const addNotification = useCallback((notificationData: NotificationAddData) => {
     const allUsers = getAllUsers();
-    let newNotifications: Notification[] = [];
+    let newNotifications: AppNotification[] = [];
 
     // --- Special Target Broadcasting ---
     const getTargetUsers = (target: string, fromUserId?: string): User[] => {
@@ -172,7 +172,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         list.push(notification);
         acc.set(notification.targetUserId, list);
         return acc;
-      }, new Map<string, Notification[]>());
+      }, new Map<string, AppNotification[]>());
       notificationsByUser.forEach((userNotifications, userId) => {
         const key = getStorageKey(userId, userId.startsWith('guest-'));
         const existing = readNotifications(key);
@@ -191,7 +191,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (notificationData.targetUserId !== activeUserId) {
       return;
     }
-    const notification: Notification = {
+    const notification: AppNotification = {
       ...notificationData,
       id: generateId(`notif-${activeUserId}`),
       targetUserId: activeUserId,
@@ -227,7 +227,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     return notifications.filter(notif => notif.targetUserId === activeUserId && !notif.read).length;
   }, [notifications, activeUserId, loadingNotifications]);
 
-  const replaceNotificationsForUser = useCallback((userId: string, next: Notification[]) => {
+  const replaceNotificationsForUser = useCallback((userId: string, next: AppNotification[]) => {
     const key = getStorageKey(userId, userId.startsWith('guest-'));
     writeNotifications(key, next);
     if (userId === activeUserId) {
