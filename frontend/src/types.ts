@@ -1433,7 +1433,14 @@ export type NotificationAddData = Omit<Notification, 'id' | 'timestamp' | 'read'
 export interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  activeUserId: string;
+  isGuest: boolean;
+  lastSeenContent: string | null;
   addNotification: (notificationData: NotificationAddData) => void;
+  addGuestNotification: (notificationData: NotificationAddData) => void;
+  replaceNotificationsForUser: (userId: string, notifications: Notification[]) => void;
+  updateLastSeenContent: (timestamp: string) => void;
+  pruneSeenNotifications: (sinceTimestamp?: string | null) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void; 
   loadingNotifications: boolean;

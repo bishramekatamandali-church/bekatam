@@ -1,10 +1,9 @@
 
 
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { useNotification } from '../../contexts/NotificationContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { Notification } from '../../types';
 import Button from '../ui/Button';
 import { formatTimestampADBS } from '../../dateConverter';
@@ -30,17 +29,16 @@ interface NotificationPanelProps {
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
-  const { notifications, markAsRead, markAllAsRead, loadingNotifications } = useNotification();
-  const { currentUser } = useAuth();
+  const { notifications, markAsRead, markAllAsRead, loadingNotifications, activeUserId, isGuest } = useNotification();
   const navigate = useNavigate();
 
   const userNotifications = useMemo(() => {
-    if (!currentUser || loadingNotifications) return [];
+    if (loadingNotifications) return [];
     return notifications
-      .filter(n => n.targetUserId === currentUser.id)
+      .filter(n => n.targetUserId === activeUserId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10); // Show up to 10 most recent
-  }, [notifications, currentUser, loadingNotifications]);
+  }, [notifications, activeUserId, loadingNotifications]);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
@@ -56,7 +54,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
     markAllAsRead();
   };
 
-  if (loadingNotifications && !currentUser) {
+  if (loadingNotifications) {
     return (
       <div className="absolute right-0 mt-2 w-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-4">
         <p className="text-sm text-slate-500">Loading notifications...</p>
@@ -102,11 +100,13 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
           ))}
         </ul>
       )}
-      <div className="px-4 py-2 border-t border-slate-200 text-center">
-        <Link to="/profile" state={{ from: 'notifications' }} onClick={onClose} className="text-sm text-purple-600 hover:underline">
-            View All
-        </Link>
-      </div>
+      {!isGuest && (
+        <div className="px-4 py-2 border-t border-slate-200 text-center">
+          <Link to="/profile" state={{ from: 'notifications' }} onClick={onClose} className="text-sm text-purple-600 hover:underline">
+              View All
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
