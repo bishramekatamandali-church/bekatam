@@ -669,11 +669,21 @@ export interface MonthlyThemeImage {
 
 // --- NEW FELLOWSHIP SCHEDULE / ROSTER TYPES ---
 export const rosterTypeList = [
-  "Saturday Main Fellowship", "Saturday Children Fellowship", "Saturday Youth Fellowship",
-  "Wednesday Home Fellowship", "House Fellowship", "Women's Fellowship", "Bible Study",
-  "Friday Evening Program", "Special Meeting", "Outreach Program", "Other Regular Program",
+  "Saturday Main Fellowship",
+  "Saturday Children Fellowship",
+  "Saturday Youth Fellowship",
+  "Wednesday Home Fellowship",
+  "House Fellowship",
+  "Women's Fellowship",
+  "Bible Study",
+  "Friday Evening Program",
+  "Special Meeting",
+  "Outreach Program",
+  "Other Regular Program",
   "Custom Schedule",
-  "Prayer Team Visit", "Night Prayer", "Saturday Prayer" // Added types
+  "Prayer Team Visit",
+  "Night Prayer",
+  "Saturday Prayer", // Added types
 ] as const;
 export type RosterType = typeof rosterTypeList[number];
 
