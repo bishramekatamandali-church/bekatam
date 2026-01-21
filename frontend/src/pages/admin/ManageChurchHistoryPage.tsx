@@ -26,7 +26,7 @@ const ManageChurchHistoryPage: React.FC = () => {
   const [editingChapter, setEditingChapter] = useState<HistoryChapter | null>(null);
 
   const sortedChapters = useMemo(() => 
-    [...historyChapters].sort((a, b) => a.chapterNumber - b.chapterNumber), 
+    [...historyChapters].sort((a, b) => b.chapterNumber - a.chapterNumber), 
   [historyChapters]);
   const nextChapterNumber = useMemo(() => {
     if (historyChapters.length === 0) return 1;

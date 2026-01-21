@@ -81,6 +81,7 @@ const ChurchHistoryPage: React.FC = () => {
           <div className="space-y-12">
             {publishedChapters.map(chapter => {
               const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
+              const comments = chapter.comments ?? [];
               return (
                 <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
                 <CardHeader>
@@ -161,16 +162,16 @@ const ChurchHistoryPage: React.FC = () => {
                     }}
                     likes={tempLikes[chapter.id] ?? chapter.likes ?? 0}
                     isLiked={tempIsLiked[chapter.id]}
-                    commentsCount={chapter.comments.length}
+                    commentsCount={comments.length}
                   />
                 </CardFooter>
-                {chapter.comments.length > 0 && (
+                {comments.length > 0 && (
                   <div className="p-4 sm:p-6 border-t dark:border-slate-700">
                     <h4 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-3">
-                      Comments ({chapter.comments.length})
+                      Comments ({comments.length})
                     </h4>
                     <div className="space-y-4">
-                      {chapter.comments.slice().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(comment => (
+                      {comments.slice().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(comment => (
                         <CommentItem key={comment.id} comment={comment} itemId={chapter.id} itemType="historyChapter" />
                       ))}
                     </div>
