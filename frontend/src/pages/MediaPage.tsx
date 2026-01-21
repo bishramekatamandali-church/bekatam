@@ -87,11 +87,11 @@ const MediaPage: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 pb-8">
+      <div className="mx-auto w-full max-w-none px-4 pb-6">
 
-        <div className="mb-8 p-4 bg-white rounded-lg shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="md:col-span-1">
+        <div className="mb-4 rounded-lg border border-slate-200 bg-white/90 p-3 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <div className="flex-1">
               <label htmlFor="search-media" className="block text-xs font-medium text-slate-700 mb-1">Search Media</label>
               <div className="relative">
                 <input
@@ -100,18 +100,18 @@ const MediaPage: React.FC = () => {
                   placeholder="Search by title, source, category..."
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                  className="w-full p-2.5 pl-10 border border-slate-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full rounded-md border border-slate-300 p-2 pl-9 text-sm focus:border-purple-500 focus:ring-purple-500"
                 />
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               </div>
             </div>
-            <div>
+            <div className="w-full lg:w-48">
               <label htmlFor="type-filter" className="block text-xs font-medium text-slate-700 mb-1">Filter by Type</label>
               <select
                 id="type-filter"
                 value={typeFilter}
                 onChange={(e) => { setTypeFilter(e.target.value as any); setCurrentPage(1); }}
-                className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500"
+                className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm focus:border-purple-500 focus:ring-purple-500"
               >
                 <option value="all">All Media Types</option>
                 <option value="image">Image</option>
@@ -119,13 +119,13 @@ const MediaPage: React.FC = () => {
                 <option value="audio">Audio</option>
               </select>
             </div>
-             <div>
+             <div className="w-full lg:w-64">
               <label htmlFor="category-filter" className="block text-xs font-medium text-slate-700 mb-1">Filter by Category/Source</label>
               <select
                 id="category-filter"
                 value={categoryFilter}
                 onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-                className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500"
+                className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm focus:border-purple-500 focus:ring-purple-500"
               >
                 {uniqueCategories.map(cat => (
                   <option key={cat} value={cat} className="capitalize">{cat === 'all' ? 'All Categories/Sources' : cat}</option>
@@ -139,10 +139,10 @@ const MediaPage: React.FC = () => {
           <p className="text-center text-slate-500 text-lg py-10">No media items found matching your criteria.</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedMedia.map((item) => (
                 <Card key={item.id} className="flex flex-col group overflow-hidden">
-                  <div className="relative h-48 bg-slate-200 flex items-center justify-center">
+                  <div className="relative w-full aspect-[4/3] bg-slate-200 flex items-center justify-center">
                     {item.type === 'image' && (
                       <img src={item.thumbnailUrl || item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     )}
@@ -162,6 +162,9 @@ const MediaPage: React.FC = () => {
                   </div>
                   <CardContent className="flex-grow p-3">
                     <h3 className="text-sm font-semibold text-slate-700 truncate mb-0.5" title={item.title}>{item.title}</h3>
+                    {item.description && (
+                      <p className="text-sm text-slate-600 mb-1 break-words">{item.description}</p>
+                    )}
                     <p className="text-xs text-slate-500 truncate" title={item.sourceTitle}>Source: {item.sourceTitle}</p>
                     {item.date && <p className="text-xs text-slate-400 mt-0.5">Posted on: {formatDateADBS(item.date)}</p>}
                     {item.postedByAdminName && (

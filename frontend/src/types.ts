@@ -1307,6 +1307,16 @@ export type GenericContentFormData =
 
 
 // --- Media Library Types ---
+export type MediaSourceContentType =
+  | 'directMedia'
+  | 'sermon'
+  | 'event'
+  | 'ministry'
+  | 'blogPost'
+  | 'news'
+  | 'prayerRequest'
+  | 'testimonial'
+  | 'other';
 
 export interface DisplayedMediaItem {
   id: string; 
