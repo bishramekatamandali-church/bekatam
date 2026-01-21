@@ -1177,13 +1177,31 @@ const nowTimestamp = new Date().toISOString();
       if(status !== 'answered' && status !== 'active') return false;
       return updatePrayerRequestStatusByAdmin(id, status);
   };
+
+  const allDerivedMediaItems = useMemo<DisplayedMediaItem[]>(() => (
+    directMediaItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      type: item.mediaType,
+      url: item.url,
+      thumbnailUrl: item.mediaType === 'image' ? item.url : undefined,
+      category: item.category,
+      date: item.uploadDate,
+      sourceTitle: 'Admin Uploads',
+      sourceLink: item.linkPath || '/media',
+      sourceContentType: 'directMedia',
+      description: item.description,
+      tags: item.tags,
+      postedByAdminName: item.postedByAdminName,
+    }))
+  ), [directMediaItems]);
   
   return (
     <ContentContext.Provider
       value={{	
         sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
         churchMembers, meetingLogs, decisionLogs, expenseRecords, fellowshipRosters, generatedSchedules,
-        allDerivedMediaItems: [],
+        allDerivedMediaItems,
         loadingContent,
         addContent, updateContent, deleteContent, getContentById,
         contentActivityLogs, logContentActivity,
