@@ -497,6 +497,20 @@ const nowTimestamp = new Date().toISOString();
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const buildDirectMediaPayload = (data: DirectMediaFormData) => {
+    const tags = data.tagsString
+      ? data.tagsString
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
+
+    return {
+      ...data,
+      category: data.uploadCategory,
+      tags,
+    };
+  };
 
   const logContentActivity = useCallback((description: string, type: FrontendActivityLog['type'], itemType?: FrontendActivityLog['itemType'], itemId?: string) => {
     const newLog: FrontendActivityLog = { id: `content-log-${Date.now()}`, timestamp: new Date().toISOString(), userId: currentUser?.id, description, type, itemType, itemId };
@@ -546,7 +560,10 @@ const nowTimestamp = new Date().toISOString();
     let useLocalFallback = false;
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
+            const payload = type === 'directMedia'
+              ? buildDirectMediaPayload(normalizedData as DirectMediaFormData)
+              : normalizedData;
+            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...payload, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const normalizedNewItem =
@@ -748,10 +765,13 @@ const nowTimestamp = new Date().toISOString();
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
+        const payload = type === 'directMedia'
+          ? buildDirectMediaPayload(data as DirectMediaFormData)
+          : data;
         const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
         if (!response.ok) {
           const errorData = await response.json();

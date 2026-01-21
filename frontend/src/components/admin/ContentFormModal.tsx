@@ -816,6 +816,19 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
         eventData.speakers = Array.isArray(eventData.speakers) ? eventData.speakers : [];
       }
 
+      if (contentType === 'directMedia' && initialData) {
+        const directData = dataToSet as DirectMediaFormData;
+        const initialMedia = initialData as DirectMediaItem;
+
+        if (!directData.uploadCategory && initialMedia.category) {
+          directData.uploadCategory = initialMedia.category;
+        }
+
+        if (!directData.tagsString && initialMedia.tags?.length) {
+          directData.tagsString = initialMedia.tags.join(', ');
+        }
+      }
+
       setFormData(dataToSet);
       setBsDateDisplays(newBsDateDisplays);
       setIsFieldUploading({});
@@ -2644,6 +2657,105 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   isUploading={isFieldUploading['imageUrl']}
                   uploadStatus={uploadingStatus['imageUrl']}
                   onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'directMedia': {
+        const data = formData as DirectMediaFormData;
+
+        return (
+          <>
+            <FormSection title="Media Details">
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={data.title}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                />
+              </FullWidthField>
+
+              <div>
+                <label htmlFor="mediaType" className={resolvedLabelClasses}>
+                  Media Type
+                </label>
+                <select
+                  name="mediaType"
+                  value={data.mediaType}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="uploadCategory" className={resolvedLabelClasses}>
+                  Category
+                </label>
+                <input
+                  type="text"
+                  name="uploadCategory"
+                  value={data.uploadCategory || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Gallery, Events, Highlights"
+                />
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="description" className={resolvedLabelClasses}>
+                  Description (Optional)
+                </label>
+                <textarea
+                  name="description"
+                  value={data.description || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  rows={3}
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="tagsString" className={resolvedLabelClasses}>
+                  Tags (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="tagsString"
+                  value={data.tagsString || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., youth, outreach, retreat"
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Upload">
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Media File"
+                  mediaType={data.mediaType}
+                  currentUrl={data.url}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as DirectMediaFormData),
+                      url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'url')}
+                  isUploading={isFieldUploading['url']}
+                  uploadStatus={uploadingStatus['url']}
                 />
               </FullWidthField>
             </FormSection>
