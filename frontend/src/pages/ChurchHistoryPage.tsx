@@ -149,7 +149,6 @@ const ChurchHistoryPage: React.FC = () => {
                 <CardFooter>
                   <ChapterActions
                     chapter={chapter}
-                    isAuthenticated={isAuthenticated}
                     onLike={() => handleLike(chapter.id)}
                     onComment={() => {
                       if (!isAuthenticated) return setIsAuthModalOpen(true);

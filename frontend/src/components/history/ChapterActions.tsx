@@ -6,9 +6,9 @@ import { HistoryChapter } from '../../types';
 
 interface ChapterActionsProps {
   chapter: HistoryChapter;
-  isAuthenticated: boolean;
-  tempLikes: Record<string, number>;
-  tempIsLiked: Record<string, boolean>;
+  likes: number;
+  isLiked?: boolean;
+  commentsCount: number;
   onLike: (chapterId: string) => void;
   onComment: () => void;
   onShare: () => void;
@@ -16,9 +16,9 @@ interface ChapterActionsProps {
 
 const ChapterActions: React.FC<ChapterActionsProps> = ({
   chapter,
-  isAuthenticated,
-  tempLikes,
-  tempIsLiked,
+  likes,
+  isLiked,
+  commentsCount,
   onLike,
   onComment,
   onShare
@@ -34,9 +34,9 @@ const ChapterActions: React.FC<ChapterActionsProps> = ({
         <HeartIcon
           title="Like"
           className="w-5 h-5 mr-1.5"
-          isFilled={tempIsLiked[chapter.id]}
+          isFilled={isLiked}
         />
-        {tempLikes[chapter.id] ?? chapter.likes ?? 0}
+        {likes}
         <span className="ml-1 hidden sm:inline">Like</span>
       </Button>
 
@@ -50,7 +50,7 @@ const ChapterActions: React.FC<ChapterActionsProps> = ({
           title="Comment"
           className="w-5 h-5 mr-1.5"
         />
-        {chapter.comments.length}
+        {commentsCount}
         <span className="ml-1 hidden sm:inline">Comment</span>
       </Button>
 
