@@ -610,6 +610,7 @@ interface ContentFormModalProps {
   isCoreSectionEditing?: boolean;
   createDefaults?: Partial<GenericContentFormData>;
   enableAutoNarration?: boolean;
+  errorMessage?: string | null;
 }
 
 const ContentFormModal: React.FC<ContentFormModalProps> = ({
@@ -621,6 +622,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   isLoading = false,
   isCoreSectionEditing = false,
   createDefaults,
+  errorMessage,
 }) => {
   const { currentUser } = useAuth();
   const [formData, setFormData] = useState<GenericContentFormData>(
@@ -2930,6 +2932,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             <span className="font-medium">Admin:</span>{' '}
             <span>{currentUser?.fullName || 'Admin'}</span>
           </div>
+          {errorMessage && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {errorMessage}
+            </div>
+          )}
           {renderSpecificFields()}
         </div>
 
