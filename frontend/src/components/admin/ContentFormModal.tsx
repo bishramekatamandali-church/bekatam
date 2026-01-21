@@ -71,6 +71,7 @@ import {
   PhotoIcon,
   CalendarIcon as CalendarOutlineIcon,
   SparklesIcon,
+  PlusCircleIcon,
 } from '@heroicons/react/24/outline';
 import RichTextEditor from '../ui/RichTextEditor';
 import DualNepaliCalendar from '../calendar/DualNepaliCalendar';
@@ -1313,7 +1314,11 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   const anyFieldUploading = Object.values(isFieldUploading).some((status) => status === true);
 
-  const renderDateFieldWithBSPicker = (fieldName: string, label: string) => (
+  const renderDateFieldWithBSPicker = (
+    fieldName: string,
+    label: string,
+    options?: { required?: boolean },
+  ) => (
     <div className="relative">
       <label htmlFor={fieldName} className={resolvedLabelClasses}>
         {label}{' '}
@@ -1328,6 +1333,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           name={fieldName}
           value={(formData as any)[fieldName] || ''}
           onChange={handleChange}
+          required={options?.required}
           className={resolvedInputClasses}
         />
         <Button
@@ -1504,6 +1510,188 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                 forceLightText={isSermonForm}
               />
               {renderEmbeddedVideoField('sermon')}
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'fellowshipRoster': {
+        const data = formData as FellowshipRosterFormData;
+
+        return (
+          <>
+            <FormSection title="Schedule Details">
+              <div>
+                <label htmlFor="rosterType" className={resolvedLabelClasses}>
+                  Schedule Type
+                </label>
+                <select
+                  id="rosterType"
+                  name="rosterType"
+                  value={data.rosterType}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  {rosterTypeList.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="groupNameOrEventTitle" className={resolvedLabelClasses}>
+                  Household / Program Title
+                </label>
+                <input
+                  type="text"
+                  id="groupNameOrEventTitle"
+                  name="groupNameOrEventTitle"
+                  value={data.groupNameOrEventTitle || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Sabbath Service, Shrestha Family Fellowship"
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Use the household name for house fellowship or the program title for service schedules.
+                </p>
+              </div>
+
+              {renderDateFieldWithBSPicker('assignedDate', 'Schedule Date', { required: true })}
+
+              <div>
+                <label htmlFor="timeSlot" className={resolvedLabelClasses}>
+                  Time Slot
+                </label>
+                <input
+                  type="text"
+                  id="timeSlot"
+                  name="timeSlot"
+                  value={data.timeSlot || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="e.g., 10:00 AM - 1:00 PM"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="location" className={resolvedLabelClasses}>
+                  Location
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={data.location || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Main Sanctuary, House Address"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contactNumber" className={resolvedLabelClasses}>
+                  Contact Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="contactNumber"
+                  name="contactNumber"
+                  value={data.contactNumber || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., 98XXXXXXXX"
+                />
+              </div>
+            </FormSection>
+
+            <FormSection title="Conduct, Speaker & Other Roles">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  Add roles like Conduct, Speaker, Worship Leader, or Household Contact for each schedule.
+                </p>
+                <div className="space-y-2">
+                  {(data.responsibilities || []).map((resp, index) => (
+                    <div key={resp.id} className="grid grid-cols-10 gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Role (e.g., Conduct)"
+                        value={resp.role}
+                        onChange={(event) =>
+                          handleResponsibilityChange(index, 'role', event.target.value)
+                        }
+                        className={`${resolvedInputClasses} col-span-4 text-xs`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Assigned To (e.g., Pastor John)"
+                        value={resp.assignedTo}
+                        onChange={(event) =>
+                          handleResponsibilityChange(index, 'assignedTo', event.target.value)
+                        }
+                        className={`${resolvedInputClasses} col-span-5 text-xs`}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => removeResponsibilityRow(resp.id)}
+                        variant="ghost"
+                        size="sm"
+                        className="col-span-1 !p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50"
+                        aria-label="Remove responsibility"
+                      >
+                        <XCircleIcon className="w-4 h-4 mx-auto" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={addResponsibilityRow}
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                >
+                  <PlusCircleIcon className="w-4 h-4 mr-1.5" />
+                  Add Responsibility
+                </Button>
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Additional Notes">
+              <FullWidthField>
+                <label htmlFor="additionalNotesOrProgramDetails" className={resolvedLabelClasses}>
+                  Extra Notice / Program Details
+                </label>
+                <textarea
+                  id="additionalNotesOrProgramDetails"
+                  name="additionalNotesOrProgramDetails"
+                  value={data.additionalNotesOrProgramDetails || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className={resolvedInputClasses}
+                  placeholder="Any announcements, requirements, or special instructions."
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isTemplate"
+                    name="isTemplate"
+                    checked={data.isTemplate || false}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-purple-600 rounded"
+                  />
+                  <label htmlFor="isTemplate" className="ml-2 text-sm font-medium dark:text-slate-300">
+                    Save as a reusable template
+                  </label>
+                </div>
+              </FullWidthField>
             </FormSection>
           </>
         );
