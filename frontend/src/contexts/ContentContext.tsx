@@ -110,6 +110,9 @@ const saveStoredData = <T,>(key: string, data: T) => {
   }
 };
 
+const ensureArray = <T,>(value: unknown, fallback: T[] = []): T[] =>
+  Array.isArray(value) ? value : fallback;
+
 const normalizeHomepageDates = <T extends { publishedAt?: string; createdAt?: string; submittedAt?: string; date?: string; incidentAt?: string }>(
   items: T[],
   fallbackTimestamp: string
@@ -150,6 +153,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
   const lastSeenContentRef = useRef<string | null>(lastSeenContent);
   const hasLoggedNetworkErrorRef = useRef(false);
+  const hasInvalidSermonsRef = useRef(false);
 
   useEffect(() => {
     lastSeenContentRef.current = lastSeenContent;
@@ -185,7 +189,9 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     [addNotification, contentNotificationConfig],
   );
 
-  const [sermons, setSermons] = useState<Sermon[]>(() => getStoredData('bem_sermons', []));
+  const [sermons, setSermons] = useState<Sermon[]>(() =>
+    ensureArray<Sermon>(getStoredData('bem_sermons', [])),
+  );
   const [events, setEvents] = useState<EventItem[]>(() => getStoredData('bem_events', []));
   const [ministries, setMinistries] = useState<Ministry[]>(() => getStoredData('bem_ministries', []));
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => getStoredData('bem_blogPosts', []));
@@ -213,11 +219,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [decisionLogs, setDecisionLogs] = useState<DecisionLog[]>(() => getStoredData('bem_decisionLogs', []));
   const [expenseRecords, setExpenseRecords] = useState<ExpenseRecord[]>(() => getStoredData('bem_expenseRecords', []));
   
+  const safeSermons = ensureArray<Sermon>(sermons);
   const [loadingContent, setLoadingContent] = useState(true);
   const [contentActivityLogs, setContentActivityLogs] = useState<FrontendActivityLog[]>(() => getStoredData('bem_content_activity_logs', []));
   const contentRef = useRef({
     directMediaItems: directMediaItems as DirectMediaItem[],
-    sermons: sermons as Sermon[],
+    sermons: safeSermons as Sermon[],
     events: events as EventItem[],
     ministries: ministries as Ministry[],
     blogPosts: blogPosts as BlogPost[],
@@ -281,9 +288,28 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (!response.ok) throw new Error(`${config.key} fetch failed`);
 
       const data = await response.json();
+      const isSermonsConfig = config.key === 'sermons';
+      const sermonPayload = isSermonsConfig ? ensureArray<Sermon>((data as any)?.sermons ?? data, []) : null;
+
+      if (isSermonsConfig && !Array.isArray((data as any)?.sermons ?? data)) {
+        if (isDev) {
+          console.warn('Received invalid sermons payload. Expected an array.');
+        }
+        if (hasExistingContent) {
+          return;
+        }
+        config.setter([]);
+        if (config.storageKey) saveStoredData(config.storageKey, []);
+        didUpdateContent = true;
+        return;
+      }
 
       // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
-      const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
+      const hasServerContent = isSermonsConfig
+        ? sermonPayload.length > 0
+        : Array.isArray(data)
+          ? data.length > 0
+          : !!data;
       if (!hasServerContent && hasExistingContent) {
         if (isDev) {
           console.warn(
@@ -294,8 +320,10 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
 
       // ✅ Normalize comment relation name: backend uses `comment`, frontend expects `comments`
-      const normalized = Array.isArray(data)
-        ? data.map((item: any) => {
+      const normalized = isSermonsConfig
+        ? sermonPayload.map(normalizeSermonItem)
+        : Array.isArray(data)
+          ? data.map((item: any) => {
             if (!item || typeof item !== 'object') return item;
             if (config.key === 'sermons') {
               return normalizeSermonItem(item);
@@ -332,7 +360,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
             return normalizedItem;
           })
-        : data;
+          : data;
 
       config.setter(normalized);
       if (Array.isArray(normalized)) {
@@ -507,9 +535,23 @@ const nowTimestamp = new Date().toISOString();
   }, [fetchContentBatch]);
 
   useEffect(() => {
-    const { items, updated } = normalizeHomepageDates(sermons, lastFetchTimestampRef.current);
+    if (Array.isArray(sermons)) {
+      hasInvalidSermonsRef.current = false;
+      return;
+    }
+    if (hasInvalidSermonsRef.current) return;
+    hasInvalidSermonsRef.current = true;
+    if (isDev) {
+      console.warn('Sermons state was not an array. Resetting and refetching.');
+    }
+    setSermons([]);
+    fetchContentBatch(false);
+  }, [fetchContentBatch, isDev, sermons]);
+
+  useEffect(() => {
+    const { items, updated } = normalizeHomepageDates(safeSermons, lastFetchTimestampRef.current);
     if (updated) setSermons(items);
-  }, [sermons]);
+  }, [safeSermons]);
 
   useEffect(() => {
     const { items, updated } = normalizeHomepageDates(events, lastFetchTimestampRef.current);
@@ -536,7 +578,7 @@ const nowTimestamp = new Date().toISOString();
     if (updated) setTestimonials(items);
   }, [testimonials]);
 
-  useEffect(() => { contentRef.current.sermons = sermons; saveStoredData('bem_sermons', sermons); }, [sermons]);
+  useEffect(() => { contentRef.current.sermons = safeSermons; saveStoredData('bem_sermons', safeSermons); }, [safeSermons]);
   useEffect(() => { contentRef.current.events = events; saveStoredData('bem_events', events); }, [events]);
   useEffect(() => { contentRef.current.ministries = ministries; saveStoredData('bem_ministries', ministries); }, [ministries]);
   useEffect(() => { contentRef.current.blogPosts = blogPosts; saveStoredData('bem_blogPosts', blogPosts); }, [blogPosts]);
@@ -1048,7 +1090,7 @@ const nowTimestamp = new Date().toISOString();
   }
   
   const getContentById = (type: ContentType, id: string): ContentItem | undefined => {
-    const allContentArrays = [ sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, branchChurches, directMediaItems, churchMembers, meetingLogs, decisionLogs, expenseRecords, collectionRecords, fellowshipRosters, generatedSchedules, advertisements, prayerRequests, testimonials, donationRecords ];
+    const allContentArrays = [ safeSermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, branchChurches, directMediaItems, churchMembers, meetingLogs, decisionLogs, expenseRecords, collectionRecords, fellowshipRosters, generatedSchedules, advertisements, prayerRequests, testimonials, donationRecords ];
     if (type === 'donatePageContent' && id === 'singleton') return donatePageContent;
     for (const contentArray of allContentArrays) { const item = (contentArray as ContentItem[]).find(item => item.id === id); if (item) return item; }
     return undefined;
@@ -1396,7 +1438,7 @@ const nowTimestamp = new Date().toISOString();
   return (
     <ContentContext.Provider
       value={{	
-        sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
+        sermons: safeSermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
         churchMembers, meetingLogs, decisionLogs, expenseRecords, fellowshipRosters, generatedSchedules,
         allDerivedMediaItems,
         loadingContent,
