@@ -14,6 +14,7 @@ import CommentItem from '../components/comments/CommentItem';
 import LoadingSpinner from './../components/ui/LoadingSpinner';
 import ChapterActions from '../components/history/ChapterActions';
 import { getMediaKindFromUrl } from '../utils/media';
+import FullscreenImageModal from '../components/ui/FullscreenImageModal';
 
 const ChurchHistoryPage: React.FC = () => {
   const { historyChapters, loadingContent, addCommentToItem, toggleLikeOnItem, logContentActivity } = useContent();
@@ -29,6 +30,7 @@ const ChurchHistoryPage: React.FC = () => {
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
   const [isSubmittingComment, setIsSubmittingComment] = useState<Record<string, boolean>>({});
+  const [fullscreenImage, setFullscreenImage] = useState<{ url: string; title: string } | null>(null);
 
   const publishedChapters = useMemo(() =>
     historyChapters.filter(ch => ch.status === 'published').sort((a, b) => b.chapterNumber - a.chapterNumber),
@@ -155,11 +157,18 @@ const ChurchHistoryPage: React.FC = () => {
                   {chapter.imageUrl && (
                     <>
                       {mediaKind === 'image' && (
-                        <img
-                          src={chapter.imageUrl}
-                          alt={chapter.title}
-                          className="w-full max-h-[450px] object-cover rounded-lg shadow mb-6"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => setFullscreenImage({ url: chapter.imageUrl, title: chapter.title })}
+                          className="mb-6 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
+                          aria-label={`View ${chapter.title} image full screen`}
+                        >
+                          <img
+                            src={chapter.imageUrl}
+                            alt={chapter.title}
+                            className="w-full max-h-[450px] object-cover rounded-lg shadow"
+                          />
+                        </button>
                       )}
                       {mediaKind === 'video' && (
                         <video
@@ -271,6 +280,14 @@ const ChurchHistoryPage: React.FC = () => {
       </div>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      {fullscreenImage && (
+        <FullscreenImageModal
+          isOpen={Boolean(fullscreenImage)}
+          onClose={() => setFullscreenImage(null)}
+          imageUrl={fullscreenImage.url}
+          alt={fullscreenImage.title}
+        />
+      )}
       {activeChapterForModal && (
         <>
           <ShareModal
