@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { Prisma, donationrecord_paymentMethod, donationrecord_purpose } from '@prisma/client';
 import crypto from 'crypto';
 import { normalizeEnumValue } from '../utils/enumNormalization';
+import { sendEmail } from '../services/emailService';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
  
 const router = express.Router();
@@ -60,7 +61,38 @@ const normalizedPurpose = normalizeEnumValue(purpose, donationrecord_purpose);
                 transactionTimestamp: new Date(),
             }
         });
-        res.status(201).json(newRecord);
+        let recordToReturn = newRecord;
+
+        try {
+            await sendEmail({
+                to: donorEmail,
+                subject: 'Thank you for your donation',
+                text: `Dear ${donorName},\n\nThank you for your generous donation of ${Number(amount).toFixed(2)}.\nPurpose: ${normalizedPurpose}\nDate: ${new Date(donationDate).toLocaleDateString()}\n${transactionReference ? `Transaction Reference: ${transactionReference}\n` : ''}\nWe appreciate your support.\n\n— Bishram Ekata Mandali`,
+                html: `
+                    <p>Dear ${donorName},</p>
+                    <p>Thank you for your generous donation of <strong>${Number(amount).toFixed(2)}</strong>.</p>
+                    <p><strong>Purpose:</strong> ${normalizedPurpose}</p>
+                    <p><strong>Date:</strong> ${new Date(donationDate).toLocaleDateString()}</p>
+                    ${transactionReference ? `<p><strong>Transaction Reference:</strong> ${transactionReference}</p>` : ''}
+                    <p>We appreciate your support.</p>
+                    <p>— Bishram Ekata Mandali</p>
+                `,
+            });
+
+            if (!isReceiptSent) {
+                recordToReturn = await prisma.donationrecord.update({
+                    where: { id: newRecord.id },
+                    data: {
+                        isReceiptSent: true,
+                        updatedAt: new Date(),
+                    },
+                });
+            }
+        } catch (emailError) {
+            console.error('Failed to send donation confirmation email:', emailError);
+        }
+
+        res.status(201).json(recordToReturn);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create donation record.' });
     }

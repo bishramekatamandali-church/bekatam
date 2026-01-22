@@ -201,6 +201,19 @@ model contactmessage {
   replyNote   String?               @db.Text
 }
 
+model emailotp {
+  id        String   @id
+  email     String
+  codeHash  String
+  purpose   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+
+  @@index([email, purpose])
+}
+
 model decisionlog {
   id                String              @id
   decisionDate      DateTime

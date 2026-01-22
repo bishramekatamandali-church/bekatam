@@ -21,6 +21,7 @@ const ManageContactMessagesPage: React.FC = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [replyNote, setReplyNote] = useState('');
+  const [replyError, setReplyError] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'replied'>('all');
 
   const sortedMessages = useMemo(() => {
@@ -39,6 +40,7 @@ const ManageContactMessagesPage: React.FC = () => {
   useEffect(() => {
     if (selectedMessage) {
       setReplyNote(selectedMessage.replyNote || '');
+      setReplyError('');
     }
   }, [selectedMessage]);
 
@@ -54,11 +56,16 @@ const ManageContactMessagesPage: React.FC = () => {
 
   const handleUpdateStatus = async (status: 'replied' | 'pending') => {
     if (!selectedMessage) return;
+    if (status === 'replied' && !replyNote.trim()) {
+      setReplyError('Please add a reply message before sending.');
+      return;
+    }
     await updateContactMessageStatus(selectedMessage.id, status, status === 'replied' ? replyNote : undefined);
     setIsReplyModalOpen(false);
     setIsViewModalOpen(false); 
     setSelectedMessage(null);
     setReplyNote('');
+    setReplyError('');
   };
   
   if (loadingContent && contactMessages.length === 0) {
@@ -120,7 +127,7 @@ const ManageContactMessagesPage: React.FC = () => {
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-2">
                         <Button variant="outline" size="sm" onClick={() => openViewModal(msg)}>View</Button>
                         <Button variant="primary" size="sm" onClick={() => openReplyModal(msg)}>
-                          {msg.status === 'replied' ? 'Edit Reply Note' : 'Reply/Log'}
+                          {msg.status === 'replied' ? 'Edit Reply' : 'Reply'}
                         </Button>
                       </td>
                     </tr>
@@ -152,16 +159,16 @@ const ManageContactMessagesPage: React.FC = () => {
             {selectedMessage.status === 'replied' && (
               <>
                 <p><strong>Replied At:</strong> {formatTimestampADBS(selectedMessage.repliedAt)}</p>
-                <p><strong>Admin Reply Note:</strong></p>
+                <p><strong>Admin Reply:</strong></p>
                 <div className="p-3 bg-blue-50 rounded border max-h-40 overflow-y-auto">
-                    <p className="whitespace-pre-wrap text-sm">{selectedMessage.replyNote || '(No note added)'}</p>
+                    <p className="whitespace-pre-wrap text-sm">{selectedMessage.replyNote || '(No reply message added)'}</p>
                 </div>
               </>
             )}
             <div className="flex justify-end space-x-2 pt-3 border-t">
                 <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
                  <Button variant="primary" onClick={() => { setIsViewModalOpen(false); openReplyModal(selectedMessage); }}>
-                    {selectedMessage.status === 'replied' ? 'Edit Reply Note' : 'Log Reply'}
+                    {selectedMessage.status === 'replied' ? 'Edit Reply' : 'Reply'}
                  </Button>
             </div>
           </div>
@@ -171,17 +178,18 @@ const ManageContactMessagesPage: React.FC = () => {
       {isReplyModalOpen && selectedMessage && (
         <Modal isOpen={isReplyModalOpen} onClose={() => setIsReplyModalOpen(false)} title={`Respond to ${selectedMessage.name}`} size="md">
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">This form is for internal logging of your reply. You should send the actual reply via your email client.</p>
+            <p className="text-sm text-slate-600">Write the reply below. When you save, the message will be emailed to the sender.</p>
             <div>
-              <label htmlFor="replyNote" className="block text-sm font-medium text-slate-700">Admin Reply Note (Internal)</label>
+              <label htmlFor="replyNote" className="block text-sm font-medium text-slate-700">Reply Message</label>
               <textarea
                 id="replyNote"
                 value={replyNote}
-                onChange={(e) => setReplyNote(e.target.value)}
-                rows={4}
+                onChange={(e) => { setReplyNote(e.target.value); setReplyError(''); }}
+                rows={5}
                 className="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-amber-500 focus:border-amber-500"
-                placeholder="E.g., Replied on [Date] regarding [Topic]. Advised to..."
+                placeholder="Type your response to the sender."
               />
+              {replyError && <p className="mt-2 text-sm text-red-600" role="alert">{replyError}</p>}
             </div>
              <div className="flex items-center justify-between pt-3 border-t">
                 <div>
@@ -194,7 +202,7 @@ const ManageContactMessagesPage: React.FC = () => {
                 <div className="space-x-2">
                     <Button variant="outline" onClick={() => setIsReplyModalOpen(false)}>Cancel</Button>
                     <Button variant="primary" onClick={() => handleUpdateStatus('replied')}>
-                        Save & Mark as Replied
+                        Send Reply & Mark as Replied
                     </Button>
                 </div>
             </div>
