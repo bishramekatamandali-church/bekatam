@@ -1,10 +1,11 @@
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useContent } from '../contexts/ContentContext';
 import Card, { CardContent, CardHeader } from '../components/ui/Card'; 
 import { AboutSection, KeyPerson, HistoryMilestone, CoreAboutSectionId, coreAboutSectionIds, HistoryChapter } from '../types';
 import Button from '../components/ui/Button';
 import { useLocation } from "react-router-dom";
+import FullscreenImageModal from '../components/ui/FullscreenImageModal';
 
 
 // --- Icons ---
@@ -57,24 +58,44 @@ const AboutMedia: React.FC<{
   );
 };
 
-const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => (
-  <Card className="text-center h-full flex flex-col">
-    <CardContent className="flex-grow flex flex-col">
-      {person.imageUrl && (
-        <AboutMedia
-  url={person.imageUrl}
-  alt={person.name}
-  className="h-full"
-   mediaClassName="w-full h-full object-cover"
-/>
+const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
+  return (
+    <>
+      <Card className="text-center h-full flex flex-col">
+        <CardContent className="flex-grow flex flex-col">
+          {person.imageUrl && (
+            <button
+              type="button"
+              onClick={() => setIsImageOpen(true)}
+              className="h-full focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
+              aria-label={`View ${person.name} portrait full screen`}
+            >
+              <AboutMedia
+                url={person.imageUrl}
+                alt={person.name}
+                className="h-full"
+                mediaClassName="w-full h-full object-cover"
+              />
+            </button>
+          )}
+          <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
+          <p className="text-purple-600 font-medium mb-2">{person.role}</p>
+          <p className="text-sm text-slate-600 flex-grow">{person.bio}</p>
+        </CardContent>
+      </Card>
+      {person.imageUrl && (
+        <FullscreenImageModal
+          isOpen={isImageOpen}
+          onClose={() => setIsImageOpen(false)}
+          imageUrl={person.imageUrl}
+          alt={person.name}
+        />
       )}
-      <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
-      <p className="text-purple-600 font-medium mb-2">{person.role}</p>
-      <p className="text-sm text-slate-600 flex-grow">{person.bio}</p>
-    </CardContent>
-  </Card>
-);
+    </>
+  );
+};
 
 const AboutPage: React.FC = () => {
   const { aboutSections, keyPersons, historyMilestones, loadingContent, historyChapters } = useContent();
