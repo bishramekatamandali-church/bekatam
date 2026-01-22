@@ -214,111 +214,144 @@ const DonatePage: React.FC = () => {
                 onMakeAnother={handleMakeAnotherDonation} 
             />
         ) : (
-        <div className="grid md:grid-cols-2 gap-10 items-start">
-          <Card className="bg-teal-50 border border-teal-200">
-            <CardHeader className="border-teal-200">
-              <h2 className="text-2xl font-semibold text-gray-700 flex items-center">
-                <BanknotesIcon className="mr-2 text-teal-600 w-7 h-7"/> How to Give
-              </h2>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div className="p-4 border border-teal-200 rounded-xl">
-                <h3 className="text-xl font-semibold text-gray-700 mb-3">{donatePageContent.localDonationsTitle}</h3>
-                <div className="space-y-8">
-                    <div>
-                        <h4 className="text-md font-semibold text-gray-600 mb-1">Bank Transfer:</h4>
-                        <div className="flex flex-col items-start sm:flex-row sm:gap-6">
-                            <ul className="list-disc list-inside text-gray-600 space-y-1 pl-2 text-sm flex-grow">
-                                <li><strong>Bank Name:</strong> {donatePageContent.bankName}</li>
-                                <li><strong>Account Name:</strong> {donatePageContent.accountName}</li>
-                                <li><strong>Account Number:</strong> {donatePageContent.accountNumber}</li>
-                                <li><strong>Branch:</strong> {donatePageContent.branch}</li>
-                            </ul>
-                             {donatePageContent.bankQrImageUrl && (
-                                <div className="mt-4 w-full sm:w-auto sm:mt-0 flex-shrink-0 flex flex-col items-center">
-                                    <p className="text-sm font-medium text-gray-600 mb-2 sm:hidden">Scan to Pay with Fonepay/QR Pay</p>
-                                    <img src={donatePageContent.bankQrImageUrl} alt="Bank QR Code" className="w-40 h-40 rounded-xl border border-teal-200" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-                        <h4 className="text-md font-semibold text-gray-600 mb-1">
-                            eSewa
-                        </h4>
-                        <p className="text-gray-600 text-sm"><strong>eSewa ID:</strong> {donatePageContent.eSewaId}</p>
-                        {donatePageContent.eSewaQrImageUrl ? (
-                          <img src={donatePageContent.eSewaQrImageUrl} alt="eSewa QR Code" className="w-40 h-40 mt-2 rounded-xl border border-teal-200" />
-                        ) : (
-                          <p className="text-xs text-gray-500 mt-1">(eSewa QR code has not been uploaded yet.)</p>
-                        )}
-                    </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-4">
-                    {donatePageContent.localDonationsNote}
-                </p>
-              </div>
+        <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
+          <div className="space-y-6">
+            <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardHeader className="border-slate-200">
+                <h2 className="text-2xl font-semibold text-slate-800 flex items-center">
+                  <BanknotesIcon className="mr-2 text-teal-600 w-7 h-7"/> Simple Steps to Give
+                </h2>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-slate-600">
+                <ol className="space-y-3">
+                  <li className="flex gap-3">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-700 font-semibold">1</span>
+                    <p>Send your gift using bank transfer or eSewa (details below).</p>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-700 font-semibold">2</span>
+                    <p>Complete the donation form so we can acknowledge your gift.</p>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-700 font-semibold">3</span>
+                    <p>Receive a confirmation and downloadable receipt right away.</p>
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
 
-              <div className="p-4 border border-teal-200 rounded-xl">
-                 <h3 className="text-xl font-semibold text-gray-700 mb-3 flex items-center">
-                    <GlobeAltIcon className="w-6 h-6 mr-2 text-teal-600" />
-                    {donatePageContent.internationalDonationsTitle}
-                </h3>
-                 <div className="grid sm:grid-cols-2 gap-4 items-start">
-                    <div className="space-y-3 text-sm text-gray-600 whitespace-pre-line">
-                        <p>{donatePageContent.internationalDonationsContent}</p>
-                        <p>You can reach us at: <a href={`mailto:${donatePageContent.internationalDonationsContactEmail}`} className="font-semibold text-teal-600 hover:underline">{donatePageContent.internationalDonationsContactEmail}</a>.</p>
-                    </div>
-                    {donatePageContent.internationalQrImageUrl && (
-                      <div className="mt-2 sm:mt-0 flex flex-col items-center sm:items-start">
-                        <h4 className="text-md font-semibold text-gray-600 mb-2">Scan to Give:</h4>
-                        <img src={donatePageContent.internationalQrImageUrl} alt="International Donation QR Code" className="w-40 h-40 rounded-xl border border-teal-200" />
+            <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardHeader className="border-slate-200">
+                <h2 className="text-2xl font-semibold text-slate-800 flex items-center">
+                  <BanknotesIcon className="mr-2 text-teal-600 w-7 h-7"/> {donatePageContent.localDonationsTitle}
+                </h2>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Bank Transfer</h4>
+                  <div className="flex flex-col gap-6 sm:flex-row">
+                    <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm flex-grow">
+                      <li><strong>Bank Name:</strong> {donatePageContent.bankName}</li>
+                      <li><strong>Account Name:</strong> {donatePageContent.accountName}</li>
+                      <li><strong>Account Number:</strong> {donatePageContent.accountNumber}</li>
+                      <li><strong>Branch:</strong> {donatePageContent.branch}</li>
+                    </ul>
+                    {donatePageContent.bankQrImageUrl && (
+                      <div className="w-full sm:w-auto flex-shrink-0 flex flex-col items-center sm:items-start">
+                        <p className="text-xs font-medium text-slate-500 mb-2">Scan to pay</p>
+                        <img src={donatePageContent.bankQrImageUrl} alt="Bank QR Code" className="w-36 h-36 rounded-xl border border-slate-200 object-cover" />
                       </div>
                     )}
-                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                  <h4 className="text-sm font-semibold text-slate-700 mb-1">eSewa</h4>
+                  <p className="text-slate-600 text-sm"><strong>eSewa ID:</strong> {donatePageContent.eSewaId}</p>
+                  {donatePageContent.eSewaQrImageUrl ? (
+                    <img src={donatePageContent.eSewaQrImageUrl} alt="eSewa QR Code" className="w-36 h-36 mt-3 rounded-xl border border-slate-200 object-cover" />
+                  ) : (
+                    <p className="text-xs text-slate-500 mt-1">(eSewa QR code has not been uploaded yet.)</p>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  {donatePageContent.localDonationsNote}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-teal-50 border border-teal-200">
-            <CardHeader className="border-teal-200">
-              <h2 className="text-2xl font-semibold text-gray-700">Log Your Local Donation (NPR)</h2>
-              <p className="text-sm text-gray-500">Help us acknowledge your gift by providing these details for your Nepali Rupee donations.</p>
+            <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardHeader className="border-slate-200">
+                <h2 className="text-2xl font-semibold text-slate-800 flex items-center">
+                  <GlobeAltIcon className="w-6 h-6 mr-2 text-teal-600" />
+                  {donatePageContent.internationalDonationsTitle}
+                </h2>
+              </CardHeader>
+              <CardContent className="grid sm:grid-cols-2 gap-4 items-start">
+                <div className="space-y-3 text-sm text-slate-600 whitespace-pre-line">
+                  <p>{donatePageContent.internationalDonationsContent}</p>
+                  <p>
+                    You can reach us at:{' '}
+                    <a href={`mailto:${donatePageContent.internationalDonationsContactEmail}`} className="font-semibold text-teal-600 hover:underline">
+                      {donatePageContent.internationalDonationsContactEmail}
+                    </a>.
+                  </p>
+                </div>
+                {donatePageContent.internationalQrImageUrl && (
+                  <div className="mt-2 sm:mt-0 flex flex-col items-center sm:items-start">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Scan to give</h4>
+                    <img src={donatePageContent.internationalQrImageUrl} alt="International Donation QR Code" className="w-36 h-36 rounded-xl border border-slate-200 object-cover" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="bg-white border border-slate-200 shadow-sm">
+            <CardHeader className="border-slate-200">
+              <h2 className="text-2xl font-semibold text-slate-800">Log Your Donation</h2>
+              <p className="text-sm text-slate-500">This quick form helps us record and acknowledge your gift.</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="donorName" className="block text-xs font-medium text-gray-700">Full Name <span className="text-red-500">*</span></label>
-                  <input type="text" name="donorName" id="donorName" value={formData.donorName} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="donorName" className="block text-xs font-medium text-slate-700">Full Name <span className="text-red-500">*</span></label>
+                    <input type="text" name="donorName" id="donorName" value={formData.donorName} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                  </div>
+                  <div>
+                    <label htmlFor="donorEmail" className="block text-xs font-medium text-slate-700">Email Address <span className="text-red-500">*</span></label>
+                    <input type="email" name="donorEmail" id="donorEmail" value={formData.donorEmail} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="donorEmail" className="block text-xs font-medium text-gray-700">Email Address <span className="text-red-500">*</span></label>
-                  <input type="email" name="donorEmail" id="donorEmail" value={formData.donorEmail} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="donorPhone" className="block text-xs font-medium text-slate-700">Phone Number (Optional)</label>
+                    <input type="tel" name="donorPhone" id="donorPhone" value={formData.donorPhone} onChange={handleChange} className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                  </div>
+                  <div>
+                    <label htmlFor="amount" className="block text-xs font-medium text-slate-700">Amount (NPR) <span className="text-red-500">*</span></label>
+                    <input type="number" name="amount" id="amount" value={formData.amount} onChange={handleChange} required min="1" step="any" className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="donorPhone" className="block text-xs font-medium text-gray-700">Phone Number (Optional)</label>
-                  <input type="tel" name="donorPhone" id="donorPhone" value={formData.donorPhone} onChange={handleChange} className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
-                </div>
-                 <div>
-                  <label htmlFor="amount" className="block text-xs font-medium text-gray-700">Amount (NPR) <span className="text-red-500">*</span></label>
-                  <input type="number" name="amount" id="amount" value={formData.amount} onChange={handleChange} required min="1" step="any" className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
-                </div>
-                 <div>
-                  <label htmlFor="purpose" className="block text-xs font-medium text-gray-700">Donation Purpose <span className="text-red-500">*</span></label>
-                  <select name="purpose" id="purpose" value={formData.purpose} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500">
-                    {donationPurposeList.map(purpose => (
-                      <option key={purpose} value={purpose}>{purpose}</option>
-                    ))}
-                  </select>
-                </div>
-                 <div>
-                  <label htmlFor="donationDate" className="block text-xs font-medium text-gray-700">Donation Date <span className="text-red-500">*</span></label>
-                  <input type="date" name="donationDate" id="donationDate" value={formData.donationDate} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-teal-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="purpose" className="block text-xs font-medium text-slate-700">Donation Purpose <span className="text-red-500">*</span></label>
+                    <select name="purpose" id="purpose" value={formData.purpose} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500">
+                      {donationPurposeList.map(purpose => (
+                        <option key={purpose} value={purpose}>{purpose}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="donationDate" className="block text-xs font-medium text-slate-700">Donation Date <span className="text-red-500">*</span></label>
+                    <input type="date" name="donationDate" id="donationDate" value={formData.donationDate} onChange={handleChange} required className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500" />
+                  </div>
                 </div>
                 {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
                 <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting || loadingContent}>
                   {isSubmitting ? 'Logging Donation...' : 'Confirm & Log My Donation'}
                 </Button>
+                <p className="text-xs text-slate-500 text-center">You will receive a confirmation and receipt after submitting.</p>
               </form>
             </CardContent>
           </Card>
