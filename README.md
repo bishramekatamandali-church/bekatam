@@ -26,14 +26,28 @@ This command will install root-level dependencies (like `concurrently`) and then
 
 **2. Configure Backend Environment**
 -   Create a `.env` file in the `/backend` directory.
--   Open the new `.env` file and add your MySQL connection string, Google Gemini API Key, and frontend URL. **All variables are required for the server to start.**
+-   Open the new `.env` file and add your MySQL connection string, Google Gemini API Key, frontend URL, and email credentials. **All variables are required for the server to start.**
     ```env
     # backend/.env
     DATABASE_URL="mysql://USER:PASSWORD@HOST:PORT/DATABASE"
     API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"
     FRONTEND_URL="http://localhost:5000"
+    JWT_SECRET="YOUR_JWT_SECRET"
+
+    # Email service (SMTP)
+    ADMIN_EMAIL="bishramekatamandali@gmail.com"
+    EMAIL_FROM="bishramekatamandali@gmail.com"
+    EMAIL_FROM_NAME="Bishram Ekata Mandali"
+    SMTP_HOST="smtp.gmail.com"
+    SMTP_PORT=465
+    SMTP_SECURE=true
+    SMTP_USER="bishramekatamandali@gmail.com"
+    SMTP_PASS="YOUR_EMAIL_APP_PASSWORD"
+    OTP_TTL_MINUTES=10
+    OTP_MAX_ATTEMPTS=5
     ```
     Replace the placeholders with your actual MySQL details. The database must already exist. For production, change `FRONTEND_URL` to your live domain.
+    For stronger deliverability, consider using a custom domain email (e.g. `info@bishramekatamandali.org`) with a provider like Zoho Mail.
 
 **3. Set Up the Database**
 This is a **critical step**. It syncs the Prisma schema with your database, creating all tables and generating the Prisma Client.
@@ -63,7 +77,7 @@ pm2 start ecosystem.config.js --env development
 ## 3. Troubleshooting
 
 -   **`FATAL: ... environment variable is not set...`**
-    -   **Solution:** Ensure the `.env` file exists inside the `/backend` directory (not the root) and contains `API_KEY`, `DATABASE_URL`, and `FRONTEND_URL`.
+    -   **Solution:** Ensure the `.env` file exists inside the `/backend` directory (not the root) and contains `API_KEY`, `DATABASE_URL`, `FRONTEND_URL`, and `JWT_SECRET`.
 
 -   **`Error: @prisma/client did not initialize yet...`**
     -   **Solution:** You must run `npm run prisma:setup` from within the `/backend` directory after configuring your `.env` file.
