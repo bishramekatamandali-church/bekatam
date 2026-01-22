@@ -150,6 +150,7 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
     { label: "Home", path: '/' },
     { label: "Blog", path: '/blog' },
     { label: "News", path: '/news' },
+    { label: "Notices", path: '/notices' },
     {
       label: "Connect",
       children: [
