@@ -117,6 +117,7 @@ const normalizeHomepageDates = <T extends { publishedAt?: string; createdAt?: st
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const isDev = import.meta.env.DEV;
   const { currentUser, isAdmin } = useAuth();
   const {
     addNotification,
@@ -128,6 +129,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   } = useNotification();
   const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
   const lastSeenContentRef = useRef<string | null>(lastSeenContent);
+  const hasLoggedNetworkErrorRef = useRef(false);
 
   useEffect(() => {
     lastSeenContentRef.current = lastSeenContent;
@@ -241,13 +243,18 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const latestContent = new Map<string, any[]>();
   let didUpdateContent = false;
 
+  if (!navigator.onLine) {
+    if (setLoading) setLoadingContent(false);
+    return;
+  }
+
+  hasLoggedNetworkErrorRef.current = false;
+
   const fetchPromises = dataFetchConfig.map(async (config) => {
     const currentValue = config.getCurrent?.();
     const hasExistingContent = Array.isArray(currentValue)
       ? (currentValue as any[]).length > 0
       : Boolean(currentValue);
-
-    if (!navigator.onLine) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/${config.key}`, { cache: 'no-store' });
@@ -258,9 +265,11 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
       const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
       if (!hasServerContent && hasExistingContent) {
-        console.warn(
-          `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
-        );
+        if (isDev) {
+          console.warn(
+            `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
+          );
+        }
         return;
       }
 
@@ -312,7 +321,17 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (config.storageKey) saveStoredData(config.storageKey, normalized);
       didUpdateContent = true;
     } catch (error) {
-      console.error(`Failed to load ${config.key}:`, error);
+      const isNetworkError = error instanceof TypeError && !navigator.onLine;
+      if (isNetworkError && !hasLoggedNetworkErrorRef.current) {
+        if (isDev) {
+          console.warn('Network appears offline. Pausing content fetch errors until back online.');
+        }
+        hasLoggedNetworkErrorRef.current = true;
+        return;
+      }
+      if (isDev) {
+        console.error(`Failed to load ${config.key}:`, error);
+      }
     }
   }); // ✅ <-- this was missing before
 
