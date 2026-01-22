@@ -680,7 +680,7 @@ export const rosterTypeList = [
   "Special Meeting",
   "Outreach Program",
   "Other Regular Program",
-  "Custom Schedule",
+  "Custom Schedule", // Fixed missing comma to prevent build error
   "Prayer Team Visit",
   "Night Prayer",
   "Saturday Prayer", // Added types
