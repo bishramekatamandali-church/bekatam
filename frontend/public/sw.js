@@ -1,6 +1,5 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `bem-static-${CACHE_VERSION}`;
-const API_CACHE = `bem-api-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   '/',
@@ -27,7 +26,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => ![STATIC_CACHE, API_CACHE].includes(key))
+          .filter((key) => key !== STATIC_CACHE)
           .map((key) => caches.delete(key)),
       ),
     ),
@@ -89,17 +88,7 @@ self.addEventListener('fetch', (event) => {
     if (isEventStream) {
       return;
     }
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok && response.type === 'basic') {
-            const responseClone = response.clone();
-            caches.open(API_CACHE).then((cache) => cache.put(request, responseClone).catch(() => undefined));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request)),
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
