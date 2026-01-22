@@ -79,6 +79,15 @@ app.use(compression());
 app.use(morgan("dev"));
 app.use(express.json());
 
+app.use("/api", (req, res, next) => {
+  if (req.method === "GET" && !res.getHeader("Cache-Control")) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Surrogate-Control", "no-store");
+  }
+  next();
+});
+
 // --- CORS CONFIGURATION ---
 app.use(
   cors({

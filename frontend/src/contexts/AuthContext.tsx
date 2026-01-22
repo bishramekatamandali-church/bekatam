@@ -274,22 +274,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [currentUser, logAdminAction]
   );
 
-  /* --------------------------- PASSWORD (NOT IMPLEMENTED) --------------------------- */
+  /* --------------------------- PASSWORD --------------------------- */
 
-  const changePassword = async () => ({
-    success: false,
-    message: "Password change endpoint not implemented yet.",
-  });
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
 
-  const forgotPassword = async () => ({
-    success: false,
-    message: "Forgot password endpoint not implemented yet.",
-  });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, message: data?.error || "Failed to change password." };
+      }
 
-  const resetPassword = async () => ({
-    success: false,
-    message: "Reset password endpoint not implemented yet.",
-  });
+      return { success: true, message: data?.message || "Password updated." };
+    } catch (error) {
+      console.error("changePassword error:", error);
+      return { success: false, message: "Failed to change password." };
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, message: data?.error || "Failed to send reset email." };
+      }
+
+      return { success: true, message: data?.message || "Reset email sent.", token: data?.token };
+    } catch (error) {
+      console.error("forgotPassword error:", error);
+      return { success: false, message: "Failed to send reset email." };
+    }
+  };
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, newPassword }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, message: data?.error || "Failed to reset password." };
+      }
+
+      return { success: true, message: data?.message || "Password reset successfully." };
+    } catch (error) {
+      console.error("resetPassword error:", error);
+      return { success: false, message: "Failed to reset password." };
+    }
+  };
 
   return (
     <AuthContext.Provider

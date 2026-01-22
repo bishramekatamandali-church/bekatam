@@ -10,7 +10,7 @@ const client_1 = require("@prisma/client");
 const emailService_1 = require("../services/emailService");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
-const ADMIN_EMAIL = 'shahidsingh1432@gmail.com'; // Hardcoded admin email for notifications
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'bishramekatamandali@gmail.com').toLowerCase().trim();
 // Helper to standardize the payload shape for the frontend
 const shapeContactMessage = (message) => ({
     ...message,
@@ -65,16 +65,17 @@ router.post('/', async (req, res) => {
           <hr>
           <p>You can manage this message in the admin panel.</p>
         `,
+                replyTo: `${name} <${email}>`,
             });
         }
         catch (emailError) {
-            console.error("Failed to send contact message notification email, but message was saved to DB:", emailError);
+            console.error('Failed to send contact message notification email, but message was saved to DB:', emailError);
             // Don't fail the request if only the email fails, since the message is saved.
         }
         res.status(201).json(shapeContactMessage(newContactMessage));
     }
     catch (error) {
-        console.error("Error creating contact message:", error);
+        console.error('Error creating contact message:', error);
         res.status(500).json({ error: 'Failed to save contact message.' });
     }
 });
@@ -86,6 +87,10 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: 'A valid status ("pending" or "replied") is required.' });
     }
     try {
+        const existingMessage = await db_1.prisma.contactmessage.findUnique({ where: { id } });
+        if (!existingMessage) {
+            return res.status(404).json({ error: 'Contact message not found.' });
+        }
         const updatedMessage = await db_1.prisma.contactmessage.update({
             where: { id },
             data: {
@@ -94,6 +99,23 @@ router.put('/:id', async (req, res) => {
                 repliedAt: status === 'replied' ? new Date() : null,
             }
         });
+        if (status === 'replied' && replyNote) {
+            try {
+                await (0, emailService_1.sendEmail)({
+                    to: existingMessage.email,
+                    subject: `Re: ${existingMessage.subject}`,
+                    text: `Hello ${existingMessage.name},\n\n${replyNote}\n\n— Bishram Ekata Mandali`,
+                    html: `
+                <p>Hello ${existingMessage.name},</p>
+                <p>${replyNote.replace(/\n/g, '<br>')}</p>
+                <p>— Bishram Ekata Mandali</p>
+              `,
+                });
+            }
+            catch (emailError) {
+                console.error('Failed to send contact reply email:', emailError);
+            }
+        }
         res.json(shapeContactMessage(updatedMessage));
     }
     catch (error) {

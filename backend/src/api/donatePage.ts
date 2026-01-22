@@ -1,5 +1,6 @@
 import express from 'express';
 import { prisma } from '../db';
+import { publishContentUpdate } from '../services/contentUpdates';
 
 const router = express.Router();
 const SINGLETON_ID = 'singleton';
@@ -31,6 +32,7 @@ router.put('/', async (req, res) => {
         updatedAt: new Date(),
       },
     });
+    publishContentUpdate({ type: 'donatePageContent', action: 'updated', id: SINGLETON_ID, timestamp: new Date().toISOString() });
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to save donate page content.' });

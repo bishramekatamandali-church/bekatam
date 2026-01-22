@@ -1,70 +1,62 @@
 // src/components/history/ChapterActions.tsx
 import React from 'react';
 import Button from '../ui/Button';
-import { HeartIcon, ChatBubbleOvalLeftEllipsisIcon, ShareIcon } from './../icons/GenericIcons';
-import { HistoryChapter } from '../../types';
+import { ChatBubbleLeftRightIcon, ArrowUpOnSquareIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
+import { HandThumbUpIcon as HandThumbUpIconSolid } from '@heroicons/react/24/solid';
 
 interface ChapterActionsProps {
-  chapter: HistoryChapter;
-  isAuthenticated: boolean;
-  tempLikes: Record<string, number>;
-  tempIsLiked: Record<string, boolean>;
-  onLike: (chapterId: string) => void;
+  likes: number;
+  isLiked?: boolean;
+  commentsCount: number;
+  onLike: () => void;
   onComment: () => void;
   onShare: () => void;
 }
 
 const ChapterActions: React.FC<ChapterActionsProps> = ({
-  chapter,
-  isAuthenticated,
-  tempLikes,
-  tempIsLiked,
+  likes,
+  isLiked,
+  commentsCount,
   onLike,
   onComment,
   onShare
 }) => {
   return (
-    <div className="flex items-center space-x-4">
+    <div className="flex flex-wrap items-center gap-2">
       <Button
         variant="ghost"
-        onClick={() => onLike(chapter.id)}
-        aria-label="Like"
+        onClick={onLike}
+        aria-label={isLiked ? `Unlike chapter, ${likes} likes` : `Like chapter, ${likes} likes`}
         title="Like"
+        aria-pressed={isLiked}
+        className="flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-slate-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600"
       >
-        <HeartIcon
-          title="Like"
-          className="w-5 h-5 mr-1.5"
-          isFilled={tempIsLiked[chapter.id]}
-        />
-        {tempLikes[chapter.id] ?? chapter.likes ?? 0}
-        <span className="ml-1 hidden sm:inline">Like</span>
+        {isLiked ? <HandThumbUpIconSolid className="h-5 w-5 text-purple-600" /> : <HandThumbUpIcon className="h-5 w-5" />}
+        <span className="text-sm font-medium">{likes}</span>
+        <span className="text-sm font-medium hidden sm:inline">Like</span>
       </Button>
 
       <Button
         variant="ghost"
         onClick={onComment}
-        aria-label="Comment"
+        aria-label={`Comment on chapter, ${commentsCount} comments`}
         title="Comment"
+        className="flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-slate-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600"
       >
-        <ChatBubbleOvalLeftEllipsisIcon
-          title="Comment"
-          className="w-5 h-5 mr-1.5"
-        />
-        {chapter.comments.length}
-        <span className="ml-1 hidden sm:inline">Comment</span>
-      </Button>
+      <ChatBubbleLeftRightIcon className="h-5 w-5" />
+        <span className="text-sm font-medium">{commentsCount}</span>
+        <span className="text-sm font-medium hidden sm:inline">Comment</span>        
+     </Button>
 
       <Button
         variant="ghost"
         onClick={onShare}
-        aria-label="Share"
+        aria-label="Share chapter"
         title="Share"
+        className="flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-slate-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600"
       >
-        <ShareIcon
-          title="Share"
-          className="w-5 h-5 mr-1.5"
-        />
-        <span className="hidden sm:inline">Share</span>
+        <ArrowUpOnSquareIcon className="h-5 w-5" />
+        <span className="text-sm font-medium hidden sm:inline">Share</span>
       </Button>
     </div>
   );

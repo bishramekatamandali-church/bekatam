@@ -24,26 +24,32 @@ const ManageSermonsPage: React.FC = () => {
   const { sermons, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
- 
+  const [formError, setFormError] = useState<string | null>(null);
+
   const sortedSermons = React.useMemo(() =>
     [...sermons].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
   [sermons]);
 
   const handleOpenModal = (sermon?: Sermon) => {
     setEditingSermon(sermon || null);
+    setFormError(null);   
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingSermon(null);
+    setFormError(null);
   };
 
   const handleSubmit = async (data: GenericContentFormData) => { 
-    if (editingSermon) {
-      await updateContent('sermon', editingSermon.id, data as SermonFormData);
-    } else {
-      await addContent('sermon', data as SermonFormData);
+    setFormError(null);
+    const result = editingSermon
+      ? await updateContent('sermon', editingSermon.id, data as SermonFormData)
+      : await addContent('sermon', data as SermonFormData);
+    if (!result.success) {
+      setFormError(result.message || 'Unable to save the sermon. Please try again.');
+      return;
     }
     handleCloseModal();
   };
@@ -113,6 +119,7 @@ const ManageSermonsPage: React.FC = () => {
           contentType="sermon"
           initialData={editingSermon}
           isLoading={loadingContent}
+          errorMessage={formError}
         />
       )}
     </div>

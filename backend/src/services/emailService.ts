@@ -5,63 +5,92 @@ interface MailOptions {
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
 }
 
 let transporter: nodemailer.Transporter;
+let defaultFrom = '"BEM Church App" <no-reply@bemchurch.com>';
 
-// Use an async function to initialize the transporter with a test account
-async function initializeEmailService() {
+const parseBoolean = (value?: string) => {
+  if (!value) return false;
+  return ['true', '1', 'yes', 'y'].includes(value.toLowerCase());
+};
+
+const buildDefaultFrom = () => {
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@bemchurch.com';
+  const fromName = process.env.EMAIL_FROM_NAME || 'BEM Church App';
+  defaultFrom = `"${fromName}" <${fromEmail}>`;
+};
+
+const createTransporter = async () => {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpSecure = parseBoolean(process.env.SMTP_SECURE);
+
+  buildDefaultFrom();
+
+  if (smtpHost && smtpUser && smtpPass) {
+    transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    console.log('📧 Email service initialized with configured SMTP settings.');
+    return;
+  }
   try {
-    // Create a test account with Ethereal
     const testAccount = await nodemailer.createTestAccount();
-    console.log("📧 Nodemailer test account created for email previews.");
-    console.log("   User: %s", testAccount.user);
-    console.log("   Pass: %s", testAccount.pass);
+    console.warn('⚠️ SMTP credentials missing. Falling back to Ethereal for email previews.');
 
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
       port: 587,
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
-        user: testAccount.user, // generated ethereal user
-        pass: testAccount.pass, // generated ethereal password
+        user: testAccount.user,
+        pass: testAccount.pass,
       },
     });
 
-    console.log("📧 Email service initialized and ready to send emails via Ethereal.");
-
+     console.log('📧 Email service initialized with Ethereal test account.');
   } catch (error) {
-    console.error("❌ Failed to create Nodemailer test account. Email sending will not work.", error);
+    console.error('❌ Failed to initialize email service.', error);
   }
-}
+};
 
-// Initialize the service when the module is loaded
-initializeEmailService();
+createTransporter();
 
 export const sendEmail = async (options: MailOptions) => {
   if (!transporter) {
-    console.error("❌ Email transporter is not initialized. Cannot send email.");
-    throw new Error("Email service is not available.");
+    console.error('❌ Email transporter is not initialized. Cannot send email.');
+    throw new Error('Email service is not available.');
   }
 
   const mailOptions = {
-    from: '"BEM Church App" <no-reply@bemchurch.com>', // sender address
+    from: defaultFrom,
     to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
+    replyTo: options.replyTo,
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Message sent: %s", info.messageId);
-    // Preview only available when sending through an Ethereal account
+     console.log('✅ Message sent: %s', info.messageId);
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
-        console.log("📬 Preview URL for the sent email: %s", previewUrl);
+     console.log('📬 Preview URL for the sent email: %s', previewUrl);
     }
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error('❌ Error sending email:', error);
     throw error;
   }
 };

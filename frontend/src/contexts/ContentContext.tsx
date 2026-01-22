@@ -50,6 +50,26 @@ const normalizeSermonItem = (item: any): Sermon => {
     linkPath: item?.linkPath || `/sermons/${item?.id}`,
   } as Sermon;
 };
+
+const normalizeFellowshipRosterItem = (item: any): FellowshipRosterItem => ({
+  ...item,
+  responsibilities: Array.isArray(item?.responsibilities)
+    ? item.responsibilities
+    : Array.isArray(item?.responsibility)
+      ? item.responsibility
+      : [],
+  linkPath: item?.linkPath || `/fellowship-program/roster/${item?.id}`,
+});
+
+const normalizeGeneratedScheduleItem = (item: any): GeneratedScheduleItem => ({
+  ...item,
+  responsibilities: Array.isArray(item?.responsibilities)
+    ? item.responsibilities
+    : Array.isArray(item?.responsibility)
+      ? item.responsibility
+      : [],
+  linkPath: item?.linkPath || `/fellowship-program/schedule/${item?.id}`,
+});
 	
 const initialSampleDonatePageContent: DonatePageContent = {
   id: 'singleton',
@@ -117,6 +137,7 @@ const normalizeHomepageDates = <T extends { publishedAt?: string; createdAt?: st
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const isDev = import.meta.env.DEV;
   const { currentUser, isAdmin } = useAuth();
   const {
     addNotification,
@@ -128,6 +149,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   } = useNotification();
   const lastFetchTimestampRef = useRef<string>(new Date().toISOString());
   const lastSeenContentRef = useRef<string | null>(lastSeenContent);
+  const hasLoggedNetworkErrorRef = useRef(false);
 
   useEffect(() => {
     lastSeenContentRef.current = lastSeenContent;
@@ -211,6 +233,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     donationRecords: donationRecords as DonationRecord[],
     collectionRecords: collectionRecords as CollectionRecord[],
     ministryJoinRequests: ministryJoinRequests as MinistryJoinRequest[],
+    donatePageContent: donatePageContent as DonatePageContent,
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -231,7 +254,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'donation-records', setter: setDonationRecords, storageKey: 'bem_donationRecords', getCurrent: () => contentRef.current.donationRecords },
     { key: 'collection-records', setter: setCollectionRecords, storageKey: 'bem_collectionRecords', getCurrent: () => contentRef.current.collectionRecords },
     { key: 'ministry-join-requests', setter: setMinistryJoinRequests, storageKey: 'bem_ministryJoinRequests', getCurrent: () => contentRef.current.ministryJoinRequests },
-  ]), []);
+    { key: 'donate-page', setter: setDonatePageContent, storageKey: 'bem_donatePageContent', getCurrent: () => contentRef.current.donatePageContent }, 
+ ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
   if (setLoading) setLoadingContent(true);
@@ -239,13 +263,19 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const latestContent = new Map<string, any[]>();
   let didUpdateContent = false;
 
+  if (!navigator.onLine) {
+    if (setLoading) setLoadingContent(false);
+    return;
+  }
+
+  hasLoggedNetworkErrorRef.current = false;
+	
   const fetchPromises = dataFetchConfig.map(async (config) => {
-    const hasExistingContent = Array.isArray(config.getCurrent?.())
-      ? (config.getCurrent?.() as any[]).length > 0
-      : false;
-
-    if (!navigator.onLine) return;
-
+    const currentValue = config.getCurrent?.();
+    const hasExistingContent = Array.isArray(currentValue)
+      ? (currentValue as any[]).length > 0
+      : Boolean(currentValue);
+   
     try {
       const response = await fetch(`${API_BASE_URL}/${config.key}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`${config.key} fetch failed`);
@@ -254,10 +284,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       // ✅ If backend returns [] / empty, do NOT overwrite existing local content.
       const hasServerContent = Array.isArray(data) ? data.length > 0 : !!data;
-      if (!hasServerContent && hasExistingContent && config.key !== 'sermons') {
-        console.warn(
-          `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
-        );
+      if (!hasServerContent && hasExistingContent) {
+        if (isDev) {
+          console.warn(
+            `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
+          );
+        }
         return;
       }
 
@@ -309,9 +341,48 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (config.storageKey) saveStoredData(config.storageKey, normalized);
       didUpdateContent = true;
     } catch (error) {
-      console.error(`Failed to load ${config.key}:`, error);
+      const isNetworkError = error instanceof TypeError && !navigator.onLine;
+      if (isNetworkError && !hasLoggedNetworkErrorRef.current) {
+        if (isDev) {
+          console.warn('Network appears offline. Pausing content fetch errors until back online.');
+        }
+        hasLoggedNetworkErrorRef.current = true;
+        return;
+      }
+      if (isDev) {
+        console.error(`Failed to load ${config.key}:`, error);
+      }
     }
   }); // ✅ <-- this was missing before
+
+  fetchPromises.push((async () => {
+    const hasExistingContent = fellowshipRosters.length > 0 || generatedSchedules.length > 0;
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('fellowship-schedules fetch failed');
+      const data = await response.json();
+      const rosters = Array.isArray(data?.rosters) ? data.rosters : [];
+      const schedules = Array.isArray(data?.schedules) ? data.schedules : [];
+      const hasServerContent = rosters.length > 0 || schedules.length > 0;
+      if (!hasServerContent && hasExistingContent) {
+        if (isDev) {
+          console.warn('Skipped overwriting fellowship schedules with empty server response.');
+        }
+        return;
+      }
+      const normalizedRosters = rosters.map(normalizeFellowshipRosterItem);
+      const normalizedSchedules = schedules.map(normalizeGeneratedScheduleItem);
+      setFellowshipRosters(normalizedRosters);
+      setGeneratedSchedules(normalizedSchedules);
+      saveStoredData('bem_fellowshipRosters', normalizedRosters);
+      saveStoredData('bem_generatedSchedules', normalizedSchedules);
+      didUpdateContent = true;
+    } catch (error) {
+      if (isDev) {
+        console.error('Failed to load fellowship schedules:', error);
+      }
+    }
+  })());
 
   await Promise.all(fetchPromises).finally(() => {
     if (setLoading) setLoadingContent(false);
@@ -377,7 +448,7 @@ const nowTimestamp = new Date().toISOString();
   if (didUpdateContent) {
     updateLastSeenContent(nowTimestamp);
   }
-}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId]);
+}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId, isDev, fellowshipRosters.length, generatedSchedules.length]);
 
   useEffect(() => {
     fetchContentBatch(true);
@@ -482,7 +553,7 @@ const nowTimestamp = new Date().toISOString();
   useEffect(() => { contentRef.current.contactMessages = contactMessages; saveStoredData('bem_contactMessages', contactMessages); }, [contactMessages]);
   useEffect(() => { contentRef.current.ministryJoinRequests = ministryJoinRequests; saveStoredData('bem_ministryJoinRequests', ministryJoinRequests); }, [ministryJoinRequests]);
   useEffect(() => { contentRef.current.directMediaItems = directMediaItems; saveStoredData('bem_directMediaItems', directMediaItems); }, [directMediaItems]);
-  useEffect(() => { saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
+  useEffect(() => { contentRef.current.donatePageContent = donatePageContent; saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
   useEffect(() => { saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
@@ -497,6 +568,20 @@ const nowTimestamp = new Date().toISOString();
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const buildDirectMediaPayload = (data: DirectMediaFormData) => {
+    const tags = data.tagsString
+      ? data.tagsString
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
+
+    return {
+      ...data,
+      category: data.uploadCategory,
+      tags,
+    };
+  };
 
   const logContentActivity = useCallback((description: string, type: FrontendActivityLog['type'], itemType?: FrontendActivityLog['itemType'], itemId?: string) => {
     const newLog: FrontendActivityLog = { id: `content-log-${Date.now()}`, timestamp: new Date().toISOString(), userId: currentUser?.id, description, type, itemType, itemId };
@@ -504,7 +589,7 @@ const nowTimestamp = new Date().toISOString();
   }, [currentUser]);
 
   const addContent = async (type: ContentType, data: GenericContentFormData): Promise<{ success: boolean; newItem?: ContentItem; message?: string }> => {
-    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest'];
+    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest', 'donation'];
     if (!isAdmin && !allowedForNonAdmins.includes(type)) {
         return { success: false, message: 'Only administrators can create this type of content.' };
     }
@@ -543,9 +628,13 @@ const nowTimestamp = new Date().toISOString();
     }
 
     const endpoint = contentTypeToEndpoint[type];
+    let useLocalFallback = false;
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...normalizedData, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
+            const payload = type === 'directMedia'
+              ? buildDirectMediaPayload(normalizedData as DirectMediaFormData)
+              : normalizedData;
+            const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...payload, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const normalizedNewItem =
@@ -554,13 +643,28 @@ const nowTimestamp = new Date().toISOString();
             const setter = setterMap[type];
             if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
             logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
+            if (type === 'donation') {
+              addNotification({
+                targetUserId: 'admin_group',
+                message: `New donation logged: ${normalizedNewItem.donorName} donated NPR ${Number(normalizedNewItem.amount).toFixed(2)}.`,
+                link: '/admin/donation-records',
+                type: 'generic',
+              });
+            }
             sendContentUpdateNotification('added', type, normalizedNewItem);           
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
-          const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
-          return { success: false, message };
+          if (type === 'sermon') {
+            useLocalFallback = true;
+          } else {
+            const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
+            return { success: false, message };
+          }
         }
+    }
+    if (endpoint && !useLocalFallback) {
+      return { success: false, message: 'Failed to create content.' };
     }
     let newItem: ContentItem | null = null;
     let success = false;
@@ -720,7 +824,31 @@ const nowTimestamp = new Date().toISOString();
       case 'meetingLog': { const newLog: MeetingLog = { id: newItemId, ...(data as MeetingLogFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setMeetingLogs(prev => [newLog, ...prev]); newItem = newLog; success = true; break; }
       case 'decisionLog': { const newLog: DecisionLog = { id: newItemId, ...(data as DecisionLogFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setDecisionLogs(prev => [newLog, ...prev]); newItem = newLog; success = true; break; }
       case 'expenseRecord': { const formData = data as ExpenseRecordFormData; const newRecord: ExpenseRecord = { id: newItemId, ...formData, amount: Number(formData.amount), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setExpenseRecords(prev => [newRecord, ...prev]); newItem = newRecord; success = true; break; }
-      case 'fellowshipRoster': { const newRoster: FellowshipRosterItem = { id: newItemId, ...(data as FellowshipRosterFormData), linkPath: `/fellowship-program/roster/${newItemId}`, createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setFellowshipRosters(prev => [newRoster, ...prev]); newItem = newRoster; success = true; break; }
+      case 'fellowshipRoster': {
+        try {
+          const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({
+              ...(data as FellowshipRosterFormData),
+              postedByAdminId: currentUser?.id,
+              postedByAdminName: currentUser?.fullName,
+            }),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create fellowship roster');
+          }
+          const created = normalizeFellowshipRosterItem(await response.json());
+          setFellowshipRosters((prev) => [created, ...prev]);
+          newItem = created;
+          success = true;
+        } catch (error) {
+          console.error('Error creating fellowship roster:', error);
+          message = 'Failed to create fellowship roster. Please try again.';
+        }
+        break;
+      }
       case 'advertisement': { const newAd: Advertisement = { id: newItemId, ...(data as AdvertisementFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setAdvertisements(prev => [newAd, ...prev]); newItem = newAd; success = true; break; }
       }
     if (success && newItem) {
@@ -731,6 +859,27 @@ const nowTimestamp = new Date().toISOString();
   };
 
   const updateContent = async (type: ContentType, id: string, data: GenericContentFormData): Promise<{ success: boolean; updatedItem?: ContentItem; message?: string }> => {
+    if (type === 'donatePageContent') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/donate-page`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update donate page content.');
+        }
+        const updatedItem: ContentItem = await response.json();
+        setDonatePageContent(updatedItem as DonatePageContent);
+        logContentActivity(`Donate page content updated`, 'content_update', 'donatePageContent', 'singleton');
+        return { success: true, updatedItem };
+      } catch (error) {
+        console.error('Error updating donate page content:', error);
+        return { success: false, message: 'Failed to update donate page content. Please try again.' };
+      }
+    }
+
     const contentTypeToEndpoint: Partial<Record<ContentType, string>> =
  { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections',
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
@@ -740,10 +889,13 @@ const nowTimestamp = new Date().toISOString();
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
+        const payload = type === 'directMedia'
+          ? buildDirectMediaPayload(data as DirectMediaFormData)
+          : data;
         const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
         if (!response.ok) {
           const errorData = await response.json();
@@ -784,6 +936,26 @@ const nowTimestamp = new Date().toISOString();
         return { success: false, message: `Failed to update ${type}. Please try again.` };
       }
     }
+    if (type === 'fellowshipRoster') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ ...(data as FellowshipRosterFormData), postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update fellowship roster');
+        }
+        const updatedItem = normalizeFellowshipRosterItem(await response.json());
+        setFellowshipRosters((prev) => prev.map((item) => item.id === id ? updatedItem : item));
+        logContentActivity(`fellowshipRoster updated: "${updatedItem.groupNameOrEventTitle}"`, 'content_update', 'fellowshipRoster', id);
+        return { success: true, updatedItem };
+      } catch (error) {
+        console.error('Error updating fellowship roster:', error);
+        return { success: false, message: 'Failed to update fellowship roster. Please try again.' };
+      }
+    }
     const timestamp = new Date().toISOString();
     let success = false;
     let updatedItem: ContentItem | undefined = undefined;
@@ -802,11 +974,6 @@ const nowTimestamp = new Date().toISOString();
         case 'expenseRecord': { const result = updateAndLog<ExpenseRecord>(setExpenseRecords, { ...(data as any), amount: Number((data as ExpenseRecordFormData).amount) }); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'fellowshipRoster': { const result = updateAndLog<FellowshipRosterItem>(setFellowshipRosters, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'advertisement': { const result = updateAndLog<Advertisement>(setAdvertisements, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
-        case 'donatePageContent':
-            const updatedPageContent = { ...donatePageContent, ...(data as DonatePageContentFormData), updatedAt: timestamp };
-            setDonatePageContent(updatedPageContent); updatedItem = updatedPageContent; success = true; message = 'Donate page updated successfully.';
-            logContentActivity(`Donate page content updated`, 'content_update', 'donatePageContent', 'singleton');
-            break;
         default: return { success: false, message: "Content type not found for update." };
     }
     if (success && updatedItem) {
@@ -831,6 +998,24 @@ const nowTimestamp = new Date().toISOString();
           console.error(`Error deleting ${type}:`, error);
           return false;
         }
+      }
+    if (type === 'fellowshipRoster') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete fellowship roster');
+        }
+        setFellowshipRosters((prev) => prev.filter((item) => item.id !== id));
+        logContentActivity(`fellowshipRoster deleted: "${id}"`, 'content_deletion', 'fellowshipRoster', id);
+        return true;
+      } catch (error) {
+        console.error('Error deleting fellowship roster:', error);
+        return false;
+      }
     }
      let success = false;
      const deleteAndLog = <T extends ContentItem>(setState: React.Dispatch<React.SetStateAction<T[]>>): boolean => { let itemTitle = 'Unknown'; setState(prevItems => { const itemToDelete = prevItems.find(item => item.id === id); if (itemToDelete) itemTitle = (itemToDelete as any).title || (itemToDelete as any).name || itemToDelete.id; return prevItems.filter(item => item.id !== id); }); logContentActivity(`${type} deleted: "${itemTitle}"`, 'content_deletion', type, id); return true; };
@@ -1149,13 +1334,71 @@ const nowTimestamp = new Date().toISOString();
       if(status !== 'answered' && status !== 'active') return false;
       return updatePrayerRequestStatusByAdmin(id, status);
   };
-  
+ 
+  const updateGeneratedSchedule = async (id: string, data: Partial<GeneratedScheduleItem>): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules/generated/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ ...data, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update schedule draft');
+      }
+      const updated = normalizeGeneratedScheduleItem(await response.json());
+      setGeneratedSchedules((prev) => prev.map((item) => item.id === id ? updated : item));
+      logContentActivity(`schedule draft updated: "${updated.groupNameOrEventTitle}"`, 'schedule_draft_updated', 'generatedSchedule', id);
+      return true;
+    } catch (error) {
+      console.error('Error updating schedule draft:', error);
+      return false;
+    }
+  };
+
+  const deleteGeneratedSchedule = async (id: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules/generated/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok && response.status !== 204) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete schedule draft');
+      }
+      setGeneratedSchedules((prev) => prev.filter((item) => item.id !== id));
+      logContentActivity(`schedule draft deleted: "${id}"`, 'schedule_draft_deleted', 'generatedSchedule', id);
+      return true;
+    } catch (error) {
+      console.error('Error deleting schedule draft:', error);
+      return false;
+    }
+  };
+
+  const allDerivedMediaItems = useMemo<DisplayedMediaItem[]>(() => (
+    directMediaItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      type: item.mediaType,
+      url: item.url,
+      thumbnailUrl: item.mediaType === 'image' ? item.url : undefined,
+      category: item.category,
+      date: item.uploadDate,
+      sourceTitle: 'Admin Uploads',
+      sourceLink: item.linkPath || '/media',
+      sourceContentType: 'directMedia',
+      description: item.description,
+      tags: item.tags,
+      postedByAdminName: item.postedByAdminName,
+    }))
+  ), [directMediaItems]);
+ 
   return (
     <ContentContext.Provider
       value={{	
         sermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, donationRecords, collectionRecords, contactMessages, branchChurches, directMediaItems, ministryJoinRequests, advertisements, prayerRequests, testimonials, donatePageContent,
         churchMembers, meetingLogs, decisionLogs, expenseRecords, fellowshipRosters, generatedSchedules,
-        allDerivedMediaItems: [],
+        allDerivedMediaItems,
         loadingContent,
         addContent, updateContent, deleteContent, getContentById,
         contentActivityLogs, logContentActivity,
@@ -1163,8 +1406,8 @@ const nowTimestamp = new Date().toISOString();
         addMinistryJoinRequest, updateMinistryJoinRequestStatus, getMinistryJoinRequestsForUser,
         addPrayerRequest, updatePrayerRequestStatusByAdmin, updatePrayerRequestStatusByUser, togglePrayerOnRequest,
         addTestimonial, addCommentToItem, updateComment, deleteComment,
-        generateNextSchedules: async () => [], updateGeneratedSchedule: async () => false,
-        deleteGeneratedSchedule: async () => false, publishGeneratedScheduleToEvent: async () => null,
+        generateNextSchedules: async () => [], updateGeneratedSchedule,
+        deleteGeneratedSchedule, publishGeneratedScheduleToEvent: async () => null,
         toggleLikeOnItem,
       }}
     >

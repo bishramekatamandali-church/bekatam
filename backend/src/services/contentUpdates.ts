@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
 export type ContentUpdatePayload = {
-  type: 'sermon' | 'event' | 'blogPost' | 'news' | 'ministry';
+   type: 'sermon' | 'event' | 'blogPost' | 'news' | 'ministry' | 'donation' | 'donatePageContent';
   action: 'created' | 'updated' | 'deleted';
   id: string;
   timestamp: string;

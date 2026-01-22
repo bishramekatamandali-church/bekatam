@@ -10,10 +10,14 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
+const emailService_1 = require("../services/emailService");
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "bishramekatamandali@15Done";
 const ADMIN_FULL_NAME = process.env.ADMIN_FULL_NAME || "Bishram Admin";
 const router = express_1.default.Router();
+const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:3000";
+const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 10);
+const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
 async function generateUniqueUsername(baseUsername) {
     const sanitizedUsername = baseUsername?.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") ||
         `user${Date.now()}`;
@@ -74,6 +78,58 @@ function sanitizeUser(user) {
     const { password, passwordHash, ...safeUser } = user;
     return safeUser;
 }
+const generateOtpCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
+const sendUserNotification = async (params) => {
+    try {
+        await (0, emailService_1.sendEmail)(params);
+    }
+    catch (error) {
+        console.error("Failed to send user notification email:", error);
+    }
+};
+const createEmailOtp = async (email, purpose) => {
+    const code = generateOtpCode();
+    const codeHash = await bcryptjs_1.default.hash(code, 10);
+    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+    await db_1.prisma.emailotp.create({
+        data: {
+            id: crypto_1.default.randomUUID(),
+            email,
+            codeHash,
+            purpose,
+            expiresAt,
+        },
+    });
+    return { code, expiresAt };
+};
+const verifyEmailOtp = async (email, purpose, code) => {
+    const otp = await db_1.prisma.emailotp.findFirst({
+        where: {
+            email,
+            purpose,
+            usedAt: null,
+            expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+    });
+    if (!otp)
+        return false;
+    if (otp.attempts >= OTP_MAX_ATTEMPTS)
+        return false;
+    const matches = await bcryptjs_1.default.compare(code, otp.codeHash);
+    if (!matches) {
+        await db_1.prisma.emailotp.update({
+            where: { id: otp.id },
+            data: { attempts: otp.attempts + 1 },
+        });
+        return false;
+    }
+    await db_1.prisma.emailotp.update({
+        where: { id: otp.id },
+        data: { usedAt: new Date() },
+    });
+    return true;
+};
 /* ---------------------------------------------
    POST /api/auth/register
 ---------------------------------------------- */
@@ -110,6 +166,17 @@ router.post("/register", async (req, res) => {
                 password: hashed,
                 passwordHash: hashed,
             },
+        });
+        await sendUserNotification({
+            to: normalizedEmail,
+            subject: "Welcome to Bishram Ekata Mandali",
+            text: `Hello ${fullName},\n\nWelcome to Bishram Ekata Mandali! Your account has been created successfully.\n\nIf you did not create this account, please contact us immediately.\n\n— Bishram Ekata Mandali`,
+            html: `
+        <p>Hello ${fullName},</p>
+        <p>Welcome to Bishram Ekata Mandali! Your account has been created successfully.</p>
+        <p>If you did not create this account, please contact us immediately.</p>
+        <p>— Bishram Ekata Mandali</p>
+      `,
         });
         const token = createToken(user);
         res.json({ token, user: sanitizeUser(user) });
@@ -151,11 +218,213 @@ router.post("/login", async (req, res) => {
         if (!match)
             return res.status(401).json({ error: "Invalid credentials" });
         const token = createToken(user);
+        await sendUserNotification({
+            to: user.email,
+            subject: "New login to your Bishram Ekata Mandali account",
+            text: `Hello ${user.fullName},\n\nWe noticed a login to your account. If this was you, no action is needed.\nIf you did not log in, please reset your password or contact us.\n\n— Bishram Ekata Mandali`,
+            html: `
+        <p>Hello ${user.fullName},</p>
+        <p>We noticed a login to your account. If this was you, no action is needed.</p>
+        <p>If you did not log in, please reset your password or contact us.</p>
+        <p>— Bishram Ekata Mandali</p>
+      `,
+        });
         console.log("LOGIN → token generated:", token.substring(0, 30) + "...");
         res.json({ token, user: sanitizeUser(user) });
     }
     catch (error) {
         console.error("LOGIN ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+/* ---------------------------------------------
+   POST /api/auth/request-otp
+---------------------------------------------- */
+router.post("/request-otp", async (req, res) => {
+    try {
+        const { email, purpose } = req.body;
+        if (!email || !purpose) {
+            return res.status(400).json({ error: "Email and purpose are required." });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const { code, expiresAt } = await createEmailOtp(normalizedEmail, purpose);
+        await sendUserNotification({
+            to: normalizedEmail,
+            subject: "Your verification code",
+            text: `Your verification code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes.`,
+            html: `
+        <p>Your verification code is <strong>${code}</strong>.</p>
+        <p>This code expires in ${OTP_TTL_MINUTES} minutes.</p>
+      `,
+        });
+        res.json({ success: true, message: "OTP sent.", expiresAt });
+    }
+    catch (error) {
+        console.error("REQUEST OTP ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+/* ---------------------------------------------
+   POST /api/auth/verify-otp
+---------------------------------------------- */
+router.post("/verify-otp", async (req, res) => {
+    try {
+        const { email, purpose, code } = req.body;
+        if (!email || !purpose || !code) {
+            return res.status(400).json({ error: "Email, purpose, and code are required." });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const isValid = await verifyEmailOtp(normalizedEmail, purpose, code);
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+        }
+        res.json({ success: true, message: "OTP verified." });
+    }
+    catch (error) {
+        console.error("VERIFY OTP ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+/* ---------------------------------------------
+   POST /api/auth/change-password
+---------------------------------------------- */
+router.post("/change-password", auth_1.authMiddleware, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: "Current and new passwords are required." });
+        }
+        const user = await db_1.prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+        const storedPassword = user.password || user.passwordHash;
+        const match = await bcryptjs_1.default.compare(currentPassword, storedPassword);
+        if (!match) {
+            return res.status(401).json({ error: "Current password is incorrect." });
+        }
+        const hashed = await bcryptjs_1.default.hash(newPassword, 10);
+        await db_1.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashed,
+                passwordHash: hashed,
+            },
+        });
+        await sendUserNotification({
+            to: user.email,
+            subject: "Your password has been changed",
+            text: `Hello ${user.fullName},\n\nYour password was just changed. If this was not you, please reset your password immediately.\n\n— Bishram Ekata Mandali`,
+            html: `
+        <p>Hello ${user.fullName},</p>
+        <p>Your password was just changed. If this was not you, please reset your password immediately.</p>
+        <p>— Bishram Ekata Mandali</p>
+      `,
+        });
+        res.json({ success: true, message: "Password updated successfully." });
+    }
+    catch (error) {
+        console.error("CHANGE PASSWORD ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+/* ---------------------------------------------
+   POST /api/auth/forgot-password
+---------------------------------------------- */
+router.post("/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: "Email is required." });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await db_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (user) {
+            const token = jsonwebtoken_1.default.sign({ id: user.id, email: user.email, type: "password_reset" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+            const resetLink = `${getFrontendUrl()}/reset-password/${token}`;
+            await sendUserNotification({
+                to: user.email,
+                subject: "Reset your Bishram Ekata Mandali password",
+                text: `Hello ${user.fullName},\n\nWe received a request to reset your password. Use the link below to reset it:\n${resetLink}\n\nIf you did not request a reset, you can ignore this email.\n\n— Bishram Ekata Mandali`,
+                html: `
+          <p>Hello ${user.fullName},</p>
+          <p>We received a request to reset your password. Use the link below to reset it:</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+          <p>If you did not request a reset, you can ignore this email.</p>
+          <p>— Bishram Ekata Mandali</p>
+        `,
+            });
+            if (process.env.NODE_ENV !== "production") {
+                return res.json({ success: true, message: "Password reset email sent.", token });
+            }
+        }
+        res.json({ success: true, message: "If an account exists for that email, a reset link has been sent." });
+    }
+    catch (error) {
+        console.error("FORGOT PASSWORD ERROR:", error);
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+            return;
+        }
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+/* ---------------------------------------------
+   POST /api/auth/reset-password
+---------------------------------------------- */
+router.post("/reset-password", async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: "Token and new password are required." });
+        }
+        let payload;
+        try {
+            payload = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        }
+        catch {
+            return res.status(400).json({ error: "Invalid or expired reset token." });
+        }
+        if (!payload?.id || payload.type !== "password_reset") {
+            return res.status(400).json({ error: "Invalid reset token." });
+        }
+        const user = await db_1.prisma.user.findUnique({ where: { id: payload.id } });
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+        const hashed = await bcryptjs_1.default.hash(newPassword, 10);
+        await db_1.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashed,
+                passwordHash: hashed,
+            },
+        });
+        await sendUserNotification({
+            to: user.email,
+            subject: "Your password has been reset",
+            text: `Hello ${user.fullName},\n\nYour password has been reset successfully. If you did not perform this action, please contact us immediately.\n\n— Bishram Ekata Mandali`,
+            html: `
+        <p>Hello ${user.fullName},</p>
+        <p>Your password has been reset successfully. If you did not perform this action, please contact us immediately.</p>
+        <p>— Bishram Ekata Mandali</p>
+      `,
+        });
+        res.json({ success: true, message: "Password reset successfully." });
+    }
+    catch (error) {
+        console.error("RESET PASSWORD ERROR:", error);
         if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
             return;
         }

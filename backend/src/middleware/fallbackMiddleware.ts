@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 // Minimal placeholder payloads for content lists used on the public site.
 export const fallbackPayloads: Record<string, unknown> = {
+  sermons: [],  
   events: [],
   ministries: [],
   blogposts: [],

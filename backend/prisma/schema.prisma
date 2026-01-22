@@ -201,6 +201,19 @@ model contactmessage {
   replyNote   String?               @db.Text
 }
 
+model emailotp {
+  id        String   @id
+  email     String
+  codeHash  String
+  purpose   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+
+  @@index([email, purpose])
+}
+
 model decisionlog {
   id                String              @id
   decisionDate      DateTime
@@ -768,10 +781,14 @@ enum fellowshiprosteritem_rosterType {
   Saturday_Children_Fellowship
   Saturday_Youth_Fellowship
   Wednesday_Home_Fellowship
+  House_Fellowship
+  Womens_Fellowship
+  Bible_Study
   Friday_Evening_Program
   Special_Meeting
   Outreach_Program
   Other_Regular_Program
+  Custom_Schedule
   Prayer_Team_Visit
   Night_Prayer
   Saturday_Prayer
@@ -801,10 +818,14 @@ enum generatedscheduleitem_rosterType {
   Saturday_Children_Fellowship
   Saturday_Youth_Fellowship
   Wednesday_Home_Fellowship
+  House_Fellowship
+  Womens_Fellowship
+  Bible_Study
   Friday_Evening_Program
   Special_Meeting
   Outreach_Program
   Other_Regular_Program
+  Custom_Schedule
   Prayer_Team_Visit
   Night_Prayer
   Saturday_Prayer
