@@ -50,6 +50,26 @@ const normalizeSermonItem = (item: any): Sermon => {
     linkPath: item?.linkPath || `/sermons/${item?.id}`,
   } as Sermon;
 };
+
+const normalizeFellowshipRosterItem = (item: any): FellowshipRosterItem => ({
+  ...item,
+  responsibilities: Array.isArray(item?.responsibilities)
+    ? item.responsibilities
+    : Array.isArray(item?.responsibility)
+      ? item.responsibility
+      : [],
+  linkPath: item?.linkPath || `/fellowship-program/roster/${item?.id}`,
+});
+
+const normalizeGeneratedScheduleItem = (item: any): GeneratedScheduleItem => ({
+  ...item,
+  responsibilities: Array.isArray(item?.responsibilities)
+    ? item.responsibilities
+    : Array.isArray(item?.responsibility)
+      ? item.responsibility
+      : [],
+  linkPath: item?.linkPath || `/fellowship-program/schedule/${item?.id}`,
+});
 	
 const initialSampleDonatePageContent: DonatePageContent = {
   id: 'singleton',
@@ -335,6 +355,35 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }); // ✅ <-- this was missing before
 
+  fetchPromises.push((async () => {
+    const hasExistingContent = fellowshipRosters.length > 0 || generatedSchedules.length > 0;
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('fellowship-schedules fetch failed');
+      const data = await response.json();
+      const rosters = Array.isArray(data?.rosters) ? data.rosters : [];
+      const schedules = Array.isArray(data?.schedules) ? data.schedules : [];
+      const hasServerContent = rosters.length > 0 || schedules.length > 0;
+      if (!hasServerContent && hasExistingContent) {
+        if (isDev) {
+          console.warn('Skipped overwriting fellowship schedules with empty server response.');
+        }
+        return;
+      }
+      const normalizedRosters = rosters.map(normalizeFellowshipRosterItem);
+      const normalizedSchedules = schedules.map(normalizeGeneratedScheduleItem);
+      setFellowshipRosters(normalizedRosters);
+      setGeneratedSchedules(normalizedSchedules);
+      saveStoredData('bem_fellowshipRosters', normalizedRosters);
+      saveStoredData('bem_generatedSchedules', normalizedSchedules);
+      didUpdateContent = true;
+    } catch (error) {
+      if (isDev) {
+        console.error('Failed to load fellowship schedules:', error);
+      }
+    }
+  })());
+
   await Promise.all(fetchPromises).finally(() => {
     if (setLoading) setLoadingContent(false);
   });
@@ -399,7 +448,7 @@ const nowTimestamp = new Date().toISOString();
   if (didUpdateContent) {
     updateLastSeenContent(nowTimestamp);
   }
-}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId]);
+}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId, isDev, fellowshipRosters.length, generatedSchedules.length]);
 
   useEffect(() => {
     fetchContentBatch(true);
@@ -775,7 +824,31 @@ const nowTimestamp = new Date().toISOString();
       case 'meetingLog': { const newLog: MeetingLog = { id: newItemId, ...(data as MeetingLogFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setMeetingLogs(prev => [newLog, ...prev]); newItem = newLog; success = true; break; }
       case 'decisionLog': { const newLog: DecisionLog = { id: newItemId, ...(data as DecisionLogFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setDecisionLogs(prev => [newLog, ...prev]); newItem = newLog; success = true; break; }
       case 'expenseRecord': { const formData = data as ExpenseRecordFormData; const newRecord: ExpenseRecord = { id: newItemId, ...formData, amount: Number(formData.amount), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setExpenseRecords(prev => [newRecord, ...prev]); newItem = newRecord; success = true; break; }
-      case 'fellowshipRoster': { const newRoster: FellowshipRosterItem = { id: newItemId, ...(data as FellowshipRosterFormData), linkPath: `/fellowship-program/roster/${newItemId}`, createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setFellowshipRosters(prev => [newRoster, ...prev]); newItem = newRoster; success = true; break; }
+      case 'fellowshipRoster': {
+        try {
+          const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({
+              ...(data as FellowshipRosterFormData),
+              postedByAdminId: currentUser?.id,
+              postedByAdminName: currentUser?.fullName,
+            }),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create fellowship roster');
+          }
+          const created = normalizeFellowshipRosterItem(await response.json());
+          setFellowshipRosters((prev) => [created, ...prev]);
+          newItem = created;
+          success = true;
+        } catch (error) {
+          console.error('Error creating fellowship roster:', error);
+          message = 'Failed to create fellowship roster. Please try again.';
+        }
+        break;
+      }
       case 'advertisement': { const newAd: Advertisement = { id: newItemId, ...(data as AdvertisementFormData), createdAt: timestamp, updatedAt: timestamp, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }; setAdvertisements(prev => [newAd, ...prev]); newItem = newAd; success = true; break; }
       }
     if (success && newItem) {
@@ -863,6 +936,26 @@ const nowTimestamp = new Date().toISOString();
         return { success: false, message: `Failed to update ${type}. Please try again.` };
       }
     }
+    if (type === 'fellowshipRoster') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ ...(data as FellowshipRosterFormData), postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update fellowship roster');
+        }
+        const updatedItem = normalizeFellowshipRosterItem(await response.json());
+        setFellowshipRosters((prev) => prev.map((item) => item.id === id ? updatedItem : item));
+        logContentActivity(`fellowshipRoster updated: "${updatedItem.groupNameOrEventTitle}"`, 'content_update', 'fellowshipRoster', id);
+        return { success: true, updatedItem };
+      } catch (error) {
+        console.error('Error updating fellowship roster:', error);
+        return { success: false, message: 'Failed to update fellowship roster. Please try again.' };
+      }
+    }
     const timestamp = new Date().toISOString();
     let success = false;
     let updatedItem: ContentItem | undefined = undefined;
@@ -905,6 +998,24 @@ const nowTimestamp = new Date().toISOString();
           console.error(`Error deleting ${type}:`, error);
           return false;
         }
+    }
+    if (type === 'fellowshipRoster') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/fellowship-schedules/rosters/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete fellowship roster');
+        }
+        setFellowshipRosters((prev) => prev.filter((item) => item.id !== id));
+        logContentActivity(`fellowshipRoster deleted: "${id}"`, 'content_deletion', 'fellowshipRoster', id);
+        return true;
+      } catch (error) {
+        console.error('Error deleting fellowship roster:', error);
+        return false;
+      }
     }
      let success = false;
      const deleteAndLog = <T extends ContentItem>(setState: React.Dispatch<React.SetStateAction<T[]>>): boolean => { let itemTitle = 'Unknown'; setState(prevItems => { const itemToDelete = prevItems.find(item => item.id === id); if (itemToDelete) itemTitle = (itemToDelete as any).title || (itemToDelete as any).name || itemToDelete.id; return prevItems.filter(item => item.id !== id); }); logContentActivity(`${type} deleted: "${itemTitle}"`, 'content_deletion', type, id); return true; };
@@ -1224,6 +1335,46 @@ const nowTimestamp = new Date().toISOString();
       return updatePrayerRequestStatusByAdmin(id, status);
   };
 
+  const updateGeneratedSchedule = async (id: string, data: Partial<GeneratedScheduleItem>): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules/generated/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ ...data, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update schedule draft');
+      }
+      const updated = normalizeGeneratedScheduleItem(await response.json());
+      setGeneratedSchedules((prev) => prev.map((item) => item.id === id ? updated : item));
+      logContentActivity(`schedule draft updated: "${updated.groupNameOrEventTitle}"`, 'schedule_draft_updated', 'generatedSchedule', id);
+      return true;
+    } catch (error) {
+      console.error('Error updating schedule draft:', error);
+      return false;
+    }
+  };
+
+  const deleteGeneratedSchedule = async (id: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/fellowship-schedules/generated/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok && response.status !== 204) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete schedule draft');
+      }
+      setGeneratedSchedules((prev) => prev.filter((item) => item.id !== id));
+      logContentActivity(`schedule draft deleted: "${id}"`, 'schedule_draft_deleted', 'generatedSchedule', id);
+      return true;
+    } catch (error) {
+      console.error('Error deleting schedule draft:', error);
+      return false;
+    }
+  };
+
   const allDerivedMediaItems = useMemo<DisplayedMediaItem[]>(() => (
     directMediaItems.map((item) => ({
       id: item.id,
@@ -1255,8 +1406,8 @@ const nowTimestamp = new Date().toISOString();
         addMinistryJoinRequest, updateMinistryJoinRequestStatus, getMinistryJoinRequestsForUser,
         addPrayerRequest, updatePrayerRequestStatusByAdmin, updatePrayerRequestStatusByUser, togglePrayerOnRequest,
         addTestimonial, addCommentToItem, updateComment, deleteComment,
-        generateNextSchedules: async () => [], updateGeneratedSchedule: async () => false,
-        deleteGeneratedSchedule: async () => false, publishGeneratedScheduleToEvent: async () => null,
+        generateNextSchedules: async () => [], updateGeneratedSchedule,
+        deleteGeneratedSchedule, publishGeneratedScheduleToEvent: async () => null,
         toggleLikeOnItem,
       }}
     >
