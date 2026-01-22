@@ -1,26 +1,14 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useContent } from '../contexts/ContentContext';
-import { DisplayedMediaItem, MediaSourceContentType } from './../types';
-import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
-import Modal from '../components/ui/Modal';
+import Card, { CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Link } from "react-router-dom";
 import { formatDateADBS } from '../dateConverter';
-import MediaViewerModal from '../components/ui/MediaViewerModal';
 
 // Icons
 const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-5 h-5"}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-);
-const FilterIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-5 h-5"}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
-);
-const PhotoIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className || "w-4 h-4"}><path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm1.5 0v9.5c0 .414.336.75.75.75h13.5a.75.75 0 00.75-.75v-9.5a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75zm6.75 2.5a.75.75 0 00-1.5 0v1.5h-1.5a.75.75 0 000 1.5h1.5v1.5a.75.75 0 001.5 0v-1.5h1.5a.75.75 0 000-1.5h-1.5v-1.5z" clipRule="evenodd" /></svg>
-);
-const PlayCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className || "w-4 h-4"}><path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" /></svg>
 );
 const UserCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className || "w-4 h-4"}>
@@ -37,8 +25,6 @@ const MediaPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video' | 'audio'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedMedia, setSelectedMedia] = useState<DisplayedMediaItem | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const uniqueCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -71,11 +57,6 @@ const MediaPage: React.FC = () => {
   }, [filteredMedia, currentPage]);
 
   const totalPages = Math.ceil(filteredMedia.length / ITEMS_PER_PAGE);
-
-  const openModal = (media: DisplayedMediaItem) => {
-    setSelectedMedia(media);
-    setIsModalOpen(true);
-  };
 
   if (loadingContent && allDerivedMediaItems.length === 0) {
     return (
@@ -146,19 +127,21 @@ const MediaPage: React.FC = () => {
                     {item.type === 'image' && (
                       <img src={item.thumbnailUrl || item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     )}
-                    {(item.type === 'video' || item.type === 'audio') && item.thumbnailUrl && (
-                      <img src={item.thumbnailUrl} alt={`${item.title} thumbnail`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    {item.type === 'video' && (
+                      <video
+                        src={item.url}
+                        poster={item.thumbnailUrl}
+                        controls
+                        preload="metadata"
+                        className="w-full h-full object-cover"
+                        aria-label={item.title}
+                      />
                     )}
-                    {(item.type === 'video' || item.type === 'audio') && !item.thumbnailUrl && (
-                       <div className="w-full h-full flex items-center justify-center bg-slate-300">
-                           <PlayCircleIcon className="w-16 h-16 text-slate-500 opacity-70" />
-                       </div>
+                    {item.type === 'audio' && (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100 p-4">
+                        <audio src={item.url} controls preload="metadata" className="w-full" aria-label={item.title} />
+                      </div>
                     )}
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                        <Button onClick={() => openModal(item)} variant="primary" size="sm" className="w-full !py-1.5 text-xs">
-                            {item.type === 'image' ? "View Image" : "Play Media"}
-                        </Button>
-                    </div>
                   </div>
                   <CardContent className="flex-grow p-3">
                     <h3 className="text-sm font-semibold text-slate-700 truncate mb-0.5" title={item.title}>{item.title}</h3>
@@ -204,15 +187,6 @@ const MediaPage: React.FC = () => {
         )}
       </div>
 
-      {isModalOpen && selectedMedia && (
-        <MediaViewerModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            mediaUrl={selectedMedia.url}
-            mediaType={selectedMedia.type}
-            title={selectedMedia.title}
-        />
-      )}
     </div>
   );
 };
