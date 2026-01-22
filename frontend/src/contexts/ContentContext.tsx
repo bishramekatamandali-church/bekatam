@@ -211,6 +211,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     donationRecords: donationRecords as DonationRecord[],
     collectionRecords: collectionRecords as CollectionRecord[],
     ministryJoinRequests: ministryJoinRequests as MinistryJoinRequest[],
+    donatePageContent: donatePageContent as DonatePageContent,
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -231,6 +232,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'donation-records', setter: setDonationRecords, storageKey: 'bem_donationRecords', getCurrent: () => contentRef.current.donationRecords },
     { key: 'collection-records', setter: setCollectionRecords, storageKey: 'bem_collectionRecords', getCurrent: () => contentRef.current.collectionRecords },
     { key: 'ministry-join-requests', setter: setMinistryJoinRequests, storageKey: 'bem_ministryJoinRequests', getCurrent: () => contentRef.current.ministryJoinRequests },
+    { key: 'donate-page', setter: setDonatePageContent, storageKey: 'bem_donatePageContent', getCurrent: () => contentRef.current.donatePageContent },
   ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
@@ -240,9 +242,10 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   let didUpdateContent = false;
 
   const fetchPromises = dataFetchConfig.map(async (config) => {
-    const hasExistingContent = Array.isArray(config.getCurrent?.())
-      ? (config.getCurrent?.() as any[]).length > 0
-      : false;
+    const currentValue = config.getCurrent?.();
+    const hasExistingContent = Array.isArray(currentValue)
+      ? (currentValue as any[]).length > 0
+      : Boolean(currentValue);
 
     if (!navigator.onLine) return;
 
@@ -482,7 +485,7 @@ const nowTimestamp = new Date().toISOString();
   useEffect(() => { contentRef.current.contactMessages = contactMessages; saveStoredData('bem_contactMessages', contactMessages); }, [contactMessages]);
   useEffect(() => { contentRef.current.ministryJoinRequests = ministryJoinRequests; saveStoredData('bem_ministryJoinRequests', ministryJoinRequests); }, [ministryJoinRequests]);
   useEffect(() => { contentRef.current.directMediaItems = directMediaItems; saveStoredData('bem_directMediaItems', directMediaItems); }, [directMediaItems]);
-  useEffect(() => { saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
+  useEffect(() => { contentRef.current.donatePageContent = donatePageContent; saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
   useEffect(() => { saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
@@ -518,7 +521,7 @@ const nowTimestamp = new Date().toISOString();
   }, [currentUser]);
 
   const addContent = async (type: ContentType, data: GenericContentFormData): Promise<{ success: boolean; newItem?: ContentItem; message?: string }> => {
-    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest'];
+    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest', 'donation'];
     if (!isAdmin && !allowedForNonAdmins.includes(type)) {
         return { success: false, message: 'Only administrators can create this type of content.' };
     }
@@ -572,6 +575,14 @@ const nowTimestamp = new Date().toISOString();
             const setter = setterMap[type];
             if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
             logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
+            if (type === 'donation') {
+              addNotification({
+                targetUserId: 'admin_group',
+                message: `New donation logged: ${normalizedNewItem.donorName} donated NPR ${Number(normalizedNewItem.amount).toFixed(2)}.`,
+                link: '/admin/donation-records',
+                type: 'generic',
+              });
+            }
             sendContentUpdateNotification('added', type, normalizedNewItem);           
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
@@ -756,6 +767,27 @@ const nowTimestamp = new Date().toISOString();
   };
 
   const updateContent = async (type: ContentType, id: string, data: GenericContentFormData): Promise<{ success: boolean; updatedItem?: ContentItem; message?: string }> => {
+    if (type === 'donatePageContent') {
+      try {
+        const response = await fetch(`${API_BASE_URL}/donate-page`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update donate page content.');
+        }
+        const updatedItem: ContentItem = await response.json();
+        setDonatePageContent(updatedItem as DonatePageContent);
+        logContentActivity(`Donate page content updated`, 'content_update', 'donatePageContent', 'singleton');
+        return { success: true, updatedItem };
+      } catch (error) {
+        console.error('Error updating donate page content:', error);
+        return { success: false, message: 'Failed to update donate page content. Please try again.' };
+      }
+    }
+
     const contentTypeToEndpoint: Partial<Record<ContentType, string>> =
  { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections',
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
@@ -830,11 +862,6 @@ const nowTimestamp = new Date().toISOString();
         case 'expenseRecord': { const result = updateAndLog<ExpenseRecord>(setExpenseRecords, { ...(data as any), amount: Number((data as ExpenseRecordFormData).amount) }); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'fellowshipRoster': { const result = updateAndLog<FellowshipRosterItem>(setFellowshipRosters, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
         case 'advertisement': { const result = updateAndLog<Advertisement>(setAdvertisements, data as any); success = result.success; updatedItem = result.updatedItem; message = result.message!; break; }
-        case 'donatePageContent':
-            const updatedPageContent = { ...donatePageContent, ...(data as DonatePageContentFormData), updatedAt: timestamp };
-            setDonatePageContent(updatedPageContent); updatedItem = updatedPageContent; success = true; message = 'Donate page updated successfully.';
-            logContentActivity(`Donate page content updated`, 'content_update', 'donatePageContent', 'singleton');
-            break;
         default: return { success: false, message: "Content type not found for update." };
     }
     if (success && updatedItem) {
