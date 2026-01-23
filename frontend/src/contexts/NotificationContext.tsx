@@ -14,7 +14,6 @@ const getGuestId = (): string => {
   localStorage.setItem('bem_guest_id', guestId);
   return guestId;
 };
-
 const getStorageKey = (userId: string, isGuest: boolean) =>
   `${NOTIFICATIONS_STORAGE_KEY_PREFIX}${isGuest ? 'guest' : userId}`;
 
@@ -26,7 +25,6 @@ const readLastSeenContent = (): string | null => {
     return null;
   }
 };
-
 const writeLastSeenContent = (timestamp: string) => {
   try {
     localStorage.setItem(LAST_SEEN_CONTENT_KEY, timestamp);
@@ -116,10 +114,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const activeUserId = currentUser?.id ?? getGuestId();
   const isGuest = !currentUser;
-  const storageKey = useMemo(
-    () => getStorageKey(activeUserId, isGuest),
-    [activeUserId, isGuest],
-  );
+  const storageKey = useMemo(() => getStorageKey(activeUserId, isGuest), [activeUserId, isGuest]);
 
   useEffect(() => {
     setLoadingNotifications(true);
@@ -140,11 +135,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, [storageKey]);
 
   const addNotification = useCallback((notificationData: NotificationAddData) => {
-    const allUsers = getAllUsers();
+    // 🔥 CRITICAL HARDENING: getAllUsers() must be treated as array
+    const rawUsers = getAllUsers() as unknown;
+    const allUsers: User[] = Array.isArray(rawUsers) ? (rawUsers as User[]) : [];
+
     let newNotifications: AppNotification[] = [];
 
-    // --- Special Target Broadcasting ---
-    const getTargetUsers = (target: string, fromUserId?: string): User[] => {
+    const getTargetUsers = (target: string): User[] => {
       if (target === 'all_users_for_content') {
         return allUsers.filter(user => user.receiveContentUpdateNotifications);
       }
@@ -157,14 +154,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       if (target === 'admin_group') {
         return allUsers.filter(u => u.role === 'admin');
       }
-      // --- End Special Target ---
 
-      // Handle single user target
       const singleUser = allUsers.find(u => u.id === target);
       return singleUser ? [singleUser] : [];
     };
 
-    const targetUsers = getTargetUsers(notificationData.targetUserId, currentUser?.id);
+    const targetUsers = getTargetUsers(notificationData.targetUserId);
 
     if (targetUsers.length > 0) {
       newNotifications = targetUsers.map(user => ({
@@ -175,7 +170,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         read: false,
       }));
     } else if (!notificationData.targetUserId.includes('_')) {
-      // It was a single user ID that was not found.
       console.warn(`addNotification: targetUserId "${notificationData.targetUserId}" not found.`);
     }
 
@@ -199,12 +193,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
       });
     }
-  }, [getAllUsers, currentUser, activeUserId]);
+  }, [getAllUsers, activeUserId]);
 
   const addGuestNotification = useCallback((notificationData: NotificationAddData) => {
-    if (notificationData.targetUserId !== activeUserId) {
-      return;
-    }
+    if (notificationData.targetUserId !== activeUserId) return;
+
     const notification: AppNotification = {
       ...notificationData,
       id: generateId(`notif-${activeUserId}`),

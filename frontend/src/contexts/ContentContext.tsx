@@ -105,7 +105,13 @@ A generous person will prosper; whoever refreshes others will be refreshed. - Pr
 const getStoredData = <T,>(key: string, defaultValue: T): T => {
   try {
     const storedData = localStorage.getItem(key);
-    return storedData ? JSON.parse(storedData) : defaultValue;
+    
+const parsed = storedData ? JSON.parse(storedData) : defaultValue;
+    if (Array.isArray(defaultValue)) {
+      return (Array.isArray(parsed) ? parsed : defaultValue) as any;
+    }
+    return parsed as any;
+
   } catch (error) {
     console.error(`Error reading ${key} from localStorage:`, error);
     return defaultValue;
@@ -1034,7 +1040,7 @@ const nowTimestamp = new Date().toISOString();
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to delete fellowship roster');
         }
-        setFellowshipRosters((prev) => prev.filter((item) => item.id !== id));
+        setFellowshipRosters((prev) => ensureArray(prev).filter((item) => item.id !== id));
         logContentActivity(`fellowshipRoster deleted: "${id}"`, 'content_deletion', 'fellowshipRoster', id);
         return true;
       } catch (error) {
@@ -1047,7 +1053,7 @@ const nowTimestamp = new Date().toISOString();
        let itemTitle = 'Unknown';
        setState(prevItems => {
          const normalizedItems = ensureArray(prevItems);
-         const itemToDelete = normalizedItems.find(item => item.id === id);
+         const itemToDelete = (Array.isArray(normalizedItems) ? normalizedItems : []).find(item => item.id === id);
          if (itemToDelete) {
            itemTitle = (itemToDelete as any).title || (itemToDelete as any).name || itemToDelete.id;
          }
@@ -1087,7 +1093,7 @@ const nowTimestamp = new Date().toISOString();
   const getContentById = (type: ContentType, id: string): ContentItem | undefined => {
     const allContentArrays = [ safeSermons, events, ministries, blogPosts, newsItems, aboutSections, keyPersons, historyMilestones, historyChapters, branchChurches, directMediaItems, churchMembers, meetingLogs, decisionLogs, expenseRecords, collectionRecords, fellowshipRosters, generatedSchedules, advertisements, prayerRequests, testimonials, donationRecords ];
     if (type === 'donatePageContent' && id === 'singleton') return donatePageContent;
-    for (const contentArray of allContentArrays) { const item = (contentArray as ContentItem[]).find(item => item.id === id); if (item) return item; }
+    for (const contentArray of allContentArrays) { const item = (Array.isArray(contentArray) ? (contentArray as ContentItem[]) : []).find(item => item.id === id); if (item) return item; }
     return undefined;
   };
   const addCommentToItem = async (itemId: string, itemType: Comment['itemType'], commentText: string): Promise<Comment | null> => {
@@ -1291,7 +1297,7 @@ const nowTimestamp = new Date().toISOString();
       return false;
     }
   };
-  const getMinistryJoinRequestsForUser = (userId: string) => ministryJoinRequests.filter(req => req.userId === userId);
+  const getMinistryJoinRequestsForUser = (userId: string) => ensureArray(ministryJoinRequests).filter(req => req.userId === userId);
   const addPrayerRequest = (data: PrayerRequestFormData) => addContent('prayerRequest', data).then(res => res.newItem as PrayerRequest || null);
   const addTestimonial = (data: TestimonialFormData) => addContent('testimonial', data).then(res => res.newItem as Testimonial || null);
   const toggleLikeOnItem = async (itemType: ContentType, itemId: string, isLiked: boolean) => {
@@ -1421,7 +1427,7 @@ const nowTimestamp = new Date().toISOString();
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete schedule draft');
       }
-      setGeneratedSchedules((prev) => prev.filter((item) => item.id !== id));
+      setGeneratedSchedules((prev) => ensureArray(prev).filter((item) => item.id !== id));
       logContentActivity(`schedule draft deleted: "${id}"`, 'schedule_draft_deleted', 'generatedSchedule', id);
       return true;
     } catch (error) {
