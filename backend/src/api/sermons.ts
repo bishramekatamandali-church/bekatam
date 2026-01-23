@@ -177,11 +177,12 @@ router.get('/:id', async (req, res) => {
 
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
+    const { id: requestedId, linkPath: requestedLinkPath, title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
     
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
-    const id = crypto.randomUUID();
+    const id = typeof requestedId === 'string' && requestedId.trim().length > 0 ? requestedId : crypto.randomUUID();
+    const linkPath = requestedLinkPath || `/sermons/${id}`;
     const normalizedCategory = normalizeEnumValue(category, sermon_category);
 
     if (category && !normalizedCategory) {
@@ -206,7 +207,7 @@ router.post('/', async (req, res) => {
                 postedByAdminId,
                 postedByAdminName,
                 location,
-                linkPath: `/sermons/${id}`,
+                linkPath,
                 }
         });
     publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
@@ -232,7 +233,7 @@ router.post('/', async (req, res) => {
                         postedByAdminId,
                         postedByAdminName,
                         location,
-                        linkPath: `/sermons/${id}`,
+                        linkPath,
                     }, missingColumns),
                 });
                 publishContentUpdate({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });

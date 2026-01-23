@@ -3,7 +3,7 @@ import {
   Sermon, EventItem, Ministry, BlogPost, AboutSection, KeyPerson, HistoryMilestone, CoreAboutSectionId, coreAboutSectionIds,
   Comment, NewsItem, DonatePageContent,
   ContentType, ContentItem,
-  SermonFormData, EventFormData, MinistryFormData, BlogPostFormData,
+  EventFormData, MinistryFormData, BlogPostFormData,
   NewsItemFormData, DonatePageContentFormData,
   AboutSectionFormData, KeyPersonFormData, HistoryMilestoneFormData, BranchChurchFormData,
   MinistryJoinRequestFormData, MinistryJoinRequest, MinistryJoinRequestStatus,
@@ -53,6 +53,11 @@ const normalizeSermonItem = (item: any): Sermon => {
     updatedAt: item?.updatedAt ? new Date(item.updatedAt).toISOString() : item?.updatedAt ?? null,
     likes: item?.likes ?? 0,
   } as Sermon;
+};
+
+const normalizeSermonCollection = (data: unknown): Sermon[] => {
+  const payload = (data as { sermons?: unknown })?.sermons ?? data;
+  return ensureArray<Sermon>(payload, []).map(normalizeSermonItem);
 };
 
 const normalizeFellowshipRosterItem = (item: any): FellowshipRosterItem => ({
@@ -193,7 +198,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 
   const [sermons, setSermons] = useState<Sermon[]>(() =>
-    ensureArray<Sermon>(getStoredData('bem_sermons', [])),
+    normalizeSermonCollection(getStoredData('bem_sermons', [])),
   );
   const [events, setEvents] = useState<EventItem[]>(() => getStoredData('bem_events', []));
   const [ministries, setMinistries] = useState<Ministry[]>(() => getStoredData('bem_ministries', []));
@@ -292,7 +297,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const data = await response.json();
       const isSermonsConfig = config.key === 'sermons';
-      const sermonPayload = isSermonsConfig ? ensureArray<Sermon>((data as any)?.sermons ?? data, []) : null;
+      const sermonPayload = isSermonsConfig ? normalizeSermonCollection(data) : null;
 
       if (isSermonsConfig && !Array.isArray((data as any)?.sermons ?? data)) {
         if (isDev) {
@@ -324,7 +329,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       // ✅ Normalize comment relation name: backend uses `comment`, frontend expects `comments`
       const normalized = isSermonsConfig
-        ? sermonPayload.map(normalizeSermonItem)
+        ? sermonPayload
         : Array.isArray(data)
           ? data.map((item: any) => {
            if (!item || typeof item !== 'object') return item;
@@ -673,7 +678,6 @@ const nowTimestamp = new Date().toISOString();
     }
 
     const endpoint = contentTypeToEndpoint[type];
-    let useLocalFallback = false;
     if (endpoint) {
         try {
             const payload = type === 'directMedia'
@@ -686,7 +690,9 @@ const nowTimestamp = new Date().toISOString();
               type === 'sermon' ? (normalizeSermonItem(newItem) as ContentItem) : newItem;
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
             const setter = setterMap[type];
-            if (setter) setter((prev: any[]) => [normalizedNewItem, ...prev]);
+            if (setter) {
+              setter((prev: any[]) => [normalizedNewItem, ...ensureArray(prev)]);
+            }
             logContentActivity(`${type} created: "${(normalizedNewItem as any).title || (normalizedNewItem as any).name}"`, 'content_creation', type, normalizedNewItem.id);
             if (type === 'donation') {
               addNotification({
@@ -700,15 +706,11 @@ const nowTimestamp = new Date().toISOString();
             return { success: true, newItem: normalizedNewItem };            
         } catch (error) {
           console.error(`Error adding ${type}:`, error);
-          if (type === 'sermon') {
-            useLocalFallback = true;
-          } else {
-            const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
-            return { success: false, message };
-          }
+          const message = error instanceof Error ? error.message : `Failed to create ${type}. Please try again.`;
+          return { success: false, message };
         }
     }
-    if (endpoint && !useLocalFallback) {
+    if (endpoint) {
       return { success: false, message: 'Failed to create content.' };
     }
     let newItem: ContentItem | null = null;
@@ -716,34 +718,7 @@ const nowTimestamp = new Date().toISOString();
     let message = 'An unknown error occurred.';
     switch (type) {
       case 'sermon': {
-        const formData = normalizedData as SermonFormData;
-        const newSermon: Sermon = {
-          id: newItemId,
-          title: formData.title,
-          description: formData.description,
-          imageUrl: formData.imageUrl,
-          linkPath: formData.linkPath || `/sermons/${newItemId}`,
-          category: formData.category,
-          date: formData.date,
-          incidentAt: formData.incidentAt || formData.date,
-          publishedAt: formData.publishedAt || timestamp,
-          speaker: formData.speaker,
-          scripture: formData.scripture,
-          videoUrl: formData.videoUrl,
-          audioUrl: formData.audioUrl,
-          fullContent: formData.fullContent,
-          location: formData.location,
-          postedByAdminId: currentUser?.id,
-          postedByAdminName: currentUser?.fullName,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          likes: 0,
-          comments: [],
-        };
-        setSermons((prev) => [newSermon, ...prev]);
-        newItem = newSermon;
-        success = true;
-        break;
+        return { success: false, message: 'Failed to create sermon.' };
       }
       case 'event': {
         const formData = normalizedData as EventFormData;
@@ -968,7 +943,9 @@ const nowTimestamp = new Date().toISOString();
           collectionRecord: setCollectionRecords,
         };
         const setter = setterMap[type];
-        if (setter) setter((prev: any[]) => prev.map(item => item.id === id ? normalizedUpdatedItem : item));
+        if (setter) {
+          setter((prev: any[]) => ensureArray(prev).map(item => item.id === id ? normalizedUpdatedItem : item));
+        }
         logContentActivity(
           `${type} updated: "${(normalizedUpdatedItem as any).title || (normalizedUpdatedItem as any).name}"`,
           'content_update',
@@ -1037,7 +1014,9 @@ const nowTimestamp = new Date().toISOString();
             if (!response.ok && response.status !== 204) throw new Error(`Failed to delete ${type} from server`);
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
             const setter = setterMap[type];
-            if(setter) setter((prev: any[]) => prev.filter(item => item.id !== id));
+            if (setter) {
+              setter((prev: any[]) => ensureArray(prev).filter(item => item.id !== id));
+            }
             logContentActivity(`${type} with ID ${id} deleted`, 'content_deletion', type, id);
             return true;
         } catch (error) {
@@ -1064,7 +1043,19 @@ const nowTimestamp = new Date().toISOString();
       }
     }
      let success = false;
-     const deleteAndLog = <T extends ContentItem>(setState: React.Dispatch<React.SetStateAction<T[]>>): boolean => { let itemTitle = 'Unknown'; setState(prevItems => { const itemToDelete = prevItems.find(item => item.id === id); if (itemToDelete) itemTitle = (itemToDelete as any).title || (itemToDelete as any).name || itemToDelete.id; return prevItems.filter(item => item.id !== id); }); logContentActivity(`${type} deleted: "${itemTitle}"`, 'content_deletion', type, id); return true; };
+     const deleteAndLog = <T extends ContentItem>(setState: React.Dispatch<React.SetStateAction<T[]>>): boolean => {
+       let itemTitle = 'Unknown';
+       setState(prevItems => {
+         const normalizedItems = ensureArray(prevItems);
+         const itemToDelete = normalizedItems.find(item => item.id === id);
+         if (itemToDelete) {
+           itemTitle = (itemToDelete as any).title || (itemToDelete as any).name || itemToDelete.id;
+         }
+         return normalizedItems.filter(item => item.id !== id);
+       });
+       logContentActivity(`${type} deleted: "${itemTitle}"`, 'content_deletion', type, id);
+       return true;
+     };
      switch (type) {
         case 'sermon': success = deleteAndLog(setSermons); break;
         case 'event': success = deleteAndLog(setEvents); break;
@@ -1138,7 +1129,13 @@ const nowTimestamp = new Date().toISOString();
             const data = await res.json();
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
             const setter = setterMap[endpoint.replace('-', '')] || setterMap[endpoint];
-            if (setter) setter(data);
+            if (setter) {
+              if (endpoint === 'sermons') {
+                setter(normalizeSermonCollection(data));
+              } else {
+                setter(ensureArray(data));
+              }
+            }
         }
 
         logContentActivity(`Commented on ${itemType}: ${itemId}`, `${itemType}_comment_added` as any, 'comment', newComment.id);
@@ -1160,7 +1157,13 @@ const nowTimestamp = new Date().toISOString();
              const data = await res.json();
              const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
              const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
-             if(setter) setter(data);
+             if (setter) {
+               if (endpoint === 'sermons') {
+                 setter(normalizeSermonCollection(data));
+               } else {
+                 setter(ensureArray(data));
+               }
+             }
          }
         return true;
     } catch(error) { console.error("Error updating comment:", error); return false; }
@@ -1176,7 +1179,13 @@ const nowTimestamp = new Date().toISOString();
             const data = await res.json();
             const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, blogPost: setBlogPosts, news: setNewsItems, historyChapter: setHistoryChapters, 'prayer-requests': setPrayerRequests, testimonials: setTestimonials };
             const setter = setterMap[endpoint.replace('-','')] || setterMap[endpoint];
-            if(setter) setter(data);
+            if (setter) {
+              if (endpoint === 'sermons') {
+                setter(normalizeSermonCollection(data));
+              } else {
+                setter(ensureArray(data));
+              }
+            }
         }
         return true;
     } catch (error) { console.error("Error deleting comment:", error); return false; }
@@ -1328,7 +1337,7 @@ const nowTimestamp = new Date().toISOString();
     const setter = setterMap[itemType];
     if (setter) {
       setter((prev: any[]) =>
-        prev.map(item => item.id === itemId ? { ...item, likes: updated.likes } : item)
+        ensureArray(prev).map(item => item.id === itemId ? { ...item, likes: updated.likes } : item)
       );
     }
 

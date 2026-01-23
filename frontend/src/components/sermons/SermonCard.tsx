@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'; 
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from 'react'; 
+import { Link } from "react-router-dom";
 import { Sermon } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
 import Button from '../ui/Button';
@@ -9,12 +9,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext'; 
 import { formatDateADBS } from '../../dateConverter'; 
 import useAITranslate from '../../../src/hooks/useAITranslate';
+import CommentItem from '../comments/CommentItem';
 import {
   HandThumbUpIcon as HandThumbUpIconSolid,
 } from '@heroicons/react/24/solid';
 import {
   HandThumbUpIcon as HandThumbUpIconOutline,
-  ChatBubbleLeftRightIcon,
+  ChatBubbleLeftEllipsisIcon,
   ShareIcon as ShareIconOutline,
 } from '@heroicons/react/24/outline';
 
@@ -52,20 +53,28 @@ interface SermonCardProps {
 
 const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
   const { isAuthenticated, currentUser } = useAuth();
-  const { logContentActivity, toggleLikeOnItem } = useContent(); 
-  const navigate = useNavigate();
+  const { logContentActivity, addCommentToItem, toggleLikeOnItem } = useContent(); 
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [likeCount, setLikeCount] = useState(sermon.likes || 0);
   const [isLiked, setIsLiked] = useState(sermon.likedByMe ?? false); 
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const { translatedText: title } = useAITranslate(sermon.title, 'en');
   const { translatedText: description } = useAITranslate(sermon.description, 'en');
   const { translatedText: speaker } = useAITranslate(sermon.speaker, 'en');
   const { translatedText: category } = useAITranslate(sermon.category, 'en');
   const detailUrl = `/sermons/${sermon.id}`;
+  const commentCount = sermon.comments?.length || 0;
+  const sortedComments = useMemo(
+    () => (sermon.comments ?? []).slice().sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+    [sermon.comments]
+  );
 
   useEffect(() => {
     setLikeCount(sermon.likes ?? 0);
@@ -77,31 +86,45 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
       setIsAuthModalOpen(true);
       return;
     }
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
     const updated = await toggleLikeOnItem('sermon', sermon.id, isLiked);
     if (updated?.likes !== undefined) {
       setLikeCount(updated.likes);
-    } else {
-      setIsLiked(!newLikedState);
-    }
-    logContentActivity(
-        `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} sermon: "${sermon.title}"`,
-        'content_update', 
+      setIsLiked(!isLiked);
+      logContentActivity(
+        `${currentUser?.fullName || 'User'} ${!isLiked ? 'liked' : 'unliked'} sermon: "${sermon.title}"`,
+        'content_update',
         'sermon',
         sermon.id
-    );
+      );
+    }
   };
 
   const handleCommentClick = () => {
-    if (!isAuthenticated) {
+    setShowComments(prev => !prev);
+  };
+
+  const handleSubmitComment = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!currentUser) {
       setIsAuthModalOpen(true);
       return;
     }
-    navigate(detailUrl, { state: { focusComments: true } });
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) {
+      setCommentError('Please enter a comment before submitting.');
+      return;
+    }
+    setIsSubmittingComment(true);
+    setCommentError(null);
+    const newComment = await addCommentToItem(sermon.id, 'sermon', trimmedComment);
+    setIsSubmittingComment(false);
+    if (newComment) {
+      setCommentText('');
+    } else {
+      setCommentError('Failed to submit comment. Please try again.');
+    }
   };
   
-  const commentCount = sermon.comments?.length || 0;
   const youtubeEmbedUrl = getYouTubeEmbedUrl(sermon.videoUrl);
 
   return (
@@ -174,26 +197,59 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
             {description}
           </p>
         </CardContent>
-        <CardFooter className="flex justify-around items-center flex-wrap gap-1 sm:gap-2 bg-slate-50">
-            <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-blue-600 px-1.5 sm:px-2 py-1" aria-pressed={isLiked} aria-label={isLiked ? `Unlike sermon, ${likeCount} likes` : `Like sermon, ${likeCount} likes`}>
-                {isLiked ? <HandThumbUpIconSolid className="w-5 h-5 mr-1 text-blue-600" /> : <HandThumbUpIconOutline className="w-5 h-5 mr-1" />}
-                {likeCount > 0 ? likeCount : ''} <span className="sr-only sm:not-sr-only ml-1">Like</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCommentClick}
-              className="flex items-center text-slate-600 hover:text-teal-500 px-1.5 sm:px-2 py-1"
-              aria-label="Comment on sermon"
-            >
-                <ChatBubbleLeftRightIcon className="w-5 h-5 mr-1" /> 
-                {commentCount > 0 ? commentCount : ''} <span className="sr-only sm:not-sr-only ml-1">Comment</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setIsShareModalOpen(true)} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5 sm:px-2 py-1" aria-label="Share sermon">
-                <ShareIconOutline className="w-5 h-5 mr-1" /> <span className="sr-only sm:not-sr-only">Share</span>
-            </Button>
-            <Button asLink to={detailUrl} variant="outline" size="sm" className="px-1.5 sm:px-2 py-1">View Details</Button>
+        <CardFooter className="bg-slate-50 mt-auto grid grid-cols-3 gap-px p-0 border-t border-slate-200">
+          <Button variant="ghost" onClick={handleLike} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-blue-50" aria-pressed={isLiked} aria-label={isLiked ? `Unlike sermon, ${likeCount} likes` : `Like sermon, ${likeCount} likes`}>
+            {isLiked ? <HandThumbUpIconSolid className="w-5 h-5 mr-1.5 text-blue-600" /> : <HandThumbUpIconOutline className="w-5 h-5 mr-1.5" />}
+            {likeCount} <span className="ml-1 hidden sm:inline">Like</span>
+          </Button>
+          <Button variant="ghost" onClick={handleCommentClick} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-slate-200" aria-label="Comment on sermon">
+            <ChatBubbleLeftEllipsisIcon className="w-5 h-5 mr-1.5" />
+            {commentCount} <span className="ml-1 hidden sm:inline">Comment</span>
+          </Button>
+          <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-slate-200" aria-label="Share sermon">
+            <ShareIconOutline className="w-5 h-5 mr-1.5" /> <span className="hidden sm:inline">Share</span>
+          </Button>
         </CardFooter>
+        {showComments && (
+          <div className="p-4 border-t border-slate-200 bg-slate-50">
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300">
+              {sortedComments.length > 0 ? (
+                sortedComments.map((comment) => (
+                  <CommentItem key={comment.id} comment={comment} itemType="sermon" itemId={sermon.id} />
+                ))
+              ) : (
+                <p className="text-center text-xs text-slate-500 py-3">No comments yet.</p>
+              )}
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <form onSubmit={handleSubmitComment} className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-600">Add a comment</label>
+                <textarea
+                  value={commentText}
+                  onChange={(event) => {
+                    setCommentText(event.target.value);
+                    if (commentError) {
+                      setCommentError(null);
+                    }
+                  }}
+                  rows={3}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="Write your comment here..."
+                />
+                {commentError && <p className="text-xs text-red-500">{commentError}</p>}
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="primary"
+                  className="w-full"
+                  disabled={isSubmittingComment}
+                >
+                  {isSubmittingComment ? 'Submitting...' : 'Submit Comment'}
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
       </Card>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
