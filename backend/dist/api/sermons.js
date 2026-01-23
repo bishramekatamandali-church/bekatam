@@ -373,7 +373,18 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         // Delete related comments (your schema uses sermonId)
-        await db_1.prisma.comment.deleteMany({ where: { sermonId: id } });
+        try {
+            await db_1.prisma.comment.deleteMany({ where: { sermonId: id } });
+        }
+        catch (commentError) {
+            if (commentError instanceof client_1.Prisma.PrismaClientKnownRequestError &&
+                (commentError.code === 'P2021' || commentError.code === 'P2022')) {
+                console.warn('Skipping comment cleanup due to missing comment schema.', commentError.message);
+            }
+            else {
+                throw commentError;
+            }
+        }
         await db_1.prisma.sermon.delete({ where: { id } });
         // Do not fail the API if publish fails
         try {
@@ -394,7 +405,20 @@ router.delete('/:id', async (req, res) => {
                 return res.status(409).json({ error: 'Cannot delete sermon due to related records.' });
             }
         }
-        return res.status(500).json({ error: 'Failed to delete sermon' });
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            return res.status(500).json({
+                error: 'Failed to delete sermon',
+                code: error.code,
+                details: error.message,
+            });
+        }
+        if (error instanceof client_1.Prisma.PrismaClientValidationError) {
+            return res.status(500).json({
+                error: 'Failed to delete sermon',
+                details: error.message,
+            });
+        }
+        res.status(500).json({ error: 'Failed to delete sermon' });
     }
 });
 exports.default = router;

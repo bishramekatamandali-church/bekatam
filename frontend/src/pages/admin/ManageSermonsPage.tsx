@@ -26,9 +26,12 @@ const ManageSermonsPage: React.FC = () => {
   const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const sortedSermons = React.useMemo(() =>
-    [...sermons].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
-  [sermons]);
+  const sermonList = React.useMemo(() => (Array.isArray(sermons) ? sermons : []), [sermons]);
+
+const sortedSermons = React.useMemo(
+  () => [...sermonList].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()),
+  [sermonList]
+);
 
   const handleOpenModal = (sermon?: Sermon) => {
     setEditingSermon(sermon || null);
@@ -71,7 +74,8 @@ const ManageSermonsPage: React.FC = () => {
 
       {loadingContent && <p className="text-gray-500">Loading sermons...</p>}
       
-      {!loadingContent && sermons.length === 0 && (
+      {!loadingContent && sermonList.length === 0 && (
+
         <Card>
             <CardContent>
                 <p className="text-center text-gray-500 py-8">No sermons found. Add one to get started!</p>

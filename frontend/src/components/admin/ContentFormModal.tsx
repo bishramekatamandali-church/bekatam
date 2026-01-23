@@ -639,6 +639,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
   const [isFieldUploading, setIsFieldUploading] = useState<Record<string, boolean>>({});
   const [isGeneratingAiContent, setIsGeneratingAiContent] = useState(false);
   const [locationLookupStatus, setLocationLookupStatus] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const isSermonForm = contentType === 'sermon';
   const isBlogOrNewsForm = contentType === 'blogPost' || contentType === 'news';
   const resolvedLabelClasses = isSermonForm
@@ -734,6 +735,7 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setValidationError(null);
       setLocationLookupStatus(null);
       const mergedDefaults = createDefaults && !initialData
         ? { ...(defaultFormValues[contentType] as GenericContentFormData), ...createDefaults }
@@ -1280,6 +1282,29 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     e.preventDefault();
 
     let dataToSubmit: any = { ...formData };
+    
+    if (contentType === 'sermon') {
+      const titleText = String(dataToSubmit.title || '').trim();
+      const descriptionText = String(dataToSubmit.description || '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      const dateValue = dataToSubmit.incidentAt || dataToSubmit.date;
+
+      if (!titleText) {
+        setValidationError('Please enter a sermon title.');
+        return;
+      }
+      if (!descriptionText) {
+        setValidationError('Please add a sermon description.');
+        return;
+      }
+      if (!dateValue) {
+        setValidationError('Please select a sermon date.');
+        return;
+      }
+    }
+
+    setValidationError(null);
 
     if (['expenseRecord', 'collectionRecord', 'donation'].includes(contentType)) {
       dataToSubmit.amount = parseFloat(dataToSubmit.amount) || 0;
@@ -3270,6 +3295,14 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
               className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               {errorMessage}
+            </div>
+          )}
+          {validationError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {validationError}
             </div>
           )}
           {renderSpecificFields()}

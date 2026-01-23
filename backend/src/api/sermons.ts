@@ -398,7 +398,18 @@ router.delete('/:id', async (req, res) => {
 
   try {
     // Delete related comments (your schema uses sermonId)
-    await prisma.comment.deleteMany({ where: { sermonId: id } });
+    try {
+      await prisma.comment.deleteMany({ where: { sermonId: id } });
+    } catch (commentError) {
+      if (
+        commentError instanceof Prisma.PrismaClientKnownRequestError &&
+        (commentError.code === 'P2021' || commentError.code === 'P2022')
+      ) {
+        console.warn('Skipping comment cleanup due to missing comment schema.', commentError.message);
+      } else {
+        throw commentError;
+      }
+    }
 
     await prisma.sermon.delete({ where: { id } });
 
@@ -422,7 +433,23 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
-    return res.status(500).json({ error: 'Failed to delete sermon' });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  return res.status(500).json({
+    error: 'Failed to delete sermon',
+    code: error.code,
+    details: error.message,
+  });
+}
+
+if (error instanceof Prisma.PrismaClientValidationError) {
+  return res.status(500).json({
+    error: 'Failed to delete sermon',
+    details: error.message,
+  });
+}
+
+res.status(500).json({ error: 'Failed to delete sermon' });
+
   }
 });
 
