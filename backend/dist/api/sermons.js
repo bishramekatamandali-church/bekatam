@@ -23,15 +23,12 @@ const isMissingColumnError = (error, column) => {
 };
 const getMissingSermonColumns = (error) => {
     const missing = new Set();
-    if (isMissingColumnError(error, 'postedByAdminId')) {
+    if (isMissingColumnError(error, 'postedByAdminId'))
         missing.add('postedByAdminId');
-    }
-    if (isMissingColumnError(error, 'postedByAdminName')) {
+    if (isMissingColumnError(error, 'postedByAdminName'))
         missing.add('postedByAdminName');
-    }
-    if (isMissingColumnError(error, 'location')) {
+    if (isMissingColumnError(error, 'location'))
         missing.add('location');
-    }
     return missing;
 };
 const buildSermonSelect = (includeAdminFields, includeLocation) => ({
@@ -55,9 +52,8 @@ const buildSermonSelect = (includeAdminFields, includeLocation) => ({
     comment: true,
 });
 const removeMissingColumns = (data, missing) => {
-    if (missing.size === 0) {
+    if (missing.size === 0)
         return data;
-    }
     const pruned = { ...data };
     for (const column of missing) {
         delete pruned[column];
@@ -67,20 +63,22 @@ const removeMissingColumns = (data, missing) => {
 // Helper to ensure the sermon object sent to the frontend has the expected shape
 const shapeSermonForFrontend = (s) => {
     const { comment, ...sermon } = s;
-    const comments = Array.isArray(comment) ? comment.map((c) => ({
-        id: c.id,
-        itemId: sermon.id,
-        itemType: 'sermon',
-        userId: c.userId ?? null,
-        userName: c.userName,
-        userProfileImageUrl: c.userProfileImageUrl ?? null,
-        isGuest: c.isGuest ?? false,
-        guestEmail: c.guestEmail ?? null,
-        guestPhone: c.guestPhone ?? null,
-        text: c.text,
-        timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
-        editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
-    })) : [];
+    const comments = Array.isArray(comment)
+        ? comment.map((c) => ({
+            id: c.id,
+            itemId: sermon.id,
+            itemType: 'sermon',
+            userId: c.userId ?? null,
+            userName: c.userName,
+            userProfileImageUrl: c.userProfileImageUrl ?? null,
+            isGuest: c.isGuest ?? false,
+            guestEmail: c.guestEmail ?? null,
+            guestPhone: c.guestPhone ?? null,
+            text: c.text,
+            timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+            editedAt: c.editedAt ? new Date(c.editedAt).toISOString() : null,
+        }))
+        : [];
     comments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
     return {
         ...sermon,
@@ -99,8 +97,7 @@ router.get('/', async (req, res) => {
             select: buildSermonSelect(true, true),
             orderBy: { date: 'desc' },
         });
-        const shapedSermons = sermons.map(shapeSermonForFrontend);
-        res.json(shapedSermons);
+        res.json(sermons.map(shapeSermonForFrontend));
     }
     catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -110,24 +107,21 @@ router.get('/', async (req, res) => {
                     select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName'), !missingColumns.has('location')),
                     orderBy: { date: 'desc' },
                 });
-                const shapedSermons = sermons.map(shapeSermonForFrontend);
-                res.json(shapedSermons);
+                res.json(sermons.map(shapeSermonForFrontend));
                 return;
             }
             catch (fallbackError) {
-                if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, fallbackError)) {
+                if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, fallbackError))
                     return;
-                }
-                console.error("Error fetching sermons without location:", fallbackError);
-                res.status(500).json({ error: "Failed to fetch sermons" });
+                console.error('Error fetching sermons without missing columns:', fallbackError);
+                res.status(500).json({ error: 'Failed to fetch sermons' });
                 return;
             }
         }
-        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
+        if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error))
             return;
-        }
-        console.error("Error fetching sermons:", error);
-        res.status(500).json({ error: "Failed to fetch sermons" });
+        console.error('Error fetching sermons:', error);
+        res.status(500).json({ error: 'Failed to fetch sermons' });
     }
 });
 // GET a single sermon by ID
@@ -135,50 +129,47 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const sermon = await db_1.prisma.sermon.findUnique({
-            where: { id: id },
+            where: { id },
             select: buildSermonSelect(true, true),
         });
-        if (sermon) {
-            res.json(shapeSermonForFrontend(sermon));
+        if (!sermon) {
+            res.status(404).json({ error: 'Sermon not found' });
+            return;
         }
-        else {
-            res.status(404).json({ error: "Sermon not found" });
-        }
+        res.json(shapeSermonForFrontend(sermon));
     }
     catch (error) {
         const missingColumns = getMissingSermonColumns(error);
         if (missingColumns.size > 0) {
             try {
                 const sermon = await db_1.prisma.sermon.findUnique({
-                    where: { id: id },
+                    where: { id },
                     select: buildSermonSelect(!missingColumns.has('postedByAdminId') && !missingColumns.has('postedByAdminName'), !missingColumns.has('location')),
                 });
-                if (sermon) {
-                    res.json(shapeSermonForFrontend(sermon));
+                if (!sermon) {
+                    res.status(404).json({ error: 'Sermon not found' });
+                    return;
                 }
-                else {
-                    res.status(404).json({ error: "Sermon not found" });
-                }
+                res.json(shapeSermonForFrontend(sermon));
                 return;
             }
             catch (fallbackError) {
-                console.error(`Error fetching sermon with id "${id}" without location:`, fallbackError);
-                res.status(500).json({ error: "Failed to fetch sermon" });
+                console.error(`Error fetching sermon with id "${id}" without missing columns:`, fallbackError);
+                res.status(500).json({ error: 'Failed to fetch sermon' });
                 return;
             }
         }
         console.error(`Error fetching sermon with id "${id}":`, error);
-        res.status(500).json({ error: "Failed to fetch sermon" });
+        res.status(500).json({ error: 'Failed to fetch sermon' });
     }
 });
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { id: requestedId, linkPath: requestedLinkPath, title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
-    // Validate date before creating a Date object. Pass null if date is invalid or not provided.
+    const { id: requestedId, linkPath: requestedLinkPath, title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, 
+    // location is present in some clients, but DB table doesn't have this column currently
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    location, } = req.body;
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
-    if (!sermonDate) {
-        return res.status(400).json({ error: 'Sermon date is required (valid date).' });
-    }
     if (typeof title !== 'string' || !title.trim()) {
         return res.status(400).json({ error: 'Title is required.' });
     }
@@ -196,12 +187,10 @@ router.post('/', async (req, res) => {
         const newSermon = await db_1.prisma.sermon.create({
             data: {
                 id,
-                createdAt: new Date(), // ✅ ADD THIS
-                updatedAt: new Date(),
                 title,
                 description,
                 date: sermonDate,
-                category: normalizedCategory,
+                ...(normalizedCategory !== undefined ? { category: normalizedCategory } : {}),
                 speaker,
                 scripture,
                 videoUrl,
@@ -210,17 +199,22 @@ router.post('/', async (req, res) => {
                 imageUrl,
                 postedByAdminId,
                 postedByAdminName,
-                location,
                 linkPath,
-            }
+                updatedAt: new Date(),
+            },
         });
         try {
-            (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+            (0, contentUpdates_1.publishContentUpdate)({
+                type: 'sermon',
+                action: 'created',
+                id: newSermon.id,
+                timestamp: new Date().toISOString(),
+            });
         }
         catch (e) {
             console.error('publishContentUpdate failed (create sermon):', e);
         }
-        res.status(201).json(shapeSermonForFrontend(newSermon));
+        return res.status(201).json(shapeSermonForFrontend(newSermon));
     }
     catch (error) {
         const missingColumns = getMissingSermonColumns(error);
@@ -229,12 +223,10 @@ router.post('/', async (req, res) => {
                 const newSermon = await db_1.prisma.sermon.create({
                     data: removeMissingColumns({
                         id,
-                        createdAt: new Date(), // ✅ add this
-                        updatedAt: new Date(),
                         title,
                         description,
                         date: sermonDate,
-                        category: normalizedCategory,
+                        ...(normalizedCategory !== undefined ? { category: normalizedCategory } : {}),
                         speaker,
                         scripture,
                         videoUrl,
@@ -243,35 +235,48 @@ router.post('/', async (req, res) => {
                         imageUrl,
                         postedByAdminId,
                         postedByAdminName,
-                        location,
                         linkPath,
+                        updatedAt: new Date(),
                     }, missingColumns),
                 });
-                (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
-                res.status(201).json(shapeSermonForFrontend(newSermon));
-                return;
+                try {
+                    (0, contentUpdates_1.publishContentUpdate)({
+                        type: 'sermon',
+                        action: 'created',
+                        id: newSermon.id,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+                catch (e) {
+                    console.error('publishContentUpdate failed (create sermon):', e);
+                }
+                return res.status(201).json(shapeSermonForFrontend(newSermon));
             }
             catch (fallbackError) {
-                console.error("Error creating sermon without location:", fallbackError);
+                console.error('Error creating sermon with missing-column fallback:', fallbackError);
                 if (fallbackError instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-                    return res.status(400).json({ error: 'Database error creating sermon.', details: fallbackError.message });
+                    return res.status(400).json({
+                        error: 'Database error creating sermon.',
+                        details: fallbackError.message,
+                    });
                 }
-                res.status(500).json({ error: 'Failed to create sermon' });
-                return;
+                return res.status(500).json({ error: 'Failed to create sermon' });
             }
         }
-        console.error("Error creating sermon:", error);
+        console.error('Error creating sermon:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             return res.status(400).json({ error: 'Database error creating sermon.', details: error.message });
         }
-        res.status(500).json({ error: 'Failed to create sermon' });
+        return res.status(500).json({ error: 'Failed to create sermon' });
     }
 });
 // PUT (update) a sermon
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
-    // Validate date before creating a Date object. Pass null if date is invalid or not provided.
+    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, 
+    // location is present in some clients, but DB table doesn't have this column currently
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    location, } = req.body;
     const sermonDate = date === undefined || date === null || date === ''
         ? undefined
         : !isNaN(new Date(date).getTime())
@@ -293,7 +298,7 @@ router.put('/:id', async (req, res) => {
     }
     try {
         const updatedSermon = await db_1.prisma.sermon.update({
-            where: { id: id },
+            where: { id },
             data: {
                 title,
                 description,
@@ -307,28 +312,32 @@ router.put('/:id', async (req, res) => {
                 imageUrl,
                 postedByAdminId,
                 postedByAdminName,
-                location,
                 updatedAt: new Date(),
-            }
+            },
         });
         try {
-            (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+            (0, contentUpdates_1.publishContentUpdate)({
+                type: 'sermon',
+                action: 'updated',
+                id: updatedSermon.id,
+                timestamp: new Date().toISOString(),
+            });
         }
         catch (e) {
             console.error('publishContentUpdate failed (update sermon):', e);
         }
-        res.json(shapeSermonForFrontend(updatedSermon));
+        return res.json(shapeSermonForFrontend(updatedSermon));
     }
     catch (error) {
         const missingColumns = getMissingSermonColumns(error);
         if (missingColumns.size > 0) {
             try {
                 const updatedSermon = await db_1.prisma.sermon.update({
-                    where: { id: id },
+                    where: { id },
                     data: removeMissingColumns({
                         title,
                         description,
-                        date: sermonDate,
+                        ...(sermonDate !== undefined ? { date: sermonDate } : {}),
                         ...(normalizedCategory !== undefined ? { category: normalizedCategory } : {}),
                         speaker,
                         scripture,
@@ -338,24 +347,31 @@ router.put('/:id', async (req, res) => {
                         imageUrl,
                         postedByAdminId,
                         postedByAdminName,
-                        location,
                         updatedAt: new Date(),
                     }, missingColumns),
                 });
-                (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
-                res.json(shapeSermonForFrontend(updatedSermon));
-                return;
+                try {
+                    (0, contentUpdates_1.publishContentUpdate)({
+                        type: 'sermon',
+                        action: 'updated',
+                        id: updatedSermon.id,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+                catch (e) {
+                    console.error('publishContentUpdate failed (update sermon):', e);
+                }
+                return res.json(shapeSermonForFrontend(updatedSermon));
             }
             catch (fallbackError) {
-                console.error(`Error updating sermon with id "${id}" without location:`, fallbackError);
+                console.error(`Error updating sermon with id "${id}" using fallback:`, fallbackError);
                 if (fallbackError instanceof client_1.Prisma.PrismaClientKnownRequestError) {
                     if (fallbackError.code === 'P2025') {
                         return res.status(404).json({ error: 'Sermon to update not found.' });
                     }
                     return res.status(400).json({ error: 'Database error updating sermon.', details: fallbackError.message });
                 }
-                res.status(500).json({ error: 'Failed to update sermon' });
-                return;
+                return res.status(500).json({ error: 'Failed to update sermon' });
             }
         }
         console.error(`Error updating sermon with id "${id}":`, error);
@@ -365,28 +381,18 @@ router.put('/:id', async (req, res) => {
             }
             return res.status(400).json({ error: 'Database error updating sermon.', details: error.message });
         }
-        res.status(500).json({ error: 'Failed to update sermon' });
+        return res.status(500).json({ error: 'Failed to update sermon' });
     }
 });
 // DELETE a sermon
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        // Delete related comments (your schema uses sermonId)
-        try {
-            await db_1.prisma.comment.deleteMany({ where: { sermonId: id } });
-        }
-        catch (commentError) {
-            if (commentError instanceof client_1.Prisma.PrismaClientKnownRequestError &&
-                (commentError.code === 'P2021' || commentError.code === 'P2022')) {
-                console.warn('Skipping comment cleanup due to missing comment schema.', commentError.message);
-            }
-            else {
-                throw commentError;
-            }
-        }
+        // Remove related likes (safe cleanup)
+        await db_1.prisma.contentlike.deleteMany({ where: { itemType: 'sermon', itemId: id } });
+        // Remove related comments
+        await db_1.prisma.comment.deleteMany({ where: { sermonId: id } });
         await db_1.prisma.sermon.delete({ where: { id } });
-        // Do not fail the API if publish fails
         try {
             (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
         }
@@ -398,27 +404,14 @@ router.delete('/:id', async (req, res) => {
     catch (error) {
         console.error(`Error deleting sermon with id "${id}":`, error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            if (error.code === 'P2025') {
+            if (error.code === 'P2025')
                 return res.status(404).json({ error: 'Sermon to delete not found.' });
-            }
-            if (error.code === 'P2003') {
-                return res.status(409).json({ error: 'Cannot delete sermon due to related records.' });
-            }
-        }
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            return res.status(500).json({
-                error: 'Failed to delete sermon',
-                code: error.code,
-                details: error.message,
-            });
+            return res.status(500).json({ error: 'Failed to delete sermon', code: error.code, details: error.message });
         }
         if (error instanceof client_1.Prisma.PrismaClientValidationError) {
-            return res.status(500).json({
-                error: 'Failed to delete sermon',
-                details: error.message,
-            });
+            return res.status(500).json({ error: 'Failed to delete sermon', details: error.message });
         }
-        res.status(500).json({ error: 'Failed to delete sermon' });
+        return res.status(500).json({ error: 'Failed to delete sermon' });
     }
 });
 exports.default = router;
