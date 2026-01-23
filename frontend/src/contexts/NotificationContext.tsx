@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { Notification as AppNotification, NotificationContextType, NotificationAddData, User } from '../types';
 import { useAuth } from './AuthContext';
@@ -15,8 +14,10 @@ const getGuestId = (): string => {
   localStorage.setItem('bem_guest_id', guestId);
   return guestId;
 };
+
 const getStorageKey = (userId: string, isGuest: boolean) =>
   `${NOTIFICATIONS_STORAGE_KEY_PREFIX}${isGuest ? 'guest' : userId}`;
+
 const readLastSeenContent = (): string | null => {
   try {
     return localStorage.getItem(LAST_SEEN_CONTENT_KEY);
@@ -25,6 +26,7 @@ const readLastSeenContent = (): string | null => {
     return null;
   }
 };
+
 const writeLastSeenContent = (timestamp: string) => {
   try {
     localStorage.setItem(LAST_SEEN_CONTENT_KEY, timestamp);
@@ -32,13 +34,15 @@ const writeLastSeenContent = (timestamp: string) => {
     console.error('Error saving last seen content timestamp', error);
   }
 };
+
 const pushNotification = (
   notification: AppNotification,
   storageKey: string,
   setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>,
 ) => {
   setNotifications(prev => {
-    const next = [notification, ...prev].slice(0, 250);
+    const safePrev = Array.isArray(prev) ? prev : [];
+    const next = [notification, ...safePrev].slice(0, 250);
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
     } catch (error) {
@@ -47,15 +51,19 @@ const pushNotification = (
     return next;
   });
 };
+
 const readNotifications = (storageKey: string): AppNotification[] => {
   try {
     const stored = localStorage.getItem(storageKey);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error('Error reading notifications', error);
     return [];
   }
 };
+
 const writeNotifications = (storageKey: string, next: AppNotification[]) => {
   try {
     localStorage.setItem(storageKey, JSON.stringify(next));
@@ -63,6 +71,7 @@ const writeNotifications = (storageKey: string, next: AppNotification[]) => {
     console.error('Error saving notifications', error);
   }
 };
+
 const sendBrowserNotification = async (notification: AppNotification) => {
   if (!('Notification' in window)) return;
   if (window.Notification.permission !== 'granted') return;
@@ -81,13 +90,15 @@ const sendBrowserNotification = async (notification: AppNotification) => {
     console.error('Unable to show browser notification', error);
   }
 };
+
 const removeNotifications = (
   storageKey: string,
   predicate: (notification: AppNotification) => boolean,
   setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>,
 ) => {
   setNotifications(prev => {
-    const next = prev.filter(predicate);
+    const safePrev = Array.isArray(prev) ? prev : [];
+    const next = safePrev.filter(predicate);
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
     } catch (error) {
@@ -115,12 +126,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     try {
       const storedNotifications = localStorage.getItem(storageKey);
       if (storedNotifications) {
-        setNotifications(JSON.parse(storedNotifications));
+        const parsed = JSON.parse(storedNotifications);
+        setNotifications(Array.isArray(parsed) ? parsed : []);
       } else {
-        setNotifications([]); 
+        setNotifications([]);
       }
     } catch (error) {
-      console.error("Error loading notifications from localStorage", error);
+      console.error('Error loading notifications from localStorage', error);
       setNotifications([]);
     } finally {
       setLoadingNotifications(false);
@@ -137,10 +149,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         return allUsers.filter(user => user.receiveContentUpdateNotifications);
       }
       if (target === 'all_users_for_prayers') {
-          return allUsers.filter(user => user.receivePrayerRequestNotifications);
+        return allUsers.filter(user => user.receivePrayerRequestNotifications);
       }
       if (target === 'all_users_for_testimonials') {
-          return allUsers.filter(user => user.receiveTestimonialNotifications);
+        return allUsers.filter(user => user.receiveTestimonialNotifications);
       }
       if (target === 'admin_group') {
         return allUsers.filter(u => u.role === 'admin');
@@ -153,17 +165,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     };
 
     const targetUsers = getTargetUsers(notificationData.targetUserId, currentUser?.id);
-    
+
     if (targetUsers.length > 0) {
-        newNotifications = targetUsers.map(user => ({
-            ...notificationData,
-            id: generateId(`notif-${user.id}`),
-            targetUserId: user.id, // Overwrite targetUserId with the specific user's ID
-            timestamp: new Date().toISOString(),
-            read: false,
-        }));
-    } else if (!notificationData.targetUserId.includes('_')) { // It was a single user ID that was not found.
-        console.warn(`addNotification: targetUserId "${notificationData.targetUserId}" not found.`);
+      newNotifications = targetUsers.map(user => ({
+        ...notificationData,
+        id: generateId(`notif-${user.id}`),
+        targetUserId: user.id,
+        timestamp: new Date().toISOString(),
+        read: false,
+      }));
+    } else if (!notificationData.targetUserId.includes('_')) {
+      // It was a single user ID that was not found.
+      console.warn(`addNotification: targetUserId "${notificationData.targetUserId}" not found.`);
     }
 
     if (newNotifications.length > 0) {
@@ -173,18 +186,19 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         acc.set(notification.targetUserId, list);
         return acc;
       }, new Map<string, AppNotification[]>());
+
       notificationsByUser.forEach((userNotifications, userId) => {
         const key = getStorageKey(userId, userId.startsWith('guest-'));
         const existing = readNotifications(key);
         const next = [...userNotifications, ...existing].slice(0, 250);
         writeNotifications(key, next);
+
         if (userId === activeUserId) {
           setNotifications(next);
           userNotifications.forEach(sendBrowserNotification);
         }
       });
     }
-
   }, [getAllUsers, currentUser, activeUserId]);
 
   const addGuestNotification = useCallback((notificationData: NotificationAddData) => {
@@ -204,7 +218,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prevNotifications => {
-      const next = prevNotifications.map(notif =>
+      const safePrev = Array.isArray(prevNotifications) ? prevNotifications : [];
+      const next = safePrev.map(notif =>
         notif.id === notificationId ? { ...notif, read: true } : notif
       );
       writeNotifications(storageKey, next);
@@ -214,7 +229,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const markAllAsRead = useCallback(() => {
     setNotifications(prevNotifications => {
-      const next = prevNotifications.map(notif =>
+      const safePrev = Array.isArray(prevNotifications) ? prevNotifications : [];
+      const next = safePrev.map(notif =>
         !notif.read ? { ...notif, read: true } : notif
       );
       writeNotifications(storageKey, next);
@@ -224,14 +240,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const unreadCount = useMemo(() => {
     if (loadingNotifications) return 0;
-    return notifications.filter(notif => notif.targetUserId === activeUserId && !notif.read).length;
+    const safe = Array.isArray(notifications) ? notifications : [];
+    return safe.filter(notif => notif.targetUserId === activeUserId && !notif.read).length;
   }, [notifications, activeUserId, loadingNotifications]);
 
   const replaceNotificationsForUser = useCallback((userId: string, next: AppNotification[]) => {
     const key = getStorageKey(userId, userId.startsWith('guest-'));
     writeNotifications(key, next);
     if (userId === activeUserId) {
-      setNotifications(next);
+      setNotifications(Array.isArray(next) ? next : []);
     }
   }, [activeUserId]);
 
@@ -255,7 +272,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   return (
     <NotificationContext.Provider value={{
-      notifications,
+      notifications: Array.isArray(notifications) ? notifications : [],
       unreadCount,
       activeUserId,
       isGuest,
