@@ -712,7 +712,7 @@ model sermon {
   likes             Int              @default(0)
   comment           comment[]
   
-  @@map("Sermon")
+  @@map("sermon")
 }
 
 model testimonial {

@@ -72,7 +72,7 @@ const port = process.env.PORT || 3001;
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, morgan_1.default)("dev"));
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: "10mb" }));
 app.use("/api", (req, res, next) => {
     if (req.method === "GET" && !res.getHeader("Cache-Control")) {
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");

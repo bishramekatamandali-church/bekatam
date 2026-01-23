@@ -77,7 +77,7 @@ const port = process.env.PORT || 3001;
 app.use(helmet());
 app.use(compression());
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 app.use("/api", (req, res, next) => {
   if (req.method === "GET" && !res.getHeader("Cache-Control")) {

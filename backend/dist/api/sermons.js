@@ -173,22 +173,34 @@ router.get('/:id', async (req, res) => {
 });
 // POST a new sermon
 router.post('/', async (req, res) => {
-    const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
+    const { id: requestedId, linkPath: requestedLinkPath, title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
     const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
-    const id = crypto_1.default.randomUUID();
-    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.sermon_category);
-    if (category && !normalizedCategory) {
+    if (!sermonDate) {
+        return res.status(400).json({ error: 'Sermon date is required (valid date).' });
+    }
+    if (typeof title !== 'string' || !title.trim()) {
+        return res.status(400).json({ error: 'Title is required.' });
+    }
+    if (typeof description !== 'string' || !description.trim()) {
+        return res.status(400).json({ error: 'Description is required.' });
+    }
+    const id = typeof requestedId === 'string' && requestedId.trim().length > 0 ? requestedId : crypto_1.default.randomUUID();
+    const linkPath = requestedLinkPath || `/sermons/${id}`;
+    const categoryInput = category === undefined || category === null || category === '' ? undefined : category;
+    const normalizedCategory = categoryInput !== undefined ? (0, enumNormalization_1.normalizeEnumValue)(categoryInput, client_1.sermon_category) : undefined;
+    if (categoryInput !== undefined && !normalizedCategory) {
         return res.status(400).json({ error: 'Invalid sermon category.' });
     }
     try {
         const newSermon = await db_1.prisma.sermon.create({
             data: {
-                id, // REQUIRED in your schema
-                updatedAt: new Date(), // REQUIRED
+                id,
+                createdAt: new Date(), // ✅ ADD THIS
+                updatedAt: new Date(),
                 title,
                 description,
-                date: sermonDate, // Use the validated date or null
+                date: sermonDate,
                 category: normalizedCategory,
                 speaker,
                 scripture,
@@ -199,10 +211,15 @@ router.post('/', async (req, res) => {
                 postedByAdminId,
                 postedByAdminName,
                 location,
-                linkPath: `/sermons/${id}`,
+                linkPath,
             }
         });
-        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+        try {
+            (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
+        }
+        catch (e) {
+            console.error('publishContentUpdate failed (create sermon):', e);
+        }
         res.status(201).json(shapeSermonForFrontend(newSermon));
     }
     catch (error) {
@@ -212,6 +229,7 @@ router.post('/', async (req, res) => {
                 const newSermon = await db_1.prisma.sermon.create({
                     data: removeMissingColumns({
                         id,
+                        createdAt: new Date(), // ✅ add this
                         updatedAt: new Date(),
                         title,
                         description,
@@ -226,7 +244,7 @@ router.post('/', async (req, res) => {
                         postedByAdminId,
                         postedByAdminName,
                         location,
-                        linkPath: `/sermons/${id}`,
+                        linkPath,
                     }, missingColumns),
                 });
                 (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'created', id: newSermon.id, timestamp: new Date().toISOString() });
@@ -254,9 +272,23 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, date, category, speaker, scripture, videoUrl, audioUrl, fullContent, imageUrl, postedByAdminId, postedByAdminName, location } = req.body;
     // Validate date before creating a Date object. Pass null if date is invalid or not provided.
-    const sermonDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : null;
-    const normalizedCategory = (0, enumNormalization_1.normalizeEnumValue)(category, client_1.sermon_category);
-    if (category && !normalizedCategory) {
+    const sermonDate = date === undefined || date === null || date === ''
+        ? undefined
+        : !isNaN(new Date(date).getTime())
+            ? new Date(date)
+            : null;
+    if (sermonDate === null) {
+        return res.status(400).json({ error: 'Invalid sermon date.' });
+    }
+    if (title === null) {
+        return res.status(400).json({ error: 'Title cannot be null.' });
+    }
+    if (description === null) {
+        return res.status(400).json({ error: 'Description cannot be null.' });
+    }
+    const categoryInput = category === undefined || category === null || category === '' ? undefined : category;
+    const normalizedCategory = categoryInput !== undefined ? (0, enumNormalization_1.normalizeEnumValue)(categoryInput, client_1.sermon_category) : undefined;
+    if (categoryInput !== undefined && !normalizedCategory) {
         return res.status(400).json({ error: 'Invalid sermon category.' });
     }
     try {
@@ -265,8 +297,8 @@ router.put('/:id', async (req, res) => {
             data: {
                 title,
                 description,
-                date: sermonDate, // Use the validated date or null
-                category: normalizedCategory,
+                ...(sermonDate !== undefined ? { date: sermonDate } : {}),
+                ...(normalizedCategory !== undefined ? { category: normalizedCategory } : {}),
                 speaker,
                 scripture,
                 videoUrl,
@@ -279,7 +311,12 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             }
         });
-        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+        try {
+            (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'updated', id: updatedSermon.id, timestamp: new Date().toISOString() });
+        }
+        catch (e) {
+            console.error('publishContentUpdate failed (update sermon):', e);
+        }
         res.json(shapeSermonForFrontend(updatedSermon));
     }
     catch (error) {
@@ -292,7 +329,7 @@ router.put('/:id', async (req, res) => {
                         title,
                         description,
                         date: sermonDate,
-                        category: normalizedCategory,
+                        ...(normalizedCategory !== undefined ? { category: normalizedCategory } : {}),
                         speaker,
                         scripture,
                         videoUrl,
@@ -335,11 +372,17 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        await db_1.prisma.sermon.delete({
-            where: { id: id },
-        });
-        (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
-        res.status(204).send(); // No Content
+        // Delete related comments (your schema uses sermonId)
+        await db_1.prisma.comment.deleteMany({ where: { sermonId: id } });
+        await db_1.prisma.sermon.delete({ where: { id } });
+        // Do not fail the API if publish fails
+        try {
+            (0, contentUpdates_1.publishContentUpdate)({ type: 'sermon', action: 'deleted', id, timestamp: new Date().toISOString() });
+        }
+        catch (e) {
+            console.error('publishContentUpdate failed (delete sermon):', e);
+        }
+        return res.status(204).send();
     }
     catch (error) {
         console.error(`Error deleting sermon with id "${id}":`, error);
@@ -347,8 +390,11 @@ router.delete('/:id', async (req, res) => {
             if (error.code === 'P2025') {
                 return res.status(404).json({ error: 'Sermon to delete not found.' });
             }
+            if (error.code === 'P2003') {
+                return res.status(409).json({ error: 'Cannot delete sermon due to related records.' });
+            }
         }
-        res.status(500).json({ error: 'Failed to delete sermon' });
+        return res.status(500).json({ error: 'Failed to delete sermon' });
     }
 });
 exports.default = router;
