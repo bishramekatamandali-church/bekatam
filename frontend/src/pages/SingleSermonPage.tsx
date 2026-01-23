@@ -18,6 +18,7 @@ import {
   HandThumbUpIcon as HandThumbUpIconOutline,
   ChatBubbleLeftRightIcon,
   ShareIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
 
 const getYouTubeEmbedUrl = (url?: string): string | null => {
@@ -61,7 +62,7 @@ const SingleSermonPage: React.FC = () => {
       setSermon(foundSermon);
       if (foundSermon) {
         setLikeCount(foundSermon.likes || 0);
-        setIsLiked(false);
+        setIsLiked(foundSermon.likedByMe ?? false);
       }
     }
   }, [sermonId, loadingContent, sermons]);
@@ -189,6 +190,11 @@ const SingleSermonPage: React.FC = () => {
             <p className="text-md text-gray-500">By <span className="font-semibold text-gray-700">{sermon.speaker}</span> on <span className="font-semibold text-gray-700">{formatDateADBS(sermon.date)}</span></p>
             {sermon.scripture && <p className="text-sm text-teal-600 mt-2">Scripture: {sermon.scripture}</p>}
             {sermon.category && <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400">{sermon.category}</p>}
+            {sermon.location && (
+              <div className="mt-2 flex items-center text-xs text-slate-500">
+                <MapPinIcon className="w-4 h-4 mr-1 text-slate-400" /> {sermon.location}
+              </div>
+            )}
           </CardHeader>
 
           <CardContent>

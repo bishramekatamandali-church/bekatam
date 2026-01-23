@@ -48,6 +48,10 @@ const normalizeSermonItem = (item: any): Sermon => {
     category: normalizedCategory || item?.category,
     comments,
     linkPath: item?.linkPath || `/sermons/${item?.id}`,
+    date: item?.date ? new Date(item.date).toISOString() : item?.date ?? null,
+    createdAt: item?.createdAt ? new Date(item.createdAt).toISOString() : item?.createdAt ?? null,
+    updatedAt: item?.updatedAt ? new Date(item.updatedAt).toISOString() : item?.updatedAt ?? null,
+    likes: item?.likes ?? 0,
   } as Sermon;
 };
 
@@ -729,6 +733,7 @@ const nowTimestamp = new Date().toISOString();
           videoUrl: formData.videoUrl,
           audioUrl: formData.audioUrl,
           fullContent: formData.fullContent,
+          location: formData.location,
           postedByAdminId: currentUser?.id,
           postedByAdminName: currentUser?.fullName,
           createdAt: timestamp,

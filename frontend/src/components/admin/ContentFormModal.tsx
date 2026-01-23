@@ -353,6 +353,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     videoUrl: '',
     audioUrl: '',
     fullContent: '',
+    location: '',
   } as SermonFormData,
 
   event: {
@@ -1453,6 +1454,37 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   className={resolvedInputClasses}
                   placeholder="Add key scripture reference"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="location" className={resolvedLabelClasses}>
+                  Location
+                </label>
+                <input
+                  id="location"
+                  type="text"
+                  name="location"
+                  value={data.location || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Main Sanctuary"
+                />
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUseCurrentLocation('single')}
+                    className={isSermonForm ? 'text-xs border-slate-300 hover:bg-slate-100' : 'text-xs'}
+                  >
+                    Use Current Location
+                  </Button>
+                  {locationLookupStatus && (
+                    <span className={isSermonForm ? 'text-xs text-black/60' : 'text-xs text-slate-500 dark:text-slate-400'}>
+                      {locationLookupStatus}
+                    </span>
+                  )}
+                </div>
               </div>
             </FormSection>
 

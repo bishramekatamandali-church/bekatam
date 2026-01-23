@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; 
+import React, { useEffect, useState } from 'react'; 
 import { Link, useNavigate } from "react-router-dom";
 import { Sermon } from '../../types';
 import Card, { CardContent, CardHeader, CardFooter } from '../ui/Card';
@@ -59,13 +59,18 @@ const SermonCard: React.FC<SermonCardProps> = ({ sermon, className = "" }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const [likeCount, setLikeCount] = useState(sermon.likes || 0);
-  const [isLiked, setIsLiked] = useState(false); 
+  const [isLiked, setIsLiked] = useState(sermon.likedByMe ?? false); 
 
   const { translatedText: title } = useAITranslate(sermon.title, 'en');
   const { translatedText: description } = useAITranslate(sermon.description, 'en');
   const { translatedText: speaker } = useAITranslate(sermon.speaker, 'en');
   const { translatedText: category } = useAITranslate(sermon.category, 'en');
   const detailUrl = `/sermons/${sermon.id}`;
+
+  useEffect(() => {
+    setLikeCount(sermon.likes ?? 0);
+    setIsLiked(sermon.likedByMe ?? false);
+  }, [sermon.likes, sermon.likedByMe]);
 
   const handleLike = async () => {
     if (!isAuthenticated) {
