@@ -252,9 +252,9 @@ model donatepagecontent {
   accountName                        String
   accountNumber                      String
   branch                             String
-  bankQrImageUrl                     String?  @db.Text
   eSewaId                            String
-  eSewaQrImageUrl                    String?  @db.Text
+  eSewaQrImageUrl                    String?  @db.LongText
+  bankQrImageUrl                     String?  @db.LongText
   localDonationsNote                 String   @db.Text
   internationalDonationsTitle        String
   internationalDonationsContent      String   @db.Text

@@ -31,7 +31,7 @@ const GlobeAltIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const PageHeaderWithBackground: React.FC<{ title: string; subtitle: string; imageUrl: string; icon?: React.ReactNode }> = ({ title, subtitle, imageUrl, icon }) => (
   <header 
-    className="relative py-10 sm:py-16 lg:py-18 bg-cover bg-center shadow-lg" 
+    className="relative py-16 sm:py-24 lg:py-28 bg-cover bg-center shadow-lg" 
     style={{ backgroundImage: `url(${imageUrl})` }}
   >
     <div className="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -214,7 +214,7 @@ const DonatePage: React.FC = () => {
                 onMakeAnother={handleMakeAnotherDonation} 
             />
         ) : (
-        <div className="max-w-3xl mx-auto flex flex-col gap-6 items-stretch">
+        <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-start">
           <div className="space-y-6">
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="border-slate-200">
