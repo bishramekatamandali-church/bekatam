@@ -1,11 +1,14 @@
 import nodemailer from 'nodemailer';
 
+type AttachmentList = NonNullable<nodemailer.SendMailOptions['attachments']>;
+
 interface MailOptions {
   to: string;
   subject: string;
   text: string;
   html: string;
   replyTo?: string;
+  attachments?: AttachmentList;
 }
 
 let transporter: nodemailer.Transporter;
@@ -45,6 +48,7 @@ const createTransporter = async () => {
     console.log('📧 Email service initialized with configured SMTP settings.');
     return;
   }
+
   try {
     const testAccount = await nodemailer.createTestAccount();
     console.warn('⚠️ SMTP credentials missing. Falling back to Ethereal for email previews.');
@@ -59,7 +63,7 @@ const createTransporter = async () => {
       },
     });
 
-     console.log('📧 Email service initialized with Ethereal test account.');
+    console.log('📧 Email service initialized with Ethereal test account.');
   } catch (error) {
     console.error('❌ Failed to initialize email service.', error);
   }
@@ -73,21 +77,23 @@ export const sendEmail = async (options: MailOptions) => {
     throw new Error('Email service is not available.');
   }
 
-  const mailOptions = {
+  const mailOptions: nodemailer.SendMailOptions = {
     from: defaultFrom,
     to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
     replyTo: options.replyTo,
+    attachments: options.attachments,
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-     console.log('✅ Message sent: %s', info.messageId);
+    console.log('✅ Message sent: %s', info.messageId);
+
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
-     console.log('📬 Preview URL for the sent email: %s', previewUrl);
+      console.log('📬 Preview URL for the sent email: %s', previewUrl);
     }
   } catch (error) {
     console.error('❌ Error sending email:', error);
