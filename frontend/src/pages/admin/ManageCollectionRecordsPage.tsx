@@ -135,7 +135,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
         <CardHeader className="pb-3 dark:border-slate-700">
             <div className="flex justify-between items-start">
                 <h2 className="text-md font-semibold text-gray-800 dark:text-slate-100 flex-grow mr-2" title={record.purpose}>{record.purpose}</h2>
-                <span className="text-lg font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">NPR {record.amount.toFixed(2)}</span>
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">NPR {Number(record.amount ?? 0).toFixed(2)}</span>
             </div>
             <p className="text-xs text-gray-500 dark:text-slate-400">Date: {formatDateADBS(record.collectionDate)}</p>
             <div className="flex items-center gap-2 mt-1">
@@ -153,7 +153,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
                 <details className="text-xs">
                     <summary className="cursor-pointer font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Donors ({record.donors.length})</summary>
                     <div className="mt-1 bg-gray-50 dark:bg-slate-700 p-2 rounded max-h-20 overflow-y-auto">
-                        {record.donors.map(d => <div key={d.id} className="truncate">{d.donorName}: {d.amount.toFixed(2)}</div>)}
+                        {record.donors.map(d => <div key={d.id} className="truncate">{d.donorName}: {Number(d.amount ?? 0).toFixed(2)}</div>)}
                     </div>
                 </details>
             )}

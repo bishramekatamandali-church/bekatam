@@ -113,7 +113,7 @@ const ManageExpensesPage: React.FC = () => {
         <CardHeader className="pb-3 dark:border-slate-700">
             <div className="flex justify-between items-start">
                 <h2 className="text-md font-semibold text-gray-800 dark:text-slate-100 flex-grow mr-2" title={expense.description}>{expense.description}</h2>
-                <span className="text-lg font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">NPR {expense.amount.toFixed(2)}</span>
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">NPR {Number(expense.amount ?? 0).toFixed(2)}</span>
             </div>
             <p className="text-xs text-gray-500 dark:text-slate-400">Date: {formatDateADBS(expense.expenseDate)}</p>
              <div className="flex items-center gap-2 mt-1">

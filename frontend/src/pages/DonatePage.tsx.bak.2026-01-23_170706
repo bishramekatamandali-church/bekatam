@@ -58,7 +58,7 @@ const DonationReceipt: React.FC<{ record: DonationRecord, verses?: string, onMak
         const doc = new jsPDF();
         doc.text(`Donation Receipt`, 10, 10);
         doc.text(`Thank you, ${record.donorName}!`, 10, 20);
-        doc.text(`Amount: NPR ${Number(record.amount ?? 0).toFixed(2)}`, 10, 30);
+        doc.text(`Amount: NPR ${record.amount.toFixed(2)}`, 10, 30);
         doc.text(`Purpose: ${record.purpose}`, 10, 40);
         doc.text(`Date: ${formatDateADBS(record.donationDate)}`, 10, 50);
         doc.text(`Transaction ID: ${record.id}`, 10, 60);
@@ -86,7 +86,7 @@ const DonationReceipt: React.FC<{ record: DonationRecord, verses?: string, onMak
                 <p className="text-center text-gray-700">Thank you, <span className="font-semibold">{record.donorName}</span>, for your generous support!</p>
                 <div className="border-t border-b border-gray-200 py-4 my-4 text-gray-700 space-y-1">
                     <p><strong>Transaction ID:</strong> <span className="font-mono text-xs">{record.id}</span></p>
-                    <p><strong>Amount Logged:</strong> <span className="font-semibold">NPR {Number(record.amount ?? 0).toFixed(2)}</span></p>
+                    <p><strong>Amount Logged:</strong> <span className="font-semibold">NPR {record.amount.toFixed(2)}</span></p>
                     <p><strong>Purpose:</strong> {record.purpose}</p>
                     <p><strong>Date Logged:</strong> {formatDateADBS(record.donationDate)}</p>
                 </div>

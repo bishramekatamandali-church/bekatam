@@ -100,7 +100,7 @@ const ManageDonationsPage: React.FC = () => {
                   {paginatedRecords.map(record => (
                     <tr key={record.id}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-medium">{record.donorName}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 text-right">{Number(record.amount ?? 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 text-right">{record.amount.toFixed(2)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{record.purpose}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{record.paymentMethod || 'N/A'}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 text-center">

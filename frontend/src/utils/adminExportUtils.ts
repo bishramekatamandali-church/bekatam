@@ -60,7 +60,7 @@ const prepareExpenseSheetData = (items: ExpenseRecord[]): SheetPreparationResult
     if (notesComment) comments.push({ r: rowIndex + 1, c: largeContentFieldIndices.notes, text: notesComment });
 
     row.push(
-      item.id, new Date(item.expenseDate).toLocaleDateString('en-CA'), item.category, descValue, item.amount.toFixed(2),
+      item.id, new Date(item.expenseDate).toLocaleDateString('en-CA'), item.category, descValue, Number(item.amount ?? 0).toFixed(2),
       item.payee || '', item.paymentMethod || '', item.transactionReference || '', item.approvedBy || '',
       item.receiptUrl || '', notesValue, item.source || '', item.location || '',
       item.postedByAdminId || '', item.postedByAdminName || '',
@@ -86,7 +86,7 @@ const prepareCollectionSheetData = (items: CollectionRecord[]): SheetPreparation
 
   items.forEach((item, rowIndex) => {
     const row: any[] = [];
-    const donorSummary = (item.donors || []).map(d => `${d.donorName}: ${d.amount.toFixed(2)} (Addr: ${d.address || 'N/A'}, Contact: ${d.contact || 'N/A'})`).join('; ');
+    const donorSummary = (item.donors || []).map(d => `${d.donorName}: ${Number(d.amount ?? 0).toFixed(2)} (Addr: ${d.address || 'N/A'}, Contact: ${d.contact || 'N/A'})`).join('; ');
     
     const { cellValue: notesValue, commentText: notesComment } = prepareCell(item.notes, true);
     if (notesComment) comments.push({ r: rowIndex + 1, c: largeContentFieldIndices.notes, text: notesComment });
@@ -95,7 +95,7 @@ const prepareCollectionSheetData = (items: CollectionRecord[]): SheetPreparation
     if (donorDetailsComment) comments.push({ r: rowIndex + 1, c: largeContentFieldIndices.donorDetails, text: donorDetailsComment });
 
     row.push(
-      item.id, new Date(item.collectionDate).toLocaleDateString('en-CA'), item.purpose, item.amount.toFixed(2),
+      item.id, new Date(item.collectionDate).toLocaleDateString('en-CA'), item.purpose, Number(item.amount ?? 0).toFixed(2),
       item.collectorName, item.source || '', notesValue, (item.donors || []).length, donorDetailsValue,
       new Date(item.recordedAt).toISOString(), item.recordedByAdminId || '', item.recordedByAdminName || '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''
@@ -112,7 +112,7 @@ const prepareDonationSheetData = (items: DonationRecord[]): SheetPreparationResu
   const sheetDataArray: any[][] = [headers];
   items.forEach(item => {
     sheetDataArray.push([
-      item.id, item.donorName, item.donorEmail, item.donorPhone || '', item.amount.toFixed(2), item.purpose,
+      item.id, item.donorName, item.donorEmail, item.donorPhone || '', Number(item.amount ?? 0).toFixed(2), item.purpose,
       new Date(item.donationDate).toLocaleDateString('en-CA'), new Date(item.transactionTimestamp).toISOString()
     ]);
   });
