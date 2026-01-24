@@ -2,11 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import { useContent } from '../contexts/ContentContext';
-import { DonationPurpose, donationPurposeList, DonationRecord } from '../types';
+import { donationPurposeList, DonationRecord } from '../types';
 import { formatDateADBS } from '../dateConverter'; 
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../contexts/AuthContext';
-
 
 const HeartIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-6 h-6 ${className}`}>
@@ -31,7 +30,7 @@ const GlobeAltIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const PageHeaderWithBackground: React.FC<{ title: string; subtitle: string; imageUrl: string; icon?: React.ReactNode }> = ({ title, subtitle, imageUrl, icon }) => (
   <header 
-    className="relative py-10 sm:py-16 lg:py-18 bg-cover bg-center shadow-lg" 
+    className="relative py-16 sm:py-24 lg:py-28 bg-cover bg-center shadow-lg" 
     style={{ backgroundImage: `url(${imageUrl})` }}
   >
     <div className="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -54,17 +53,102 @@ const DonationReceipt: React.FC<{ record: DonationRecord, verses?: string, onMak
     }, [verses]);
 
     const handlePrint = () => window.print();
+
+    // ✅ Updated: downloadable PDF now matches the printable receipt content
     const handleDownload = () => {
-        const doc = new jsPDF();
-        doc.text(`Donation Receipt`, 10, 10);
-        doc.text(`Thank you, ${record.donorName}!`, 10, 20);
-        doc.text(`Amount: NPR ${Number(record.amount ?? 0).toFixed(2)}`, 10, 30);
-        doc.text(`Purpose: ${record.purpose}`, 10, 40);
-        doc.text(`Date: ${formatDateADBS(record.donationDate)}`, 10, 50);
-        doc.text(`Transaction ID: ${record.id}`, 10, 60);
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 14;
+        const maxWidth = pageWidth - margin * 2;
+
+        const safeAmount = Number(record.amount ?? 0);
+        const amountText = `NPR ${Number.isFinite(safeAmount) ? safeAmount.toFixed(2) : '0.00'}`;
+
+        const lines: string[] = [];
+
+        // Title / header
+        lines.push('Donation Receipt');
+        lines.push('Bishram Ekata Mandali');
+        lines.push('');
+        lines.push('Donation Logged Successfully!');
+        lines.push('');
+
+        // Matches the on-page receipt details
+        lines.push(`Thank you, ${record.donorName}, for your generous support!`);
+        lines.push('');
+        lines.push(`Transaction ID: ${record.id}`);
+        lines.push(`Amount Logged: ${amountText}`);
+        lines.push(`Purpose: ${record.purpose}`);
+        lines.push(`Date Logged: ${formatDateADBS(record.donationDate)}`);
+        lines.push('');
+
+        // Verse block (same behavior as UI: optional)
         if (randomVerse) {
-          doc.text(doc.splitTextToSize(randomVerse, 180), 10, 70);
+          lines.push('Verse:');
+          lines.push(randomVerse);
+          lines.push('');
         }
+
+        // Same disclaimers as the printed card
+        lines.push('Please ensure you have completed the actual transfer via your chosen method. This system is for record-keeping purposes.');
+        lines.push('');
+        lines.push('The fund will be used as purposed by the donor; however, the final authority to manage all funds remains under the high authority of the church.');
+
+        // Draw nicely with wrapping
+        let y = 18;
+
+        // Title style
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text(lines[0], margin, y);
+        y += 8;
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text(lines[1], margin, y);
+        y += 6;
+
+        // Body
+        doc.setFontSize(12);
+        for (let i = 2; i < lines.length; i++) {
+          const text = lines[i];
+          if (text.trim() === '') {
+            y += 4;
+            continue;
+          }
+
+          const wrapped = doc.splitTextToSize(text, maxWidth);
+          // Page break if needed
+          if (y + wrapped.length * 6 > 285) {
+            doc.addPage();
+            y = 18;
+          }
+
+          // Emphasize the success line a bit
+          if (text === 'Donation Logged Successfully!') {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text(text, margin, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            y += 7;
+            continue;
+          }
+
+          // Emphasize key fields
+          const isKey =
+            text.startsWith('Transaction ID:') ||
+            text.startsWith('Amount Logged:') ||
+            text.startsWith('Purpose:') ||
+            text.startsWith('Date Logged:');
+
+          if (isKey) doc.setFont('helvetica', 'bold');
+          doc.text(wrapped, margin, y);
+          if (isKey) doc.setFont('helvetica', 'normal');
+
+          y += wrapped.length * 6;
+        }
+
         doc.save(`Donation_Receipt_${record.id}.pdf`);
     };
 
@@ -111,7 +195,6 @@ const DonationReceipt: React.FC<{ record: DonationRecord, verses?: string, onMak
     );
 };
 
-
 const DonatePage: React.FC = () => {
   const { addDonationRecord, loadingContent, donatePageContent } = useContent();
   const { currentUser } = useAuth();
@@ -139,7 +222,6 @@ const DonatePage: React.FC = () => {
     }
   }, [currentUser]);
 
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -165,7 +247,7 @@ const DonatePage: React.FC = () => {
         amount: amountNumber,
         purpose: formData.purpose,
         donationDate: formData.donationDate,
-        isReceiptSent: false, // This is for logging, receipt is not sent yet.
+        isReceiptSent: false,
     };
     
     const newRecord = await addDonationRecord(recordData);
@@ -214,7 +296,7 @@ const DonatePage: React.FC = () => {
                 onMakeAnother={handleMakeAnotherDonation} 
             />
         ) : (
-        <div className="max-w-3xl mx-auto flex flex-col gap-6 items-stretch">
+        <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-start">
           <div className="space-y-6">
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="border-slate-200">
