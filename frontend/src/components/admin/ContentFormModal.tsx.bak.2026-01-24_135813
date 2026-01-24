@@ -60,8 +60,8 @@ import {
   Responsibility,
   decisionLogStatusList as decisionPointStatusList,
   expenseStatusList,
-  expenseCategoryList,
 } from '../../types';
+
 import { adToBs, formatBSDate } from '../../dateConverter';
 
 import SelectMediaModal from './SelectMediaModal';

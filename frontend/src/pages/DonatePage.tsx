@@ -35,25 +35,30 @@ const GlobeAltIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; subtitle?: string }> = ({ icon, title, subtitle }) => (
+  <div className="flex items-start gap-3">
+    <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700 border border-teal-100">
+      {icon}
+    </div>
+    <div className="min-w-0">
+      <h2 className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight">{title}</h2>
+      {subtitle ? <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p> : null}
+    </div>
+  </div>
+);
+
 const PageHeaderWithBackground: React.FC<{ title: string; subtitle: string; imageUrl: string; icon?: React.ReactNode }> = ({
   title,
   subtitle,
   imageUrl,
   icon,
 }) => (
-  <header
-    className="relative py-10 sm:py-12 lg:py-16 bg-cover bg-center shadow"
-    style={{ backgroundImage: `url(${imageUrl})` }}
-  >
-    <div className="absolute inset-0 bg-black/50" />
+  <header className="relative py-8 sm:py-10 lg:py-12 bg-cover bg-center" style={{ backgroundImage: `url(${imageUrl})` }}>
+    <div className="absolute inset-0 bg-black/55" />
     <div className="container mx-auto px-4 text-center relative z-10">
-      {icon && <div className="mb-3 text-teal-200 flex justify-center">{icon}</div>}
-      <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-3 drop-shadow">
-        {title}
-      </h1>
-      <p className="text-base sm:text-lg text-teal-100 max-w-3xl mx-auto drop-shadow-sm">
-        {subtitle}
-      </p>
+      {icon && <div className="mb-2 text-teal-200 flex justify-center">{icon}</div>}
+      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white drop-shadow">{title}</h1>
+      <p className="mt-2 text-sm sm:text-base text-teal-100 max-w-3xl mx-auto drop-shadow-sm">{subtitle}</p>
     </div>
   </header>
 );
@@ -96,25 +101,22 @@ const DonationReceipt: React.FC<{ record: DonationRecord; verses?: string; onMak
         }
       `}</style>
 
-      <CardHeader className="bg-green-600 text-white text-center">
-        <CheckCircleIcon className="w-11 h-11 mx-auto mb-2" />
-        <h2 className="text-xl sm:text-2xl font-semibold">Donation Logged Successfully!</h2>
+      <CardHeader className="bg-emerald-600 text-white text-center">
+        <CheckCircleIcon className="w-10 h-10 mx-auto mb-2" />
+        <h2 className="text-lg sm:text-xl font-semibold">Donation Logged Successfully</h2>
       </CardHeader>
 
       <CardContent className="p-4 sm:p-5 space-y-3">
-        <p className="text-center text-slate-700">
-          Thank you, <span className="font-semibold">{record.donorName}</span>, for your generous support!
-        </p>
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-700 space-y-1">
-          <p className="text-sm">
-            <strong>Transaction ID:</strong> <span className="font-mono text-xs break-all">{record.id}</span>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-700">
+            Thank you, <span className="font-semibold">{record.donorName}</span>.
           </p>
-          <p className="text-sm">
-            <strong>Amount Logged:</strong> <span className="font-semibold">NPR {Number(record.amount ?? 0).toFixed(2)}</span>
-          </p>
-          <p className="text-sm"><strong>Purpose:</strong> {record.purpose}</p>
-          <p className="text-sm"><strong>Date Logged:</strong> {formatDateADBS(record.donationDate)}</p>
+          <div className="mt-3 grid gap-1 text-sm text-slate-700">
+            <p><strong>Amount:</strong> NPR {Number(record.amount ?? 0).toFixed(2)}</p>
+            <p><strong>Purpose:</strong> {record.purpose}</p>
+            <p><strong>Date:</strong> {formatDateADBS(record.donationDate)}</p>
+            <p className="break-all"><strong>Transaction ID:</strong> <span className="font-mono text-xs">{record.id}</span></p>
+          </div>
         </div>
 
         {randomVerse && (
@@ -123,19 +125,16 @@ const DonationReceipt: React.FC<{ record: DonationRecord; verses?: string; onMak
           </blockquote>
         )}
 
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-slate-500">
           Please ensure you have completed the actual transfer via your chosen method. This system is for record-keeping purposes.
         </p>
-        <p className="text-xs text-slate-500 text-center">
-          The fund will be used as purposed by the donor; however, the final authority to manage all funds remains under the high authority of the church.
-        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 no-print">
-          <Button variant="outline" size="sm" onClick={handlePrint}>Print Receipt</Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 no-print">
+          <Button variant="outline" size="sm" onClick={handlePrint}>Print</Button>
           <Button variant="outline" size="sm" onClick={handleDownload}>Download PDF</Button>
         </div>
 
-        <Button variant="primary" className="w-full mt-2 no-print" onClick={onMakeAnother}>
+        <Button variant="primary" className="w-full no-print" onClick={onMakeAnother}>
           Make Another Donation
         </Button>
       </CardContent>
@@ -225,7 +224,7 @@ const DonatePage: React.FC = () => {
   if (loadingContent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg text-slate-600">Loading donation information...</p>
+        <p className="text-base text-slate-600">Loading donation information...</p>
       </div>
     );
   }
@@ -236,10 +235,10 @@ const DonatePage: React.FC = () => {
         title={donatePageContent.headerTitle}
         subtitle={donatePageContent.headerSubtitle}
         imageUrl={donatePageContent.headerImageUrl}
-        icon={<HeartIcon className="w-14 h-14 text-teal-200" />}
+        icon={<HeartIcon className="w-12 h-12 text-teal-200" />}
       />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-7">
         {submittedRecord ? (
           <DonationReceipt
             record={submittedRecord}
@@ -247,61 +246,59 @@ const DonatePage: React.FC = () => {
             onMakeAnother={handleMakeAnotherDonation}
           />
         ) : (
-          <div className="max-w-4xl mx-auto flex flex-col gap-6">
+          <div className="max-w-4xl mx-auto flex flex-col gap-5">
             {/* Steps */}
             <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardHeader className="border-slate-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 flex items-center">
-                  <BanknotesIcon className="mr-2 text-teal-600 w-6 h-6" /> Simple Steps to Give
-                </h2>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ol className="mt-3 space-y-3 text-sm text-slate-600">
-                  <li className="flex gap-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-semibold">1</span>
-                    <p>Send your gift using bank transfer or eSewa (details below).</p>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-semibold">2</span>
-                    <p>Complete the donation form so we can acknowledge your gift.</p>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-semibold">3</span>
-                    <p>Receive a confirmation and downloadable receipt right away.</p>
-                  </li>
-                </ol>
+              <CardContent className="p-4 sm:p-5">
+                <SectionTitle
+                  icon={<BanknotesIcon className="w-5 h-5" />}
+                  title="How to give"
+                  subtitle="Transfer first, then log your donation."
+                />
+                <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                  <div className="flex gap-2">
+                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">1</span>
+                    <p>Send your gift using Bank Transfer or eSewa.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">2</span>
+                    <p>Fill the form so we can record and acknowledge your gift.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">3</span>
+                    <p>Get a receipt immediately (print or download).</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Local donations */}
+            {/* Local Donations */}
             <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardHeader className="border-slate-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 flex items-center">
-                  <BanknotesIcon className="mr-2 text-teal-600 w-6 h-6" /> {donatePageContent.localDonationsTitle}
-                </h2>
-              </CardHeader>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <SectionTitle
+                  icon={<BanknotesIcon className="w-5 h-5" />}
+                  title={donatePageContent.localDonationsTitle}
+                />
 
-              <CardContent className="space-y-5">
-                {/* Bank Transfer */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                {/* Bank */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h4 className="text-sm font-semibold text-slate-800">Bank Transfer</h4>
-                      <ul className="mt-2 text-sm text-slate-600 space-y-1">
-                        <li><strong>Bank Name:</strong> {donatePageContent.bankName}</li>
-                        <li><strong>Account Name:</strong> {donatePageContent.accountName}</li>
-                        <li><strong>Account Number:</strong> {donatePageContent.accountNumber}</li>
-                        <li><strong>Branch:</strong> {donatePageContent.branch}</li>
-                      </ul>
+                      <p className="text-sm font-semibold text-slate-900">Bank transfer</p>
+                      <div className="mt-2 text-sm text-slate-600 space-y-1">
+                        <p><span className="font-semibold text-slate-800">Bank:</span> {donatePageContent.bankName}</p>
+                        <p><span className="font-semibold text-slate-800">Account name:</span> {donatePageContent.accountName}</p>
+                        <p><span className="font-semibold text-slate-800">Account no:</span> {donatePageContent.accountNumber}</p>
+                        <p><span className="font-semibold text-slate-800">Branch:</span> {donatePageContent.branch}</p>
+                      </div>
                     </div>
 
                     {donatePageContent.bankQrImageUrl && (
-                      <div className="flex-shrink-0 text-center">
-                        <p className="text-[11px] font-medium text-slate-500 mb-2">Scan</p>
+                      <div className="flex-shrink-0">
                         <img
                           src={donatePageContent.bankQrImageUrl}
                           alt="Bank QR Code"
-                          className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-slate-200 object-cover bg-white"
+                          className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border border-slate-200 object-cover bg-slate-50"
                         />
                       </div>
                     )}
@@ -309,25 +306,24 @@ const DonatePage: React.FC = () => {
                 </div>
 
                 {/* eSewa */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h4 className="text-sm font-semibold text-slate-800">eSewa</h4>
+                      <p className="text-sm font-semibold text-slate-900">eSewa</p>
                       <p className="mt-2 text-sm text-slate-600">
-                        <strong>eSewa ID:</strong> {donatePageContent.eSewaId}
+                        <span className="font-semibold text-slate-800">ID:</span> {donatePageContent.eSewaId}
                       </p>
                       {!donatePageContent.eSewaQrImageUrl && (
-                        <p className="text-xs text-slate-500 mt-1">(eSewa QR code has not been uploaded yet.)</p>
+                        <p className="text-xs text-slate-500 mt-1">(QR code not uploaded yet.)</p>
                       )}
                     </div>
 
                     {donatePageContent.eSewaQrImageUrl && (
-                      <div className="flex-shrink-0 text-center">
-                        <p className="text-[11px] font-medium text-slate-500 mb-2">Scan</p>
+                      <div className="flex-shrink-0">
                         <img
                           src={donatePageContent.eSewaQrImageUrl}
                           alt="eSewa QR Code"
-                          className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-slate-200 object-cover bg-white"
+                          className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border border-slate-200 object-cover bg-slate-50"
                         />
                       </div>
                     )}
@@ -340,37 +336,25 @@ const DonatePage: React.FC = () => {
 
             {/* International */}
             <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardHeader className="border-slate-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 flex items-center">
-                  <GlobeAltIcon className="w-5 h-5 mr-2 text-teal-600" />
-                  {donatePageContent.internationalDonationsTitle}
-                </h2>
-              </CardHeader>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <SectionTitle
+                  icon={<GlobeAltIcon className="w-5 h-5" />}
+                  title={donatePageContent.internationalDonationsTitle}
+                />
 
-              <CardContent className="space-y-4">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 space-y-2 text-sm text-slate-600 whitespace-pre-line">
+                    <div className="min-w-0 text-sm text-slate-600 whitespace-pre-line">
                       <p>{donatePageContent.internationalDonationsContent}</p>
-                      <p>
-                        You can reach us at:{' '}
-                        <a
-                          href={`mailto:${donatePageContent.internationalDonationsContactEmail}`}
-                          className="font-semibold text-teal-700 hover:underline"
-                        >
-                          {donatePageContent.internationalDonationsContactEmail}
-                        </a>
-                        .
-                      </p>
+                      {/* Removed the "You can reach us at..." line as requested */}
                     </div>
 
                     {donatePageContent.internationalQrImageUrl && (
-                      <div className="flex-shrink-0 text-center">
-                        <p className="text-[11px] font-medium text-slate-500 mb-2">Scan</p>
+                      <div className="flex-shrink-0">
                         <img
                           src={donatePageContent.internationalQrImageUrl}
                           alt="International Donation QR Code"
-                          className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-slate-200 object-cover bg-white"
+                          className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border border-slate-200 object-cover bg-slate-50"
                         />
                       </div>
                     )}
@@ -379,15 +363,16 @@ const DonatePage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Log Donation */}
+            {/* Form */}
             <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardHeader className="border-slate-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">Log Your Donation</h2>
-                <p className="text-sm text-slate-500">This quick form helps us record and acknowledge your gift.</p>
-              </CardHeader>
+              <CardContent className="p-4 sm:p-5">
+                <SectionTitle
+                  icon={<HeartIcon className="w-5 h-5" />}
+                  title="Log your donation"
+                  subtitle="We’ll record it and show a receipt instantly."
+                />
 
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="mt-5 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label htmlFor="donorName" className="block text-xs font-medium text-slate-700">
@@ -400,7 +385,7 @@ const DonatePage: React.FC = () => {
                         value={formData.donorName}
                         onChange={handleChange}
                         required
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       />
                     </div>
                     <div>
@@ -414,7 +399,7 @@ const DonatePage: React.FC = () => {
                         value={formData.donorEmail}
                         onChange={handleChange}
                         required
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       />
                     </div>
                   </div>
@@ -430,7 +415,7 @@ const DonatePage: React.FC = () => {
                         id="donorPhone"
                         value={formData.donorPhone}
                         onChange={handleChange}
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       />
                     </div>
                     <div>
@@ -446,7 +431,7 @@ const DonatePage: React.FC = () => {
                         required
                         min="1"
                         step="any"
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       />
                     </div>
                   </div>
@@ -462,7 +447,7 @@ const DonatePage: React.FC = () => {
                         value={formData.purpose}
                         onChange={handleChange}
                         required
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       >
                         {donationPurposeList.map(purpose => (
                           <option key={purpose} value={purpose}>
@@ -483,13 +468,13 @@ const DonatePage: React.FC = () => {
                         value={formData.donationDate}
                         onChange={handleChange}
                         required
-                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                        className="mt-1 w-full p-2.5 border border-slate-300 rounded-2xl bg-white focus:ring-teal-500 focus:border-teal-500"
                       />
                     </div>
                   </div>
 
                   {error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-3">
                       <p className="text-sm text-red-700" role="alert">{error}</p>
                     </div>
                   )}
@@ -499,7 +484,7 @@ const DonatePage: React.FC = () => {
                   </Button>
 
                   <p className="text-xs text-slate-500 text-center">
-                    You will receive a confirmation and receipt after submitting.
+                    You’ll get a receipt right after submitting.
                   </p>
                 </form>
               </CardContent>
