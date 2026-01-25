@@ -148,6 +148,7 @@ const AdminDashboardPage: React.FC = () => {
     { label: 'Expense Records', path: '/admin/manage-expenses', subpath: 'manage-expenses', icon: CreditCardIcon, group: "Finance" },
     { label: 'Collection Records', path: '/admin/manage-collection-records', subpath: 'manage-collection-records', icon: BanknotesIcon, group: "Finance" },
     { label: 'Donation Records', path: '/admin/donation-records', subpath: 'donation-records', icon: CurrencyDollarIcon, group: "Finance" },
+    { label: 'Donor Lists', path: '/admin/donor-lists', subpath: 'donor-lists', icon: DocumentTextIcon, group: "Finance" },
     { label: 'Manage Donate Page', path: '/admin/manage-donate-page', subpath: 'manage-donate-page', icon: CurrencyDollarIcon, group: "Finance" },
     { label: 'Financial Summary', path: '/admin/financial-summary', subpath: 'financial-summary', icon: ReceiptPercentIcon, group: "Finance" },
     { label: 'Prayer Requests', path: '/admin/manage-prayer-requests', subpath: 'manage-prayer-requests', icon: PrayerHandsIcon, group: "Community Engagement" },
