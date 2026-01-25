@@ -71,6 +71,11 @@ const FinancialSummaryPage: React.FC = () => {
     const transactionLog: TransactionLogItem[] = [];
     let totalIncome = 0;
     let totalExpense = 0;
+    const toAmount = (value: number | string | null | undefined) => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string' && value.trim() !== '') return Number(value);
+      return 0;
+    };
     
     const parseDate = (dateString: string | null | undefined): Date | null => {
         if (!dateString) return null;
@@ -88,37 +93,40 @@ const FinancialSummaryPage: React.FC = () => {
     collectionRecords.forEach(record => {
       const recordDate = parseDate(record.collectionDate);
       if (!recordDate || (start && recordDate < start) || (end && recordDate > end)) return;
-      
+      const amount = toAmount(record.amount);
+
       transactionLog.push({
         id: record.id,
         date: record.collectionDate,
         type: 'Income',
         category: record.purpose,
         description: `Collection by ${record.collectorName}`,
-        amount: record.amount
+        amount
       });
-      totalIncome += record.amount;
+      totalIncome += amount;
     });
 
     donationRecords.forEach(record => {
       const recordDate = parseDate(record.donationDate);
       if (!recordDate || (start && recordDate < start) || (end && recordDate > end)) return;
-      
+      const amount = toAmount(record.amount);
+
       transactionLog.push({
         id: record.id,
         date: record.donationDate,
         type: 'Income',
         category: record.purpose,
         description: `Donation from ${record.donorName}`,
-        amount: record.amount
+        amount
       });
-      totalIncome += record.amount;
+      totalIncome += amount;
     });
 
 
     expenseRecords.forEach(record => {
       const recordDate = parseDate(record.expenseDate);
        if (!recordDate || (start && recordDate < start) || (end && recordDate > end)) return;
+      const amount = toAmount(record.amount);
 
        transactionLog.push({
         id: record.id,
@@ -126,9 +134,9 @@ const FinancialSummaryPage: React.FC = () => {
         type: 'Expense',
         category: record.category,
         description: record.description,
-        amount: record.amount
+        amount
       });
-      totalExpense += record.amount;
+      totalExpense += amount;
     });
     
     transactionLog.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
