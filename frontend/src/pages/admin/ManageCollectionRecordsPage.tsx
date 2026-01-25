@@ -101,8 +101,10 @@ export const ManageCollectionRecordsPage: React.FC = () => {
       if (result.success) {
         const action = editingRecord ? 'updated' : 'added';
         const title = (result.newItem as CollectionRecord)?.purpose || (result.updatedItem as CollectionRecord)?.purpose || 'Record';
-        const amount = (result.newItem as CollectionRecord)?.amount || (result.updatedItem as CollectionRecord)?.amount || 0;
-        alert(`Collection Record for "${title}" (Amount: ${amount.toFixed(2)}) ${action} successfully!`);
+        const rawAmount = (result.newItem as CollectionRecord)?.amount || (result.updatedItem as CollectionRecord)?.amount || 0;
+        const amountValue = Number(rawAmount);
+        const formattedAmount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
+        alert(`Collection Record for "${title}" (Amount: ${formattedAmount}) ${action} successfully!`);
         handleCloseModal();
       } else {
         alert(result.message || `Failed to ${editingRecord ? 'update' : 'add'} collection record.`);
