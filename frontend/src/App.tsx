@@ -59,6 +59,7 @@ import ManageAdvertisementsPage from "./pages/admin/ManageAdvertisementsPage";
 import ManagePrayerRequestsPage from "./pages/admin/ManagePrayerRequestsPage";
 import ManageTestimonialsPage from "./pages/admin/ManageTestimonialsPage";
 import FinancialSummaryPage from "./pages/admin/FinancialSummaryPage";
+import DonorListReportPage from "./pages/admin/DonorListReportPage";
 
 // New Admin Pages for Church Management
 import ManageChurchMembersPage from "./pages/admin/ManageChurchMembersPage";
@@ -215,6 +216,7 @@ const AppContent: React.FC = () => {
                 element={<ManageDonatePage />}
               />
               <Route path="financial-summary" element={<FinancialSummaryPage />} />
+              <Route path="donor-lists" element={<DonorListReportPage />} />
 
               <Route path="donation-records" element={<ManageDonationsPage />} />
               <Route
@@ -256,5 +258,4 @@ const App: React.FC = () => {
 };
 
 export default App;
-
 
