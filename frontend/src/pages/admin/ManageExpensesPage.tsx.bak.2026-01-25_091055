@@ -194,8 +194,9 @@ const ManageExpensesPage: React.FC = () => {
           isOpen={isModalOpen}
           onClose={closeModal}
           contentType="expenseRecord"
+          mode={editing ? 'edit' : 'add'}
           initialData={editing ?? undefined}
-          onSubmit={handleSave as any}
+          onSave={handleSave as any}
         />
       </div>
     </div>

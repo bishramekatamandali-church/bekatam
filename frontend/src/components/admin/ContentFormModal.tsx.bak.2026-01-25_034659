@@ -60,7 +60,7 @@ import {
   Responsibility,
   decisionLogStatusList as decisionPointStatusList,
   expenseStatusList,
-  expenseCategoriesList,
+  expenseCategoryList,
 } from '../../types';
 import { adToBs, formatBSDate } from '../../dateConverter';
 
@@ -974,9 +974,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           ...prev,
           [name]: value,
         };
-
-  const handleChange = handleChange;
-
         if (name === 'incidentAt') {
           next.date = value;
         }
@@ -3281,12 +3278,12 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                   </label>
                   <select
                     name="category"
-                    value={(formData as any).category || expenseCategoriesList?.[0] || ''}
+                    value={(formData as any).category || expenseCategoryList?.[0] || ''}
                     onChange={handleChange}
                     required
                     className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
                   >
-                    {(expenseCategoriesList || []).map((c: any) => (
+                    {(expenseCategoryList || []).map((c: any) => (
                       <option key={c} value={c}>{String(c).replace(/_/g, ' ')}</option>
                     ))}
                   </select>

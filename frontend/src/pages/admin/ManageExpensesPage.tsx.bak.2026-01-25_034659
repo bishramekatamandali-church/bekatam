@@ -3,7 +3,7 @@ import Button from '../../components/ui/Button';
 import Card, { CardContent, CardHeader } from '../../components/ui/Card';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import type { ExpenseRecord, ExpenseRecordFormData } from '../../types';
-import { API_BASE_URL } from '../../utils/apiConfig';
+import { API_BASE_URL } from '../../contexts/ContentContext';
 
 const jsonHeaders = () => ({
   'Content-Type': 'application/json',
@@ -194,8 +194,9 @@ const ManageExpensesPage: React.FC = () => {
           isOpen={isModalOpen}
           onClose={closeModal}
           contentType="expenseRecord"
+          mode={editing ? 'edit' : 'add'}
           initialData={editing ?? undefined}
-          onSubmit={handleSave as any}
+          onSave={handleSave as any}
         />
       </div>
     </div>

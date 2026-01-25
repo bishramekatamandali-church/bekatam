@@ -273,7 +273,6 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'testimonials', setter: setTestimonials, storageKey: 'bem_testimonials', getCurrent: () => contentRef.current.testimonials },
     { key: 'contact-messages', setter: setContactMessages, storageKey: 'bem_contactMessages', getCurrent: () => contentRef.current.contactMessages },
     { key: 'donation-records', setter: setDonationRecords, storageKey: 'bem_donationRecords', getCurrent: () => contentRef.current.donationRecords },
-      { key: 'expense-records', setter: setExpenseRecords, storageKey: '', getCurrent: () => contentRef.current.expenseRecords },
     { key: 'collection-records', setter: setCollectionRecords, storageKey: 'bem_collectionRecords', getCurrent: () => contentRef.current.collectionRecords },
     { key: 'ministry-join-requests', setter: setMinistryJoinRequests, storageKey: 'bem_ministryJoinRequests', getCurrent: () => contentRef.current.ministryJoinRequests },
     { key: 'donate-page', setter: setDonatePageContent, storageKey: 'bem_donatePageContent', getCurrent: () => contentRef.current.donatePageContent }, 

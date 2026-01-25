@@ -974,9 +974,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           ...prev,
           [name]: value,
         };
-
-  const handleChange = handleChange;
-
         if (name === 'incidentAt') {
           next.date = value;
         }

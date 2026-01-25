@@ -60,7 +60,7 @@ import {
   Responsibility,
   decisionLogStatusList as decisionPointStatusList,
   expenseStatusList,
-  expenseCategoriesList,
+  expenseCategoryList,
 } from '../../types';
 import { adToBs, formatBSDate } from '../../dateConverter';
 
@@ -974,9 +974,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           ...prev,
           [name]: value,
         };
-
-  const handleChange = handleChange;
-
         if (name === 'incidentAt') {
           next.date = value;
         }
@@ -3222,138 +3219,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           </>
         );
       }
-
-      case 'expenseRecord':
-        return (
-          <div className="space-y-4 bg-white">
-            <FormSection title="Expense Details" subtitle="Keep expense logs consistent and clear.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Expense Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    name="expenseDate"
-                    value={(formData as any).expenseDate || ''}
-                    onChange={handleChange}
-                    required
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Amount (NPR) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="amount"
-                    value={(formData as any).amount ?? ''}
-                    onChange={handleChange}
-                    required
-                    min="0"
-                    step="any"
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="description"
-                  value={(formData as any).description || ''}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  placeholder="e.g., Sound system repair, chairs purchase..."
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Category <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="category"
-                    value={(formData as any).category || expenseCategoriesList?.[0] || ''}
-                    onChange={handleChange}
-                    required
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  >
-                    {(expenseCategoriesList || []).map((c: any) => (
-                      <option key={c} value={c}>{String(c).replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={(formData as any).status || expenseStatusList?.[0] || ''}
-                    onChange={handleChange}
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  >
-                    {(expenseStatusList || []).map((st: any) => (
-                      <option key={st} value={st}>{String(st).replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Payee (optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="payee"
-                    value={(formData as any).payee || ''}
-                    onChange={handleChange}
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Who was paid?"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Transaction Reference (optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="transactionReference"
-                    value={(formData as any).transactionReference || ''}
-                    onChange={handleChange}
-                    className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Voucher / bill / reference"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">
-                  Notes (optional)
-                </label>
-                <textarea
-                  name="notes"
-                  value={(formData as any).notes || ''}
-                  onChange={handleChange}
-                  className="mt-1 w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
-                  rows={3}
-                />
-              </div>
-            </FormSection>
-          </div>
-        );
 
       default:
         const dateFields = new Set(dateFieldsConfig[contentType] || []);
