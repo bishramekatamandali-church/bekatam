@@ -131,7 +131,8 @@ const AppContent: React.FC = () => {
             <Route
               path="/profile/:userId"
               element={<ProtectedRoute element={<PublicProfilePage />} />}
-             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
 
             {/* Admin Routes */}
