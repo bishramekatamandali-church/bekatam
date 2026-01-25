@@ -60,8 +60,7 @@ import {
   Responsibility,
   decisionLogStatusList as decisionPointStatusList,
   expenseStatusList,
-  expenseCategoriesList,
-} from '../../types';
+  } from '../../types';
 import { adToBs, formatBSDate } from '../../dateConverter';
 
 import SelectMediaModal from './SelectMediaModal';
@@ -842,11 +841,16 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
 
   useEffect(() => {
     if (contentType === 'collectionRecord') {
-      const total = (formData as CollectionRecordFormData).donors.reduce(
+      const donors = (formData as CollectionRecordFormData).donors || [];
+      if (donors.length === 0) {
+        return;
+      }
+      const total = donors.reduce(
         (sum, donor) => sum + (Number(donor.amount) || 0),
         0
       );
-      if (String(total) !== (formData as CollectionRecordFormData).amount) {
+      const currentAmount = Number((formData as CollectionRecordFormData).amount || 0);
+      if (total !== currentAmount) {
         setFormData((prev) => ({
           ...prev,
           amount: String(total),
@@ -3354,6 +3358,233 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
             </FormSection>
           </div>
         );
+
+      case 'collectionRecord': {
+        const data = formData as CollectionRecordFormData;
+        const donors = data.donors || [];
+
+        return (
+          <>
+            <FormSection title="Collection Details">
+              <div>
+                <label className={resolvedLabelClasses}>
+                  Collector Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="collectorName"
+                  value={data.collectorName || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Person who collected the offering"
+                />
+              </div>
+
+              <div>
+                <label className={resolvedLabelClasses}>
+                  Collection Category <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="purpose"
+                  value={data.purpose || collectionPurposeList[0]}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                >
+                  {collectionPurposeList.map((purpose) => (
+                    <option key={purpose} value={purpose}>
+                      {purpose}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {renderDateFieldWithBSPicker('collectionDate', 'Collection Date', { required: true })}
+
+              <div>
+                <label className={resolvedLabelClasses}>Collection Source / Location</label>
+                <input
+                  type="text"
+                  name="source"
+                  value={data.source || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Sunday service, Youth fellowship"
+                />
+              </div>
+
+              <div>
+                <label className={resolvedLabelClasses}>
+                  Total Amount (NPR) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="amount"
+                  value={data.amount ?? ''}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="any"
+                  disabled={donors.length > 0}
+                  className={resolvedInputClasses}
+                />
+                {donors.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Total is auto-calculated from donor entries.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className={resolvedLabelClasses}>Counted By</label>
+                <input
+                  type="text"
+                  name="countedBy"
+                  value={data.countedBy || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Finance team member"
+                />
+              </div>
+
+              <div>
+                <label className={resolvedLabelClasses}>Deposit Status</label>
+                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    name="isDeposited"
+                    checked={Boolean(data.isDeposited)}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  Mark as deposited to bank
+                </label>
+              </div>
+
+              {data.isDeposited && (
+                <>
+                  {renderDateFieldWithBSPicker('depositDate', 'Deposit Date')}
+                  <div>
+                    <label className={resolvedLabelClasses}>Bank Deposit Reference</label>
+                    <input
+                      type="text"
+                      name="bankDepositReference"
+                      value={data.bankDepositReference || ''}
+                      onChange={handleChange}
+                      className={resolvedInputClasses}
+                      placeholder="Voucher / reference number"
+                    />
+                  </div>
+                </>
+              )}
+            </FormSection>
+
+            <FormSection title="Donor Details">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Add donor names and amounts if this collection includes multiple offerings. The total will update automatically.
+                </p>
+              </FullWidthField>
+
+              <FullWidthField>
+                {donors.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No donors added yet. Use the button below to add donor entries.
+                  </p>
+                )}
+                <div className="space-y-3">
+                  {donors.map((donor, index) => (
+                    <div
+                      key={donor.id || `donor-${index}`}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+                    >
+                      <div className="md:col-span-3">
+                        <label className={resolvedLabelClasses}>Donor Name</label>
+                        <input
+                          type="text"
+                          value={donor.donorName || ''}
+                          onChange={(event) => handleDonorChange(index, 'donorName', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Full name"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={resolvedLabelClasses}>Amount (NPR)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={donor.amount ?? ''}
+                          onChange={(event) => handleDonorChange(index, 'amount', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className={resolvedLabelClasses}>Address (optional)</label>
+                        <input
+                          type="text"
+                          value={donor.address || ''}
+                          onChange={(event) => handleDonorChange(index, 'address', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Ward / city"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className={resolvedLabelClasses}>Contact (optional)</label>
+                        <input
+                          type="text"
+                          value={donor.contact || ''}
+                          onChange={(event) => handleDonorChange(index, 'contact', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Phone or email"
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDonorField(index)}
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          aria-label="Remove donor"
+                        >
+                          <XCircleIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={addDonorField}
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                >
+                  <PlusCircleIcon className="w-4 h-4 mr-1.5" />
+                  Add Donor
+                </Button>
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Additional Notes">
+              <FullWidthField>
+                <label className={resolvedLabelClasses}>Notes</label>
+                <textarea
+                  name="notes"
+                  value={data.notes || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  rows={4}
+                  placeholder="Any extra details about this collection."
+                />
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
 
       default:
         const dateFields = new Set(dateFieldsConfig[contentType] || []);

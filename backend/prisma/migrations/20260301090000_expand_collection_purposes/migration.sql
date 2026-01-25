@@ -1,0 +1,26 @@
+ALTER TABLE `collectionrecord`
+  MODIFY `purpose` enum(
+    'Tithe',
+    'Temple_Tax',
+    'General_Offering',
+    'Saturday_Fellowship_Offering',
+    'Wednesday_Fellowship_Offering',
+    'Friday_Program_Offering',
+    'Building_Fund',
+    'Freewill_Offering',
+    'Vow_Offering',
+    'Redemption_Offering',
+    'Guilt_Offering',
+    'Firstfruits',
+    'Alms',
+    'Mission_Support',
+    'Youth_Ministry_Support',
+    'Children_Ministry_Support',
+    'Women_Ministry_Support',
+    'Men_Ministry_Support',
+    'Church_Offering',
+    'Minister_Support',
+    'Thanksgiving_Offering',
+    'Special_Event_Collection',
+    'Other_Collections'
+  ) NOT NULL;
