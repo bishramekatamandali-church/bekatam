@@ -13,6 +13,7 @@ declare module "pdfkit" {
     text(text: string, x?: number, y?: number, options?: any): this;
 
     moveDown(lines?: number): this;
+    addPage(options?: any): this;
     moveTo(x: number, y: number): this;
     lineTo(x: number, y: number): this;
     stroke(color?: any): this;
