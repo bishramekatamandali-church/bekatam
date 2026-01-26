@@ -6,6 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { DecisionLog, DecisionLogFormData, GenericContentFormData, DecisionLogStatus, decisionLogStatusList, ActionItemStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
@@ -48,9 +49,44 @@ const getActionItemStatusColor = (status: ActionItemStatus) => {
 };
 
 const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF';
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const BASE_FONT_NAME = 'Helvetica';
 let isDevanagariFontSuccessfullyEmbedded = false;
+
+const normalizeBase64Font = (fontData: string): string => fontData.replace(/\s+/g, '');
+
+const isValidBase64Font = (fontData: string): boolean => {
+  if (!fontData || fontData === 'YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE') {
+    return false;
+  }
+
+  const normalizedFontData = normalizeBase64Font(fontData);
+
+  try {
+    atob(normalizedFontData);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const tryEmbedDevanagariFont = (doc: jsPDF): void => {
+  isDevanagariFontSuccessfullyEmbedded = false;
+
+  if (!isValidBase64Font(NotoSansDevanagariBase64)) {
+    console.warn('Skipping Devanagari font embedding: invalid base64 data.');
+    return;
+  }
+
+  try {
+    const fontData = normalizeBase64Font(NotoSansDevanagariBase64);
+    doc.addFileToVFS('NotoSansDevanagariCustom.ttf', fontData);
+    doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
+    isDevanagariFontSuccessfullyEmbedded = true;
+  } catch (error) {
+    console.error('Could not embed font for PDF', error);
+  }
+};
 
 const getCurrentFont = (text: string): string => {
   if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
@@ -101,17 +137,9 @@ const ManageDecisionsPage: React.FC = () => {
     }
   };
 
-  const generateDecisionPdf = (decision: DecisionLog) => {
+  const generateDecisionPdf = async (decision: DecisionLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
-    
-    isDevanagariFontSuccessfullyEmbedded = false;
-    try {
-        if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE") {
-            doc.addFileToVFS('NotoSansDevanagariCustom.ttf', NotoSansDevanagariBase64);
-            doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
-            isDevanagariFontSuccessfullyEmbedded = true;
-        }
-    } catch (e) { console.error("Could not embed font for PDF", e); }
+    const fontState = await preparePdfDoc(doc);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -125,18 +153,18 @@ const ManageDecisionsPage: React.FC = () => {
     const churchNameForPdf = "BEM Church";
     const documentTitle = "Decision Record";
     
-    doc.setFont(getCurrentFont(churchNameForPdf), 'bold');
+    setPdfFont(doc, fontState, 'bold');
     doc.setFontSize(16);
     doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 7;
 
-    doc.setFont(BASE_FONT_NAME, 'normal');
+    setPdfFont(doc, fontState, 'normal');
     doc.setFontSize(14);
     doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 10;
     
     const decisionTitle = decision.title || 'N/A';
-    doc.setFont(getCurrentFont(decisionTitle), 'bold');
+    setPdfFont(doc, fontState, 'bold');
     doc.setFontSize(12);
     doc.text(decisionTitle, margin, yPosRef.current);
     yPosRef.current += sectionSpacing;
@@ -150,10 +178,10 @@ const ManageDecisionsPage: React.FC = () => {
 
         if (yPosRef.current > pageHeight - footerMargin - 25) { doc.addPage(); yPosRef.current = margin; }
         
-        doc.setFont(getCurrentFont(label), 'bold');
+        setPdfFont(doc, fontState, 'bold');
         doc.text(`${label}: `, margin, yPosRef.current);
         
-        doc.setFont(getCurrentFont(valueString), 'normal');
+        setPdfFont(doc, fontState, 'normal');
         
         const labelWidth = doc.getTextWidth(`${label}: `) + 1; 
         const valueXPos = margin + labelWidth;
@@ -186,13 +214,13 @@ const ManageDecisionsPage: React.FC = () => {
     if (decision.followUpActions && decision.followUpActions.length > 0) {
         if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
         doc.setFontSize(11);
-        doc.setFont(BASE_FONT_NAME, 'bold');
+        setPdfFont(doc, fontState, 'bold');
         doc.text('Follow-up Action Items:', margin, yPosRef.current);
         yPosRef.current += lineSpacing + 1;
         (decision.followUpActions || []).forEach((item, index) => {
             if (yPosRef.current > pageHeight - footerMargin - 30) { doc.addPage(); yPosRef.current = margin; }
             doc.setFontSize(10);
-            doc.setFont(BASE_FONT_NAME, 'bold');
+            setPdfFont(doc, fontState, 'bold');
             doc.text(`Item ${index + 1}:`, margin, yPosRef.current);
             yPosRef.current += lineSpacing - 1;
             addDetail('  Description', item.description, { isMultiLine: true, isPotentiallyMultilingualValue: true });
@@ -212,7 +240,7 @@ const ManageDecisionsPage: React.FC = () => {
 
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        doc.setFont(BASE_FONT_NAME, 'normal');
+        setPdfFont(doc, fontState, 'normal');
         doc.setFontSize(8);
         doc.text(`Generated date: ${generatedDate}`, margin, pageHeight - footerMargin);
         const copyrightText = `All rights reserved at ${churchNameForPdf} © ${currentYear}`;

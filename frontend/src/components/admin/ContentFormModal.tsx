@@ -36,6 +36,8 @@ import {
   blogPostCategoriesList,
   newsCategoriesList,
   MeetingDecisionPoint,
+  ActionItem,
+  actionItemStatusList,
   expenseCategoriesList,
   paymentMethodOptions,
   rosterTypeList,
@@ -1155,6 +1157,48 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
     setFormData((prev) => ({
       ...(prev as FellowshipRosterFormData),
       responsibilities: updatedResponsibilities,
+    }));
+  };
+
+const updateActionItem = (
+    listKey: 'actionItems' | 'followUpActions',
+    index: number,
+    field: keyof ActionItem,
+    value: string
+  ) => {
+    const currentItems = Array.isArray((formData as any)[listKey])
+      ? ([...(formData as any)[listKey]] as ActionItem[])
+      : [];
+    (currentItems[index] as any)[field] = value;
+    setFormData((prev) => ({
+      ...(prev as GenericContentFormData),
+      [listKey]: currentItems,
+    }));
+  };
+
+  const addActionItem = (listKey: 'actionItems' | 'followUpActions') => {
+    const newItem: ActionItem = {
+      id: `new-action-${Date.now()}`,
+      description: '',
+      status: actionItemStatusList[0],
+    };
+    const currentItems = Array.isArray((formData as any)[listKey])
+      ? ([...(formData as any)[listKey]] as ActionItem[])
+      : [];
+    setFormData((prev) => ({
+      ...(prev as GenericContentFormData),
+      [listKey]: [...currentItems, newItem],
+    }));
+  };
+
+  const removeActionItem = (listKey: 'actionItems' | 'followUpActions', id: string) => {
+    const currentItems = Array.isArray((formData as any)[listKey])
+      ? ([...(formData as any)[listKey]] as ActionItem[])
+      : [];
+    const updatedItems = currentItems.filter((item) => item.id !== id);
+    setFormData((prev) => ({
+      ...(prev as GenericContentFormData),
+      [listKey]: updatedItems,
     }));
   };
 
@@ -3221,6 +3265,512 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
                     </div>
                   ))}
                 </div>
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+      
+      case 'meetingLog': {
+        const data = formData as MeetingLogFormData;
+        const actionItems = data.actionItems || [];
+        const decisionPoints = data.decisionPoints || [];
+
+        return (
+          <>
+            <FormSection title="Meeting Overview">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Track the meeting purpose, participants, outcomes, and next steps. Include external organizations
+                  in the attendee list or agenda when applicable (e.g., partner churches, NGOs, community leaders).
+                </p>
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Meeting Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="title"
+                  name="title"
+                  value={data.title || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Youth Leaders Monthly Planning"
+                />
+              </FullWidthField>
+
+              {renderDateFieldWithBSPicker('meetingDate', 'Meeting Date', { required: true })}
+
+              <div>
+                <label htmlFor="meetingType" className={resolvedLabelClasses}>
+                  Meeting Type
+                </label>
+                <select
+                  id="meetingType"
+                  name="meetingType"
+                  value={data.meetingType || meetingTypeList[0]}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  {meetingTypeList.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="status" className={resolvedLabelClasses}>
+                  Overall Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={data.status || meetingLogStatusList[0]}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  {meetingLogStatusList.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FormSection>
+
+            <FormSection title="Participants & Agenda">
+              <FullWidthField>
+                <label htmlFor="attendees" className={resolvedLabelClasses}>
+                  Attendees <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="attendees"
+                  name="attendees"
+                  value={data.attendees || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder={`List one per line (Name - Role/Organization).\nExample:\nSita Rai - Youth Coordinator (BEM)\nPastor Jacob - Grace Church`}
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="agenda" className={resolvedLabelClasses}>
+                  Agenda <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="agenda"
+                  name="agenda"
+                  value={data.agenda || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Summarize the topics discussed, agenda order, or planned discussion points."
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Minutes & Supporting Media">
+              <FullWidthField>
+                <label htmlFor="minutes" className={resolvedLabelClasses}>
+                  Minutes / Summary <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="minutes"
+                  name="minutes"
+                  value={data.minutes || ''}
+                  onChange={handleChange}
+                  rows={5}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Record outcomes, key discussions, prayer points, and follow-up context."
+                />
+              </FullWidthField>
+
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Meeting Image (optional)"
+                  mediaType="image"
+                  currentUrl={data.imageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as MeetingLogFormData),
+                      imageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'imageUrl')}
+                  isUploading={isFieldUploading['imageUrl']}
+                  uploadStatus={uploadingStatus['imageUrl']}
+                  onSelectFromLibrary={() => handleImageFieldSelect('imageUrl')}
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Action Items">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Capture assignments, owners, and due dates so teams can follow up after the meeting.
+                </p>
+              </FullWidthField>
+
+              <FullWidthField>
+                {actionItems.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No action items yet. Use the button below to add the first one.
+                  </p>
+                )}
+                <div className="space-y-3">
+                  {actionItems.map((item, index) => (
+                    <div
+                      key={item.id || `action-${index}`}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+                    >
+                      <div className="md:col-span-4">
+                        <label className={resolvedLabelClasses}>Task</label>
+                        <input
+                          type="text"
+                          value={item.description || ''}
+                          onChange={(event) => updateActionItem('actionItems', index, 'description', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Follow-up task"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className={resolvedLabelClasses}>Assigned To</label>
+                        <input
+                          type="text"
+                          value={item.assignedTo || ''}
+                          onChange={(event) => updateActionItem('actionItems', index, 'assignedTo', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Name or team"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={resolvedLabelClasses}>Status</label>
+                        <select
+                          value={item.status || actionItemStatusList[0]}
+                          onChange={(event) => updateActionItem('actionItems', index, 'status', event.target.value)}
+                          className={resolvedInputClasses}
+                        >
+                          {actionItemStatusList.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={resolvedLabelClasses}>Due Date</label>
+                        <input
+                          type="date"
+                          value={item.dueDate || ''}
+                          onChange={(event) => updateActionItem('actionItems', index, 'dueDate', event.target.value)}
+                          className={resolvedInputClasses}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeActionItem('actionItems', item.id)}
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          aria-label="Remove action item"
+                        >
+                          <XCircleIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => addActionItem('actionItems')}
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                >
+                  <PlusCircleIcon className="w-4 h-4 mr-1.5" />
+                  Add Action Item
+                </Button>
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Decision Points">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Record key decisions, who proposed them, and any follow-up notes.
+                </p>
+              </FullWidthField>
+              <FullWidthField>
+                {decisionPoints.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No decision points yet. Add them as decisions are made.
+                  </p>
+                )}
+                <div className="space-y-4">
+                  {decisionPoints.map((point, index) => (
+                    <div key={point.id || `dp-${index}`} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        <div className="md:col-span-4">
+                          <label className={resolvedLabelClasses}>Decision</label>
+                          <input
+                            type="text"
+                            value={point.description || ''}
+                            onChange={(event) => handleDecisionPointChange(index, 'description', event.target.value)}
+                            className={resolvedInputClasses}
+                            placeholder="Decision summary"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className={resolvedLabelClasses}>Proposed By</label>
+                          <input
+                            type="text"
+                            value={point.proposedBy || ''}
+                            onChange={(event) => handleDecisionPointChange(index, 'proposedBy', event.target.value)}
+                            className={resolvedInputClasses}
+                            placeholder="Person or team"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={resolvedLabelClasses}>Status</label>
+                          <select
+                            value={point.status || decisionPointStatusList[0]}
+                            onChange={(event) => handleDecisionPointChange(index, 'status', event.target.value)}
+                            className={resolvedInputClasses}
+                          >
+                            {decisionPointStatusList.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={resolvedLabelClasses}>Resolution Date</label>
+                          <input
+                            type="date"
+                            value={point.resolutionDate || ''}
+                            onChange={(event) => handleDecisionPointChange(index, 'resolutionDate', event.target.value)}
+                            className={resolvedInputClasses}
+                          />
+                        </div>
+                        <div className="md:col-span-1 flex">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDecisionPoint(point.id)}
+                            className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                            aria-label="Remove decision point"
+                          >
+                            <XCircleIcon className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className={resolvedLabelClasses}>Follow-up Notes</label>
+                        <textarea
+                          value={point.followUpNotes || ''}
+                          onChange={(event) => handleDecisionPointChange(index, 'followUpNotes', event.target.value)}
+                          rows={2}
+                          className={resolvedInputClasses}
+                          placeholder="Add any notes, responsibilities, or required approvals."
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={addDecisionPoint}
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                >
+                  <PlusCircleIcon className="w-4 h-4 mr-1.5" />
+                  Add Decision Point
+                </Button>
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'decisionLog': {
+        const data = formData as DecisionLogFormData;
+        const followUpActions = data.followUpActions || [];
+
+        return (
+          <>
+            <FormSection title="Decision Details">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Use this log for major resolutions, approvals, or leadership decisions that should be tracked
+                  independently from meeting minutes.
+                </p>
+              </FullWidthField>
+
+              <FullWidthField>
+                <label htmlFor="title" className={resolvedLabelClasses}>
+                  Decision Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="title"
+                  name="title"
+                  value={data.title || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="e.g., Approve outreach budget for August"
+                />
+              </FullWidthField>
+
+              {renderDateFieldWithBSPicker('decisionDate', 'Decision Date', { required: true })}
+
+              <div>
+                <label htmlFor="madeBy" className={resolvedLabelClasses}>
+                  Made By <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="madeBy"
+                  name="madeBy"
+                  value={data.madeBy || ''}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Person, committee, or ministry"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="status" className={resolvedLabelClasses}>
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={data.status || decisionLogStatusList[0]}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  {decisionLogStatusList.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="description" className={resolvedLabelClasses}>
+                  Description / Rationale <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={data.description || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Explain why the decision was made and any key context."
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Follow-up Actions">
+              <FullWidthField>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Track the tasks needed to implement this decision and who is responsible.
+                </p>
+              </FullWidthField>
+              <FullWidthField>
+                {followUpActions.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No follow-up actions yet. Add them below if needed.
+                  </p>
+                )}
+                <div className="space-y-3">
+                  {followUpActions.map((item, index) => (
+                    <div
+                      key={item.id || `followup-${index}`}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+                    >
+                      <div className="md:col-span-4">
+                        <label className={resolvedLabelClasses}>Task</label>
+                        <input
+                          type="text"
+                          value={item.description || ''}
+                          onChange={(event) => updateActionItem('followUpActions', index, 'description', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Implementation task"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className={resolvedLabelClasses}>Assigned To</label>
+                        <input
+                          type="text"
+                          value={item.assignedTo || ''}
+                          onChange={(event) => updateActionItem('followUpActions', index, 'assignedTo', event.target.value)}
+                          className={resolvedInputClasses}
+                          placeholder="Name or team"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={resolvedLabelClasses}>Status</label>
+                        <select
+                          value={item.status || actionItemStatusList[0]}
+                          onChange={(event) => updateActionItem('followUpActions', index, 'status', event.target.value)}
+                          className={resolvedInputClasses}
+                        >
+                          {actionItemStatusList.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={resolvedLabelClasses}>Due Date</label>
+                        <input
+                          type="date"
+                          value={item.dueDate || ''}
+                          onChange={(event) => updateActionItem('followUpActions', index, 'dueDate', event.target.value)}
+                          className={resolvedInputClasses}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeActionItem('followUpActions', item.id)}
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          aria-label="Remove follow-up action"
+                        >
+                          <XCircleIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => addActionItem('followUpActions')}
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                >
+                  <PlusCircleIcon className="w-4 h-4 mr-1.5" />
+                  Add Follow-up Action
+                </Button>
               </FullWidthField>
             </FormSection>
           </>

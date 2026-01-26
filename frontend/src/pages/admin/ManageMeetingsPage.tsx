@@ -6,6 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { MeetingLog, MeetingLogFormData, GenericContentFormData, MeetingLogStatus, DecisionLogStatus, MeetingDecisionPoint, ActionItemStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 
@@ -23,9 +24,44 @@ const ViewListIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF';
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const BASE_FONT_NAME = 'Helvetica';
 let isDevanagariFontSuccessfullyEmbedded = false;
+
+const normalizeBase64Font = (fontData: string): string => fontData.replace(/\s+/g, '');
+
+const isValidBase64Font = (fontData: string): boolean => {
+  if (!fontData || fontData === 'YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE') {
+    return false;
+  }
+
+  const normalizedFontData = normalizeBase64Font(fontData);
+
+  try {
+    atob(normalizedFontData);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const tryEmbedDevanagariFont = (doc: jsPDF): void => {
+  isDevanagariFontSuccessfullyEmbedded = false;
+
+  if (!isValidBase64Font(NotoSansDevanagariBase64)) {
+    console.warn('Skipping Devanagari font embedding: invalid base64 data.');
+    return;
+  }
+
+  try {
+    const fontData = normalizeBase64Font(NotoSansDevanagariBase64);
+    doc.addFileToVFS('NotoSansDevanagariCustom.ttf', fontData);
+    doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
+    isDevanagariFontSuccessfullyEmbedded = true;
+  } catch (error) {
+    console.error('Could not embed font for PDF', error);
+  }
+};
 
 const getCurrentFont = (text: string): string => {
   if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
@@ -106,17 +142,9 @@ const ManageMeetingsPage: React.FC = () => {
     }
   };
   
-  const generateMeetingPdf = (meeting: MeetingLog) => {
+  const generateMeetingPdf = async (meeting: MeetingLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
-
-    isDevanagariFontSuccessfullyEmbedded = false;
-    try {
-        if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE") {
-            doc.addFileToVFS('NotoSansDevanagariCustom.ttf', NotoSansDevanagariBase64);
-            doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
-            isDevanagariFontSuccessfullyEmbedded = true;
-        }
-    } catch (e) { console.error("Could not embed font for PDF", e); }
+    const fontState = await preparePdfDoc(doc);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -131,18 +159,18 @@ const ManageMeetingsPage: React.FC = () => {
     const documentTitle = "Meeting Minutes/Log"; 
     
     doc.setFontSize(16);
-    doc.setFont(getCurrentFont(churchNameForPdf), 'bold'); 
+    setPdfFont(doc, fontState, 'bold'); 
     doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 7;
 
     doc.setFontSize(14);
-    doc.setFont(BASE_FONT_NAME, 'normal'); 
+    setPdfFont(doc, fontState, 'normal'); 
     doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 10;
     
     const meetingTitle = meeting.title || 'N/A';
     doc.setFontSize(12);
-    doc.setFont(getCurrentFont(meetingTitle), 'bold');
+    setPdfFont(doc, fontState, 'bold');
     doc.text(meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += sectionSpacing + 2;
 
@@ -158,10 +186,10 @@ const ManageMeetingsPage: React.FC = () => {
             yPosRef.current = margin;
         }
         
-        doc.setFont(getCurrentFont(label), 'bold'); 
+        setPdfFont(doc, fontState, 'bold'); 
         doc.text(`${label}:`, margin, yPosRef.current);
         
-        doc.setFont(getCurrentFont(valueString), 'normal'); 
+        setPdfFont(doc, fontState, 'normal'); 
         
         const labelWidth = doc.getTextWidth(`${label}:`) + 2;
         const valueXPos = margin + labelWidth;
@@ -196,13 +224,13 @@ const ManageMeetingsPage: React.FC = () => {
     if (meeting.actionItems && meeting.actionItems.length > 0) {
         if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
         doc.setFontSize(11);
-        doc.setFont(BASE_FONT_NAME, 'bold');
+        setPdfFont(doc, fontState, 'bold');
         doc.text('Action Items:', margin, yPosRef.current);
         yPosRef.current += lineSpacing + 1;
         (meeting.actionItems || []).forEach((item, index) => {
             if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
             doc.setFontSize(10);
-            doc.setFont(BASE_FONT_NAME, 'bold');
+            setPdfFont(doc, fontState, 'bold');
             doc.text(`Item ${index + 1}:`, margin, yPosRef.current);
             yPosRef.current += lineSpacing - 1;
             addDetail('  Description', item.description, { isMultiLine: true, isPotentiallyMultilingualValue: true });
@@ -217,14 +245,14 @@ const ManageMeetingsPage: React.FC = () => {
     if (meeting.decisionPoints && meeting.decisionPoints.length > 0) {
         if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
         doc.setFontSize(11);
-        doc.setFont(BASE_FONT_NAME, 'bold'); 
+        setPdfFont(doc, fontState, 'bold'); 
         doc.text('Decisions & Plans Discussed:', margin, yPosRef.current);
         yPosRef.current += lineSpacing + 1;
         
         (meeting.decisionPoints || []).forEach((dp, index) => {
             if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
             doc.setFontSize(10);
-            doc.setFont(BASE_FONT_NAME, 'bold'); 
+            setPdfFont(doc, fontState, 'bold'); 
             doc.text(`Item ${index + 1}:`, margin, yPosRef.current);
             yPosRef.current += lineSpacing - 1;
             addDetail('  Description', dp.description, { isMultiLine: true, isPotentiallyMultilingualValue: true });
@@ -248,12 +276,12 @@ const ManageMeetingsPage: React.FC = () => {
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
-        doc.setFont(BASE_FONT_NAME, 'normal'); 
+        setPdfFont(doc, fontState, 'normal');
         
         doc.text(`Generated date: ${generatedDate}`, margin, pageHeight - footerMargin);
         
         const copyrightText = `All rights reserved at ${churchNameForPdf} © ${currentYear}`;
-        doc.setFont(getCurrentFont(copyrightText), 'normal'); 
+        setPdfFont(doc, fontState, 'normal'); 
         const copyrightTextWidth = doc.getTextWidth(copyrightText);
         doc.text(copyrightText, (pageWidth - copyrightTextWidth) / 2, pageHeight - footerMargin);
         
@@ -402,8 +430,37 @@ const ManageMeetingsPage: React.FC = () => {
           {filteredMeetings.map(meeting => renderMeetingCard(meeting))}
         </div>
       ) : (
-        <Card className="overflow-x-auto">
-          {/* Table view logic can be added here if needed */}
+        <Card className="overflow-x-auto dark:bg-slate-800">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+            <thead className="bg-gray-50 dark:bg-slate-700">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+              {filteredMeetings.map((meeting) => (
+                <tr key={meeting.id}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-100 max-w-xs truncate" title={meeting.title}>{meeting.title}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{formatDateADBS(meeting.meetingDate)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{meeting.meetingType || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getMeetingStatusColor(meeting.status)}`}>
+                      {meeting.status || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-medium space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => generateMeetingPdf(meeting)} className="!p-1.5 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"><DocumentTextIcon className="w-4 h-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenModal(meeting)} className="!p-1.5 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">View/Edit</Button>
+                    <Button variant="secondary" size="sm" onClick={() => handleDelete(meeting.id)} className="!bg-red-500 hover:!bg-red-600 text-white !p-1.5">Delete</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
 

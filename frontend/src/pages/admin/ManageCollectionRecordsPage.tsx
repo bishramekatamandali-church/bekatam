@@ -6,19 +6,12 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { CollectionRecord, CollectionRecordFormData, GenericContentFormData, collectionPurposeList, CollectionPurpose, DonorDetail } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, DocumentTextIcon as DocumentPdfIcon, TableCellsIcon as DocumentCsvIcon, Squares2X2Icon, Bars3Icon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 const ITEMS_PER_PAGE_CARD = 9;
 const ITEMS_PER_PAGE_LIST = 15;
-
-const BASE_FONT_NAME = 'Helvetica';
-
-const getCurrentFont = (doc: jsPDF, text: string): string => {
-  // Always return the base font since custom fonts are removed.
-  return BASE_FONT_NAME;
-};
-
 
 export const ManageCollectionRecordsPage: React.FC = () => {
   const { collectionRecords, addContent, updateContent, deleteContent, loadingContent } = useContent();
@@ -101,8 +94,10 @@ export const ManageCollectionRecordsPage: React.FC = () => {
       if (result.success) {
         const action = editingRecord ? 'updated' : 'added';
         const title = (result.newItem as CollectionRecord)?.purpose || (result.updatedItem as CollectionRecord)?.purpose || 'Record';
-        const amount = (result.newItem as CollectionRecord)?.amount || (result.updatedItem as CollectionRecord)?.amount || 0;
-        alert(`Collection Record for "${title}" (Amount: ${amount.toFixed(2)}) ${action} successfully!`);
+        const rawAmount = (result.newItem as CollectionRecord)?.amount || (result.updatedItem as CollectionRecord)?.amount || 0;
+        const amountValue = Number(rawAmount);
+        const formattedAmount = Number.isFinite(amountValue) ? amountValue.toFixed(2) : '0.00';
+        alert(`Collection Record for "${title}" (Amount: ${formattedAmount}) ${action} successfully!`);
         handleCloseModal();
       } else {
         alert(result.message || `Failed to ${editingRecord ? 'update' : 'add'} collection record.`);
@@ -121,8 +116,9 @@ export const ManageCollectionRecordsPage: React.FC = () => {
     }
   };
 
-  const generateRecordPdf = (record: CollectionRecord) => {
+  const generateRecordPdf = async (record: CollectionRecord) => {
     const doc = new jsPDF('p', 'mm', 'a4');
+    const fontState = await preparePdfDoc(doc);
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
@@ -135,12 +131,12 @@ export const ManageCollectionRecordsPage: React.FC = () => {
     const documentTitle = "Collection Record";
 
     doc.setFontSize(16);
-    doc.setFont(getCurrentFont(doc, churchNameForPdf), 'bold');
+    setPdfFont(doc, fontState, 'bold');
     doc.text(churchNameForPdf, pageWidth / 2, yPos, { align: 'center' });
     yPos += 7;
 
     doc.setFontSize(13);
-    doc.setFont(getCurrentFont(doc, documentTitle), 'normal');
+    setPdfFont(doc, fontState, 'normal');
     doc.text(documentTitle, pageWidth / 2, yPos, { align: 'center' });
     yPos += sectionSpacing;
 
@@ -151,9 +147,9 @@ export const ManageCollectionRecordsPage: React.FC = () => {
         doc.addPage();
         yPos = margin;
       }
-      doc.setFont(getCurrentFont(doc, label), 'bold');
+      setPdfFont(doc, fontState, 'bold');
       doc.text(`${label}:`, margin, yPos);
-      doc.setFont(getCurrentFont(doc, valueString), 'normal');
+      setPdfFont(doc, fontState, 'normal');
       const labelWidth = doc.getTextWidth(`${label}:`) + 2;
       const valueX = margin + labelWidth;
       const valueWidth = pageWidth - margin - valueX;
@@ -177,7 +173,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
 
     if (record.donors && record.donors.length > 0) {
       yPos += 2;
-      doc.setFont(getCurrentFont(doc, 'Donor Details'), 'bold');
+      setPdfFont(doc, fontState, 'bold');
       doc.text('Donor Details', margin, yPos);
       yPos += lineSpacing;
 
@@ -188,7 +184,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
           doc.addPage();
           yPos = margin;
         }
-        doc.setFont(getCurrentFont(doc, donorLine), 'normal');
+        setPdfFont(doc, fontState, 'normal');
         doc.text(donorLines, margin, yPos);
         yPos += lineSpacing * (Array.isArray(donorLines) ? donorLines.length : 1);
       });
@@ -199,7 +195,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
     const currentYear = new Date().getFullYear();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setFont(getCurrentFont(doc, generatedDate), 'normal');
+      setPdfFont(doc, fontState, 'normal');
       doc.setFontSize(8);
       doc.text(`Generated date: ${generatedDate}`, margin, pageHeight - footerMargin);
       const copyrightText = `All rights reserved at ${churchNameForPdf} © ${currentYear}`;

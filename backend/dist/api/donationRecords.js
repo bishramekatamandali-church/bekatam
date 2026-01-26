@@ -12,6 +12,7 @@ const emailService_1 = require("../services/emailService");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const contentUpdates_1 = require("../services/contentUpdates");
 const pdfkit_1 = __importDefault(require("pdfkit"));
+const pdfFonts_1 = require("../utils/pdfFonts");
 const router = express_1.default.Router();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'bishramekatamandali@gmail.com').toLowerCase().trim();
 const formatDate = (d) => {
@@ -26,6 +27,7 @@ const buildDonationReceiptPdfBuffer = (data) => {
     return new Promise((resolve, reject) => {
         try {
             const doc = new pdfkit_1.default({ size: 'A4', margin: 50 });
+            (0, pdfFonts_1.applyPdfFont)(doc);
             const chunks = [];
             doc.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
             doc.on('end', () => resolve(Buffer.concat(chunks)));

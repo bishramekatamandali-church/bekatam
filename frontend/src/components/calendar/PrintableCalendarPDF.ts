@@ -1,6 +1,7 @@
 
 // components/calendar/PrintableCalendarPDF.ts
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc } from '../../utils/pdfFonts';
 import { EventItem } from '../../types';
 import {
   adToBs,
@@ -34,8 +35,7 @@ interface PaperSettings {
   footerHeight: number;
 }
 
-const NotoSansDevanagariBase64: string = "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF'; 
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari'; 
 const BASE_FONT_NAME = 'Helvetica'; 
 let isDevanagariFontSuccessfullyEmbedded = false;
 
@@ -144,19 +144,8 @@ export const generateYearlyCalendarPDF = async (
     format: paperSize
   });
 
-  isDevanagariFontSuccessfullyEmbedded = false; 
-  if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE" && NotoSansDevanagariBase64.length > 100) {
-    try {
-      doc.addFileToVFS('NotoSansDevanagariCustomPDF.ttf', NotoSansDevanagariBase64); 
-      doc.addFont('NotoSansDevanagariCustomPDF.ttf', DEVANAGARI_FONT_NAME, 'normal');
-      isDevanagariFontSuccessfullyEmbedded = true;
-      console.log("Devanagari font embedded successfully for PDF.");
-    } catch (e) {
-      console.error("Error embedding Devanagari font for PDF:", e);
-    }
-  } else {
-    console.warn("Devanagari font base64 string is a placeholder or too short. Nepali text may not render correctly in PDF.");
-  }
+  const fontState = await preparePdfDoc(doc);
+  isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
 
   const settings = getPaperSettings(doc, paperSize);
   const { 

@@ -10,13 +10,51 @@ const client_1 = require("@prisma/client");
 const enumNormalization_1 = require("../utils/enumNormalization");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const router = express_1.default.Router();
+const normalizeDonorEntries = (donors) => {
+    if (!Array.isArray(donors)) {
+        return null;
+    }
+    return donors
+        .map((donor) => {
+        const donorName = String(donor.donorName || '').trim();
+        if (!donorName) {
+            return null;
+        }
+        return {
+            id: crypto_1.default.randomUUID(),
+            donorName,
+            amount: Number(donor.amount) || 0,
+            address: donor.address?.trim() || null,
+            contact: donor.contact?.trim() || null,
+        };
+    })
+        .filter((donor) => donor !== null);
+};
+const normalizeCollectionRecord = (record) => {
+    const { donordetail, amount, ...rest } = record;
+    const donors = Array.isArray(donordetail)
+        ? donordetail.map((donor) => ({
+            id: donor.id,
+            donorName: donor.donorName,
+            amount: Number(donor.amount ?? 0),
+            address: donor.address ?? undefined,
+            contact: donor.contact ?? undefined,
+        }))
+        : [];
+    return {
+        ...rest,
+        amount: Number(amount ?? 0),
+        donors,
+    };
+};
 // GET all collection records
 router.get('/', async (req, res) => {
     try {
         const records = await db_1.prisma.collectionrecord.findMany({
             orderBy: { collectionDate: 'desc' },
+            include: { donordetail: true },
         });
-        res.json(records);
+        res.json(records.map((record) => normalizeCollectionRecord(record)));
     }
     catch (error) {
         if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
@@ -27,7 +65,7 @@ router.get('/', async (req, res) => {
 });
 // POST a new collection record
 router.post('/', async (req, res) => {
-    const { collectorName, collectionDate, amount, purpose, source, notes, countedBy, isDeposited, depositDate, bankDepositReference, recordedByAdminId, recordedByAdminName } = req.body;
+    const { collectorName, collectionDate, amount, purpose, source, notes, countedBy, isDeposited, depositDate, bankDepositReference, recordedByAdminId, recordedByAdminName, donors, } = req.body;
     if (!collectorName || !collectionDate || !amount || !purpose) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
@@ -36,6 +74,7 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Invalid collection purpose.' });
     }
     try {
+        const donorEntries = normalizeDonorEntries(donors);
         const newRecord = await db_1.prisma.collectionrecord.create({
             data: {
                 id: crypto_1.default.randomUUID(), // ✅ Required
@@ -53,9 +92,15 @@ router.post('/', async (req, res) => {
                 recordedByAdminId: recordedByAdminId || 'system',
                 recordedByAdminName: recordedByAdminName || 'System',
                 recordedAt: new Date(),
-            }
+                ...(donorEntries && donorEntries.length > 0
+                    ? { donordetail: { create: donorEntries } }
+                    : {}),
+            },
+            include: {
+                donordetail: true,
+            },
         });
-        res.status(201).json(newRecord);
+        res.status(201).json(normalizeCollectionRecord(newRecord));
     }
     catch (error) {
         console.error(error);
@@ -65,12 +110,13 @@ router.post('/', async (req, res) => {
 // PUT update a record
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { collectorName, collectionDate, amount, purpose, source, notes, countedBy, isDeposited, depositDate, bankDepositReference } = req.body;
+    const { collectorName, collectionDate, amount, purpose, source, notes, countedBy, isDeposited, depositDate, bankDepositReference, donors, } = req.body;
     const normalizedPurpose = (0, enumNormalization_1.normalizeEnumValue)(purpose, client_1.collectionrecord_purpose);
     if (purpose && !normalizedPurpose) {
         return res.status(400).json({ error: 'Invalid collection purpose.' });
     }
     try {
+        const donorEntries = normalizeDonorEntries(donors);
         const updatedRecord = await db_1.prisma.collectionrecord.update({
             where: { id },
             data: {
@@ -85,9 +131,21 @@ router.put('/:id', async (req, res) => {
                 depositDate: depositDate ? new Date(depositDate) : null,
                 bankDepositReference,
                 updatedAt: new Date(), // ✅ Required
+                ...(donorEntries
+                    ? {
+                        donordetail: {
+                            deleteMany: {},
+                            create: donorEntries,
+                        },
+                    }
+                    : {}),
             }
         });
-        res.json(updatedRecord);
+        const updatedWithDonors = await db_1.prisma.collectionrecord.findUnique({
+            where: { id },
+            include: { donordetail: true },
+        });
+        res.json(updatedWithDonors ? normalizeCollectionRecord(updatedWithDonors) : updatedRecord);
     }
     catch (error) {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
