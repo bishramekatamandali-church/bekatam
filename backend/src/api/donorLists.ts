@@ -1,5 +1,6 @@
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
+import { applyPdfFont } from '../utils/pdfFonts';
 import { prisma } from '../db';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -175,6 +176,7 @@ const buildDonorListPdfBuffer = (
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      applyPdfFont(doc);
       const chunks: Buffer[] = [];
       doc.on('data', (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
       doc.on('end', () => resolve(Buffer.concat(chunks)));

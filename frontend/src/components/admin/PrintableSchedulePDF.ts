@@ -3,10 +3,11 @@
 import { jsPDF } from 'jspdf';
 import { GeneratedScheduleItem, FellowshipRosterItem } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
+import { preparePdfDoc } from '../../utils/pdfFonts';
 
 // A subset of a real base64 font string for demonstration. A full one would be very large.
 const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF';
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const BASE_FONT_NAME = 'Helvetica';
 let isDevanagariFontSuccessfullyEmbedded = false;
 
@@ -32,16 +33,24 @@ const parseAdditionalDetailsForPDF = (detailsString?: string): Record<string, st
   return details;
 };
 
-const setupPdfDoc = (doc: jsPDF, churchName: string, documentTitle: string): { yPos: number, contentWidth: number, margin: number, baseFontSize: number, titleFontSize: number, headerFontSize: number, lineSpacing: number, sectionSpacing: number, pageHeight: number, pageWidth: number } => {
-    isDevanagariFontSuccessfullyEmbedded = false;
-    if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE" && NotoSansDevanagariBase64.length > 100) {
-        try {
-        doc.addFileToVFS('NotoSansDevanagariCustomPDF.ttf', NotoSansDevanagariBase64);
-        doc.addFont('NotoSansDevanagariCustomPDF.ttf', DEVANAGARI_FONT_NAME, 'normal');
-        isDevanagariFontSuccessfullyEmbedded = true;
-        } catch (e) { console.error("Error embedding Devanagari font for PDF:", e); }
-    }
-
+const setupPdfDoc = async (
+  doc: jsPDF,
+  churchName: string,
+  documentTitle: string
+): Promise<{
+  yPos: number;
+  contentWidth: number;
+  margin: number;
+  baseFontSize: number;
+  titleFontSize: number;
+  headerFontSize: number;
+  lineSpacing: number;
+  sectionSpacing: number;
+  pageHeight: number;
+  pageWidth: number;
+}> => {
+    const fontState = await preparePdfDoc(doc);
+    isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
@@ -68,7 +77,7 @@ const setupPdfDoc = (doc: jsPDF, churchName: string, documentTitle: string): { y
     return { yPos, contentWidth, margin, baseFontSize, titleFontSize, headerFontSize, lineSpacing, sectionSpacing, pageHeight, pageWidth };
 };
 
-const addDetailLineToPdf = (doc: jsPDF, label: string, value: string | number | null | undefined, yPosRef: { current: number }, settings: ReturnType<typeof setupPdfDoc>, options: { isPotentiallyMultilingualValue?: boolean, isMultiLine?: boolean } = {}) => {
+const addDetailLineToPdf = (doc: jsPDF, label: string, value: string | number | null | undefined, yPosRef: { current: number }, settings: Awaited<ReturnType<typeof setupPdfDoc>>, options: { isPotentiallyMultilingualValue?: boolean, isMultiLine?: boolean } = {}) => {
     if (value === undefined || value === null || String(value).trim() === '') return;
     const { isPotentiallyMultilingualValue = false, isMultiLine = false } = options;
     const valueString = String(value).trim();
@@ -102,7 +111,7 @@ export const generateSchedulePDF = async (
   churchWebsite: string
 ): Promise<void> => {
   const doc = new jsPDF('p', 'mm', 'a4');
-  const settings = setupPdfDoc(doc, churchNameFromUI, "Generated Program Schedule");
+  const settings = await setupPdfDoc(doc, churchNameFromUI, "Generated Program Schedule");
   let yPosRef = { current: settings.yPos };
 
   const scheduleTitle = schedule.groupNameOrEventTitle || 'Untitled Schedule';
@@ -173,7 +182,7 @@ export const generateRosterItemPDF = async (
   churchWebsite: string
 ): Promise<void> => {
   const doc = new jsPDF('p', 'mm', 'a4');
-  const settings = setupPdfDoc(doc, churchName, "Fellowship Roster Item Details");
+  const settings = await setupPdfDoc(doc, churchName, "Fellowship Roster Item Details");
   let yPosRef = { current: settings.yPos };
 
   const rosterTitle = rosterItem.groupNameOrEventTitle || 'Untitled Roster Item';

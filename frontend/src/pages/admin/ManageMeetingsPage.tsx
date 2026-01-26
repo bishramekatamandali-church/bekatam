@@ -6,6 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { MeetingLog, MeetingLogFormData, GenericContentFormData, MeetingLogStatus, DecisionLogStatus, MeetingDecisionPoint, ActionItemStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 
@@ -23,7 +24,7 @@ const ViewListIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF';
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const BASE_FONT_NAME = 'Helvetica';
 let isDevanagariFontSuccessfullyEmbedded = false;
 
@@ -141,10 +142,9 @@ const ManageMeetingsPage: React.FC = () => {
     }
   };
   
-  const generateMeetingPdf = (meeting: MeetingLog) => {
+  const generateMeetingPdf = async (meeting: MeetingLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
-
-    tryEmbedDevanagariFont(doc);
+    const fontState = await preparePdfDoc(doc);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -159,18 +159,18 @@ const ManageMeetingsPage: React.FC = () => {
     const documentTitle = "Meeting Minutes/Log"; 
     
     doc.setFontSize(16);
-    doc.setFont(getCurrentFont(churchNameForPdf), 'bold'); 
+    setPdfFont(doc, fontState, 'bold');
     doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 7;
 
     doc.setFontSize(14);
-    doc.setFont(BASE_FONT_NAME, 'normal'); 
+    setPdfFont(doc, fontState, 'normal');
     doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 10;
     
     const meetingTitle = meeting.title || 'N/A';
     doc.setFontSize(12);
-    doc.setFont(getCurrentFont(meetingTitle), 'bold');
+    setPdfFont(doc, fontState, 'bold');
     doc.text(meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += sectionSpacing + 2;
 
@@ -186,10 +186,10 @@ const ManageMeetingsPage: React.FC = () => {
             yPosRef.current = margin;
         }
         
-        doc.setFont(getCurrentFont(label), 'bold'); 
+        setPdfFont(doc, fontState, 'bold');
         doc.text(`${label}:`, margin, yPosRef.current);
         
-        doc.setFont(getCurrentFont(valueString), 'normal'); 
+        setPdfFont(doc, fontState, 'normal');
         
         const labelWidth = doc.getTextWidth(`${label}:`) + 2;
         const valueXPos = margin + labelWidth;
@@ -224,13 +224,13 @@ const ManageMeetingsPage: React.FC = () => {
     if (meeting.actionItems && meeting.actionItems.length > 0) {
         if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
         doc.setFontSize(11);
-        doc.setFont(BASE_FONT_NAME, 'bold');
+        setPdfFont(doc, fontState, 'bold');
         doc.text('Action Items:', margin, yPosRef.current);
         yPosRef.current += lineSpacing + 1;
         (meeting.actionItems || []).forEach((item, index) => {
             if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
             doc.setFontSize(10);
-            doc.setFont(BASE_FONT_NAME, 'bold');
+            setPdfFont(doc, fontState, 'bold');
             doc.text(`Item ${index + 1}:`, margin, yPosRef.current);
             yPosRef.current += lineSpacing - 1;
             addDetail('  Description', item.description, { isMultiLine: true, isPotentiallyMultilingualValue: true });
@@ -245,14 +245,14 @@ const ManageMeetingsPage: React.FC = () => {
     if (meeting.decisionPoints && meeting.decisionPoints.length > 0) {
         if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
         doc.setFontSize(11);
-        doc.setFont(BASE_FONT_NAME, 'bold'); 
+        setPdfFont(doc, fontState, 'bold');
         doc.text('Decisions & Plans Discussed:', margin, yPosRef.current);
         yPosRef.current += lineSpacing + 1;
         
         (meeting.decisionPoints || []).forEach((dp, index) => {
             if (yPosRef.current > pageHeight - footerMargin - 40) { doc.addPage(); yPosRef.current = margin; }
             doc.setFontSize(10);
-            doc.setFont(BASE_FONT_NAME, 'bold'); 
+            setPdfFont(doc, fontState, 'bold');
             doc.text(`Item ${index + 1}:`, margin, yPosRef.current);
             yPosRef.current += lineSpacing - 1;
             addDetail('  Description', dp.description, { isMultiLine: true, isPotentiallyMultilingualValue: true });
@@ -276,12 +276,12 @@ const ManageMeetingsPage: React.FC = () => {
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
-        doc.setFont(BASE_FONT_NAME, 'normal'); 
+        setPdfFont(doc, fontState, 'normal');
         
         doc.text(`Generated date: ${generatedDate}`, margin, pageHeight - footerMargin);
         
         const copyrightText = `All rights reserved at ${churchNameForPdf} © ${currentYear}`;
-        doc.setFont(getCurrentFont(copyrightText), 'normal'); 
+        setPdfFont(doc, fontState, 'normal');
         const copyrightTextWidth = doc.getTextWidth(copyrightText);
         doc.text(copyrightText, (pageWidth - copyrightTextWidth) / 2, pageHeight - footerMargin);
         
