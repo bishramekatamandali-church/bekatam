@@ -402,8 +402,37 @@ const ManageMeetingsPage: React.FC = () => {
           {filteredMeetings.map(meeting => renderMeetingCard(meeting))}
         </div>
       ) : (
-        <Card className="overflow-x-auto">
-          {/* Table view logic can be added here if needed */}
+        <Card className="overflow-x-auto dark:bg-slate-800">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+            <thead className="bg-gray-50 dark:bg-slate-700">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+              {filteredMeetings.map((meeting) => (
+                <tr key={meeting.id}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-100 max-w-xs truncate" title={meeting.title}>{meeting.title}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{formatDateADBS(meeting.meetingDate)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{meeting.meetingType || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getMeetingStatusColor(meeting.status)}`}>
+                      {meeting.status || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-medium space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => generateMeetingPdf(meeting)} className="!p-1.5 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"><DocumentTextIcon className="w-4 h-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenModal(meeting)} className="!p-1.5 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">View/Edit</Button>
+                    <Button variant="secondary" size="sm" onClick={() => handleDelete(meeting.id)} className="!bg-red-500 hover:!bg-red-600 text-white !p-1.5">Delete</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
 
