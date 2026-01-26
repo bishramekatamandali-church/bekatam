@@ -144,7 +144,31 @@ const ManageMeetingsPage: React.FC = () => {
   
   const generateMeetingPdf = async (meeting: MeetingLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
-    const fontState = await preparePdfDoc(doc);
+    let fontState = await preparePdfDoc(doc);
+
+    if (fontState.fontName === BASE_FONT_NAME) {
+      tryEmbedDevanagariFont(doc);
+      if (isDevanagariFontSuccessfullyEmbedded) {
+        doc.setFont(DEVANAGARI_FONT_NAME, 'normal');
+        fontState = {
+          fontName: DEVANAGARI_FONT_NAME,
+          supportsBold: false,
+          supportsItalic: false,
+        };
+      }
+    }
+
+    const setFontForText = (text: string, style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal') => {
+      if (fontState.fontName === DEVANAGARI_FONT_NAME) {
+        setPdfFont(doc, fontState, style);
+        return;
+      }
+      if (isDevanagariFontSuccessfullyEmbedded && /[^\x00-\x7F]+/.test(text)) {
+        doc.setFont(DEVANAGARI_FONT_NAME, 'normal');
+        return;
+      }
+      setPdfFont(doc, fontState, style);
+    };
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -159,18 +183,18 @@ const ManageMeetingsPage: React.FC = () => {
     const documentTitle = "Meeting Minutes/Log"; 
     
     doc.setFontSize(16);
-    setPdfFont(doc, fontState, 'bold'); 
+    setFontForText(churchNameForPdf, 'bold'); 
     doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 7;
 
     doc.setFontSize(14);
-    setPdfFont(doc, fontState, 'normal'); 
+    setFontForText(documentTitle, 'normal'); 
     doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 10;
     
     const meetingTitle = meeting.title || 'N/A';
     doc.setFontSize(12);
-    setPdfFont(doc, fontState, 'bold');
+    setFontForText(meetingTitle, 'bold');
     doc.text(meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += sectionSpacing + 2;
 
@@ -189,7 +213,7 @@ const ManageMeetingsPage: React.FC = () => {
         setPdfFont(doc, fontState, 'bold'); 
         doc.text(`${label}:`, margin, yPosRef.current);
         
-        setPdfFont(doc, fontState, 'normal'); 
+        setFontForText(valueString, 'normal'); 
         
         const labelWidth = doc.getTextWidth(`${label}:`) + 2;
         const valueXPos = margin + labelWidth;
