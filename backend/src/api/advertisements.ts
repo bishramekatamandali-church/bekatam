@@ -2,6 +2,7 @@ import express from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import crypto from 'crypto';
+import { publishContentUpdate } from '../services/contentUpdates';
 
 const router = express.Router();
 
@@ -46,6 +47,7 @@ router.post('/', async (req, res) => {
         updatedAt: new Date(),
       },
     });
+    publishContentUpdate({ type: 'advertisement', action: 'created', id: created.id, timestamp: new Date().toISOString() });
     res.status(201).json(created);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create advertisement.' });
@@ -78,6 +80,7 @@ router.put('/:id', async (req, res) => {
         updatedAt: new Date(),
       },
     });
+    publishContentUpdate({ type: 'advertisement', action: 'updated', id: updated.id, timestamp: new Date().toISOString() });
     res.json(updated);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -93,6 +96,7 @@ router.delete('/:id', async (req, res) => {
 
   try {
     await prisma.advertisement.delete({ where: { id } });
+    publishContentUpdate({ type: 'advertisement', action: 'deleted', id, timestamp: new Date().toISOString() });
     res.status(204).send();
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
