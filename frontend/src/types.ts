@@ -904,7 +904,7 @@ export interface AuthContextType {
   logout: () => void;
   updateUserProfile?: (userId: string, data: Partial<User>) => Promise<boolean>;
   adminActionLogs: AdminActionLog[];
-  logAdminAction: (action: string, targetId?: string, details?: string) => void;
+  logAdminAction: (action: string, targetId?: string, details?: string, adminOverride?: User) => void;
   getAllUsers: () => User[];
   updateUserRole: (targetUserId: string, newRole: UserRole) => Promise<{ success: boolean; message?: string }>;
   userActivityLogs: FrontendActivityLog[];
