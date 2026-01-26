@@ -22,53 +22,7 @@ const ViewGridIcon: React.FC<{ className?: string }> = ({ className }) => (
 const ViewListIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-5 h-5"}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" /></svg>
 );
-
-const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
-const BASE_FONT_NAME = 'Helvetica';
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-const normalizeBase64Font = (fontData: string): string => fontData.replace(/\s+/g, '');
-
-const isValidBase64Font = (fontData: string): boolean => {
-  if (!fontData || fontData === 'YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE') {
-    return false;
-  }
-
-  const normalizedFontData = normalizeBase64Font(fontData);
-
-  try {
-    atob(normalizedFontData);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const tryEmbedDevanagariFont = (doc: jsPDF): void => {
-  isDevanagariFontSuccessfullyEmbedded = false;
-
-  if (!isValidBase64Font(NotoSansDevanagariBase64)) {
-    console.warn('Skipping Devanagari font embedding: invalid base64 data.');
-    return;
-  }
-
-  try {
-    const fontData = normalizeBase64Font(NotoSansDevanagariBase64);
-    doc.addFileToVFS('NotoSansDevanagariCustom.ttf', fontData);
-    doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
-    isDevanagariFontSuccessfullyEmbedded = true;
-  } catch (error) {
-    console.error('Could not embed font for PDF', error);
-  }
-};
-
-const getCurrentFont = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
+  
 
 const getMeetingStatusColor = (status?: MeetingLogStatus) => {
     switch(status) {
@@ -146,6 +100,11 @@ const ManageMeetingsPage: React.FC = () => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const fontState = await preparePdfDoc(doc);
 
+    const setFontForText = (text: string, style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal') => {
+      void text;
+      setPdfFont(doc, fontState, style);
+    };
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
@@ -159,18 +118,18 @@ const ManageMeetingsPage: React.FC = () => {
     const documentTitle = "Meeting Minutes/Log"; 
     
     doc.setFontSize(16);
-    setPdfFont(doc, fontState, 'bold'); 
+    setFontForText(churchNameForPdf, 'bold'); 
     doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 7;
 
     doc.setFontSize(14);
-    setPdfFont(doc, fontState, 'normal'); 
+    setFontForText(documentTitle, 'normal');
     doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += 10;
     
     const meetingTitle = meeting.title || 'N/A';
     doc.setFontSize(12);
-    setPdfFont(doc, fontState, 'bold');
+    setFontForText(meetingTitle, 'bold');
     doc.text(meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
     yPosRef.current += sectionSpacing + 2;
 
@@ -189,7 +148,7 @@ const ManageMeetingsPage: React.FC = () => {
         setPdfFont(doc, fontState, 'bold'); 
         doc.text(`${label}:`, margin, yPosRef.current);
         
-        setPdfFont(doc, fontState, 'normal'); 
+        setFontForText(valueString, 'normal'); 
         
         const labelWidth = doc.getTextWidth(`${label}:`) + 2;
         const valueXPos = margin + labelWidth;
