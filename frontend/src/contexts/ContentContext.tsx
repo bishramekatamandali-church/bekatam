@@ -29,6 +29,103 @@ import { formatDateADBS } from '../dateConverter';
 
 import { API_BASE_URL } from "../utils/apiConfig";
 
+const parseJsonArrayField = <T,>(value: unknown, fallback: T[] = []): T[] => {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+  if (typeof value !== 'string' || value.trim() === '') {
+    return fallback;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (error) {
+    console.warn('Failed to parse JSON array field.', error);
+    return fallback;
+  }
+};
+
+const normalizeMeetingTypeLabel = (value?: string): MeetingType | undefined => {
+  if (!value) return undefined;
+  const normalized = value.trim();
+  const normalizedValue = normalized.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalizedNoApostrophe = normalizedValue
+    .replace(/’|'/g, '')
+    .replace(/\b(\w+)\s+s\b/gi, '$1s');
+  const match = meetingTypeList.find((option) => {
+    const optionNormalized = option.replace(/’|'/g, '');
+    return optionNormalized.toLowerCase() === normalizedNoApostrophe.toLowerCase()
+      || option.toLowerCase() === normalizedValue.toLowerCase();
+  });
+  return match;
+};
+
+const normalizeDecisionStatusLabel = (value?: string): DecisionLogStatus | undefined => {
+  if (!value) return undefined;
+  const normalizedValue = value.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return decisionLogStatusList.find(
+    (option) => option.toLowerCase() === normalizedValue.toLowerCase(),
+  );
+};
+
+const normalizeMeetingStatusLabel = (value?: string): MeetingLogStatus | undefined => {
+  if (!value) return undefined;
+  const normalizedValue = value.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return meetingLogStatusList.find(
+    (option) => option.toLowerCase() === normalizedValue.toLowerCase(),
+  );
+};
+
+const serializeActionItems = (items: unknown) => {
+  if (Array.isArray(items)) {
+    return JSON.stringify(items);
+  }
+  if (typeof items === 'string') {
+    return items;
+  }
+  return undefined;
+};
+
+const normalizeMeetingLogItem = (item: any): MeetingLog => {
+  const decisionPointsRaw = item?.meetingdecisionpoint || item?.decisionPoints;
+  const decisionPoints = Array.isArray(decisionPointsRaw)
+    ? decisionPointsRaw.map((point: any) => ({
+      id: point.id,
+      description: point.description,
+      proposedBy: point.proposedBy,
+      status: normalizeDecisionStatusLabel(point.status) || point.status,
+      followUpNotes: point.followUpNotes,
+      resolutionDate: point.resolutionDate
+        ? new Date(point.resolutionDate).toISOString().split('T')[0]
+        : undefined,
+    }))
+    : [];
+
+  return {
+    ...item,
+    meetingDate: item?.meetingDate ? new Date(item.meetingDate).toISOString().split('T')[0] : item?.meetingDate,
+    meetingType: normalizeMeetingTypeLabel(item?.meetingType) || item?.meetingType,
+    status: normalizeMeetingStatusLabel(item?.status) || item?.status,
+    actionItems: parseJsonArrayField(item?.actionItems, []),
+    decisionPoints,
+  } as MeetingLog;
+};
+
+const normalizeDecisionLogItem = (item: any): DecisionLog => ({
+  ...item,
+  decisionDate: item?.decisionDate ? new Date(item.decisionDate).toISOString().split('T')[0] : item?.decisionDate,
+  status: normalizeDecisionStatusLabel(item?.status) || item?.status,
+  followUpActions: parseJsonArrayField(item?.followUpActions, []),
+});
+
+const normalizeMeetingTypeForApi = (value?: string) => {
+  if (!value) return undefined;
+  if (value.includes("'s")) {
+    return value.replace(/'s/g, '_s');
+  }
+  return value;
+};
+
 const normalizeSermonCategory = (category?: string): SermonCategory | undefined => {
   if (!category) return undefined;
   const cleaned = category.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
@@ -255,6 +352,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     collectionRecords: collectionRecords as CollectionRecord[],
     ministryJoinRequests: ministryJoinRequests as MinistryJoinRequest[],
     donatePageContent: donatePageContent as DonatePageContent,
+    meetingLogs: meetingLogs as MeetingLog[],
+    decisionLogs: decisionLogs as DecisionLog[],
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -277,6 +376,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'collection-records', setter: setCollectionRecords, storageKey: 'bem_collectionRecords', getCurrent: () => contentRef.current.collectionRecords },
     { key: 'ministry-join-requests', setter: setMinistryJoinRequests, storageKey: 'bem_ministryJoinRequests', getCurrent: () => contentRef.current.ministryJoinRequests },
     { key: 'donate-page', setter: setDonatePageContent, storageKey: 'bem_donatePageContent', getCurrent: () => contentRef.current.donatePageContent }, 
+    { key: 'meeting-logs', setter: setMeetingLogs, storageKey: 'bem_meetingLogs', getCurrent: () => contentRef.current.meetingLogs },
+    { key: 'decision-logs', setter: setDecisionLogs, storageKey: 'bem_decisionLogs', getCurrent: () => contentRef.current.decisionLogs },
  ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
@@ -342,6 +443,12 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
            if (!item || typeof item !== 'object') return item;
             if (config.key === 'sermons') {
               return normalizeSermonItem(item);
+            }
+            if (config.key === 'meeting-logs') {
+              return normalizeMeetingLogItem(item);
+            }
+            if (config.key === 'decision-logs') {
+              return normalizeDecisionLogItem(item);
             }
             let normalizedItem = item;
             if (item.comment && !item.comments) {
@@ -611,12 +718,12 @@ const nowTimestamp = new Date().toISOString();
   useEffect(() => { contentRef.current.ministryJoinRequests = ministryJoinRequests; saveStoredData('bem_ministryJoinRequests', ministryJoinRequests); }, [ministryJoinRequests]);
   useEffect(() => { contentRef.current.directMediaItems = directMediaItems; saveStoredData('bem_directMediaItems', directMediaItems); }, [directMediaItems]);
   useEffect(() => { contentRef.current.donatePageContent = donatePageContent; saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
+  useEffect(() => { contentRef.current.meetingLogs = meetingLogs; saveStoredData('bem_meetingLogs', meetingLogs); }, [meetingLogs]);
+  useEffect(() => { contentRef.current.decisionLogs = decisionLogs; saveStoredData('bem_decisionLogs', decisionLogs); }, [decisionLogs]);
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
   useEffect(() => { saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
   useEffect(() => { saveStoredData('bem_churchMembers', churchMembers); }, [churchMembers]);
-  useEffect(() => { saveStoredData('bem_meetingLogs', meetingLogs); }, [meetingLogs]);
-  useEffect(() => { saveStoredData('bem_decisionLogs', decisionLogs); }, [decisionLogs]);
   useEffect(() => { saveStoredData('bem_expenseRecords', expenseRecords); }, [expenseRecords]);
   useEffect(() => { saveStoredData('bem_content_activity_logs', contentActivityLogs); }, [contentActivityLogs]);
 
@@ -669,6 +776,8 @@ const nowTimestamp = new Date().toISOString();
     ministryJoinRequest: 'ministry-join-requests',
     contactMessage: 'contact-messages',
     expenseRecord: 'expense-records',
+    meetingLog: 'meeting-logs',
+    decisionLog: 'decision-logs',
 };
 
     const newItemId = `${type}-${Date.now()}`;
@@ -690,13 +799,30 @@ const nowTimestamp = new Date().toISOString();
         try {
             const payload = type === 'directMedia'
               ? buildDirectMediaPayload(normalizedData as DirectMediaFormData)
-              : normalizedData;
+              : type === 'meetingLog'
+                ? {
+                    ...normalizedData,
+                    meetingType: normalizeMeetingTypeForApi((normalizedData as MeetingLogFormData).meetingType),
+                    actionItems: serializeActionItems((normalizedData as MeetingLogFormData).actionItems),
+                  }
+                : type === 'decisionLog'
+                  ? {
+                      ...normalizedData,
+                      followUpActions: serializeActionItems((normalizedData as DecisionLogFormData).followUpActions),
+                    }
+                  : normalizedData;
             const response = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ ...payload, postedByAdminId: currentUser?.id, postedByAdminName: currentUser?.fullName, userId: currentUser?.id, userName: currentUser?.fullName, userEmail: currentUser?.email, userProfileImageUrl: currentUser?.profileImageUrl }) });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Failed to create ${type}`); }
             const newItem: ContentItem = await response.json();
             const normalizedNewItem =
-              type === 'sermon' ? (normalizeSermonItem(newItem) as ContentItem) : newItem;
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
+              type === 'sermon'
+                ? (normalizeSermonItem(newItem) as ContentItem)
+                : type === 'meetingLog'
+                  ? (normalizeMeetingLogItem(newItem) as ContentItem)
+                  : type === 'decisionLog'
+                    ? (normalizeDecisionLogItem(newItem) as ContentItem)
+                    : newItem;
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => [normalizedNewItem, ...ensureArray(prev)]);
@@ -910,7 +1036,18 @@ const nowTimestamp = new Date().toISOString();
         try {
         const payload = type === 'directMedia'
           ? buildDirectMediaPayload(data as DirectMediaFormData)
-          : data;
+          : type === 'meetingLog'
+            ? {
+                ...data,
+                meetingType: normalizeMeetingTypeForApi((data as MeetingLogFormData).meetingType),
+                actionItems: serializeActionItems((data as MeetingLogFormData).actionItems),
+              }
+            : type === 'decisionLog'
+              ? {
+                  ...data,
+                  followUpActions: serializeActionItems((data as DecisionLogFormData).followUpActions),
+                }
+              : data;
         const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -922,7 +1059,13 @@ const nowTimestamp = new Date().toISOString();
         }
         const updatedItem: ContentItem = await response.json();
         const normalizedUpdatedItem =
-          type === 'sermon' ? (normalizeSermonItem(updatedItem) as ContentItem) : updatedItem;
+          type === 'sermon'
+            ? (normalizeSermonItem(updatedItem) as ContentItem)
+            : type === 'meetingLog'
+              ? (normalizeMeetingLogItem(updatedItem) as ContentItem)
+              : type === 'decisionLog'
+                ? (normalizeDecisionLogItem(updatedItem) as ContentItem)
+                : updatedItem;
         const setterMap: Record<string, Function> = {
           sermon: setSermons,
           event: setEvents,
@@ -939,6 +1082,8 @@ const nowTimestamp = new Date().toISOString();
           testimonial: setTestimonials,
           donation: setDonationRecords,
           collectionRecord: setCollectionRecords,
+          meetingLog: setMeetingLogs,
+          decisionLog: setDecisionLogs,
         };
         const setter = setterMap[type];
         if (setter) {
@@ -1004,13 +1149,13 @@ const nowTimestamp = new Date().toISOString();
   }
 
   const deleteContent = async (type: ContentType, id: string): Promise<boolean> => {
-    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages' };
+    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages', meetingLog: 'meeting-logs', decisionLog: 'decision-logs' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
             const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
             if (!response.ok && response.status !== 204) throw new Error(`Failed to delete ${type} from server`);
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => ensureArray(prev).filter(item => item.id !== id));
