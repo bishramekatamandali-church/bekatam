@@ -214,7 +214,7 @@ const buildDonorListPdfBuffer = (
 
       if (refinedDonors.length > 0) {
         doc.addPage();
-        doc.fontSize(16).text('Refined Donor List', { align: 'left' });
+        doc.fontSize(16).text('refined doners list', { align: 'left' });
         doc.moveDown(0.6);
 
         refinedDonors.forEach((donor, index) => {
@@ -294,6 +294,7 @@ ${purposesXml}
   <donors>
 ${donorsXml}
   </donors>
+  <refinedDonorsHeader>refined doners list</refinedDonorsHeader>
   <refinedDonors>
 ${refinedXml}
   </refinedDonors>
