@@ -49,6 +49,71 @@ const normalizeDateRange = (startDate?: string, endDate?: string) => {
   return { start, end: normalizedEnd };
 };
 
+const normalizeMatchValue = (value?: string | null) => (value ?? '').trim().toLowerCase();
+
+const findMatchingDonor = (
+  donorsByName: Map<string, DonorListEntry[]>,
+  donorName: string,
+  address?: string | null,
+  contact?: string | null
+) => {
+  const nameKey = normalizeMatchValue(donorName);
+  const candidates = donorsByName.get(nameKey);
+  if (!candidates) {
+    return null;
+  }
+  const addressKey = normalizeMatchValue(address);
+  const contactKey = normalizeMatchValue(contact);
+  return (
+    candidates.find((candidate) => {
+      const candidateAddress = normalizeMatchValue(candidate.address);
+      const candidateContact = normalizeMatchValue(candidate.contact);
+      const addressMatches = addressKey && candidateAddress && addressKey === candidateAddress;
+      const contactMatches = contactKey && candidateContact && contactKey === candidateContact;
+      return addressMatches || contactMatches;
+    }) ?? null
+  );
+};
+
+const addDonorDonation = (
+  donorsByName: Map<string, DonorListEntry[]>,
+  donorName: string,
+  address: string | null | undefined,
+  contact: string | null | undefined,
+  donationEntry: DonorDonationEntry
+) => {
+  const trimmedName = donorName.trim();
+  if (!trimmedName) {
+    return;
+  }
+  const nameKey = normalizeMatchValue(trimmedName);
+  const existing = findMatchingDonor(donorsByName, trimmedName, address, contact);
+  if (existing) {
+    existing.totalAmount += donationEntry.amount;
+    existing.donations.push(donationEntry);
+    if (!existing.address && address) {
+      existing.address = address;
+    }
+    if (!existing.contact && contact) {
+      existing.contact = contact;
+    }
+    return;
+  }
+  const newEntry: DonorListEntry = {
+    donorName: trimmedName,
+    address: address ?? null,
+    contact: contact ?? null,
+    totalAmount: donationEntry.amount,
+    donations: [donationEntry],
+  };
+  const bucket = donorsByName.get(nameKey);
+  if (bucket) {
+    bucket.push(newEntry);
+  } else {
+    donorsByName.set(nameKey, [newEntry]);
+  }
+};
+
 const buildDonorListPdfBuffer = (title: string, donors: DonorListEntry[]): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
@@ -148,54 +213,66 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
   }
 
   try {
-    const records = await prisma.collectionrecord.findMany({
-      where: {
-        ...(start || end
-          ? {
-              collectionDate: {
-                ...(start ? { gte: start } : {}),
-                ...(end ? { lte: end } : {}),
-              },
-            }
-          : {}),
-      },
-      include: {
-        donordetail: true,
-      },
-      orderBy: {
-        collectionDate: 'asc',
-      },
-    });
+    const [collectionRecords, donationRecords] = await Promise.all([
+      prisma.collectionrecord.findMany({
+        where: {
+          ...(start || end
+            ? {
+                collectionDate: {
+                  ...(start ? { gte: start } : {}),
+                  ...(end ? { lte: end } : {}),
+                },
+              }
+            : {}),
+        },
+        include: {
+          donordetail: true,
+        },
+        orderBy: {
+          collectionDate: 'asc',
+        },
+      }),
+      prisma.donationrecord.findMany({
+        where: {
+          ...(start || end
+            ? {
+                donationDate: {
+                  ...(start ? { gte: start } : {}),
+                  ...(end ? { lte: end } : {}),
+                },
+              }
+            : {}),
+        },
+        orderBy: {
+          donationDate: 'asc',
+        },
+      }),
+    ]);
 
-    const donorsMap = new Map<string, DonorListEntry>();
-    records.forEach((record) => {
+    const donorsByName = new Map<string, DonorListEntry[]>();
+    collectionRecords.forEach((record) => {
       record.donordetail.forEach((donor) => {
-        const key = `${donor.donorName}`.trim().toLowerCase() +
-          `|${donor.address ?? ''}`.trim().toLowerCase() +
-          `|${donor.contact ?? ''}`.trim().toLowerCase();
         const donationEntry: DonorDonationEntry = {
           amount: Number(donor.amount ?? 0),
           date: record.collectionDate,
           collectionId: record.id,
         };
-
-        const existing = donorsMap.get(key);
-        if (existing) {
-          existing.totalAmount += donationEntry.amount;
-          existing.donations.push(donationEntry);
-        } else {
-          donorsMap.set(key, {
-            donorName: donor.donorName,
-            address: donor.address,
-            contact: donor.contact,
-            totalAmount: donationEntry.amount,
-            donations: [donationEntry],
-          });
-        }
+        addDonorDonation(donorsByName, donor.donorName, donor.address, donor.contact, donationEntry);
       });
     });
 
-    const donors = Array.from(donorsMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+    donationRecords.forEach((record) => {
+      const donationEntry: DonorDonationEntry = {
+        amount: Number(record.amount ?? 0),
+        date: record.donationDate,
+        collectionId: record.id,
+      };
+      addDonorDonation(donorsByName, record.donorName, null, record.donorPhone ?? null, donationEntry);
+    });
+
+    const donors = Array.from(donorsByName.values())
+      .flat()
+      .sort((a, b) => b.totalAmount - a.totalAmount);
     const titleParts = [
       start ? formatDate(start) : 'All time',
       end ? formatDate(end) : 'Present',
