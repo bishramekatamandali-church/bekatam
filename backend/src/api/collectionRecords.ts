@@ -7,13 +7,60 @@ import { handleDatabaseFallback } from '../utils/databaseFallback';
 
 const router = express.Router();
 
+type DonorPayload = {
+  donorName?: string;
+  amount?: number;
+  address?: string | null;
+  contact?: string | null;
+};
+
+const normalizeDonorEntries = (donors?: DonorPayload[]) => {
+  if (!Array.isArray(donors)) {
+    return null;
+  }
+  return donors
+    .map((donor) => {
+      const donorName = String(donor.donorName || '').trim();
+      if (!donorName) {
+        return null;
+      }
+      return {
+        id: crypto.randomUUID(),
+        donorName,
+        amount: Number(donor.amount) || 0,
+        address: donor.address?.trim() || null,
+        contact: donor.contact?.trim() || null,
+      };
+    })
+    .filter((donor): donor is NonNullable<typeof donor> => donor !== null);
+};
+
+const normalizeCollectionRecord = (record: any) => {
+  const { donordetail, amount, ...rest } = record;
+  const donors = Array.isArray(donordetail)
+    ? donordetail.map((donor: any) => ({
+        id: donor.id,
+        donorName: donor.donorName,
+        amount: Number(donor.amount ?? 0),
+        address: donor.address ?? undefined,
+        contact: donor.contact ?? undefined,
+      }))
+    : [];
+  return {
+    ...rest,
+    amount: Number(amount ?? 0),
+    donors,
+  };
+};
+
 // GET all collection records
 router.get('/', async (req, res) => {
     try {
         const records = await prisma.collectionrecord.findMany({
             orderBy: { collectionDate: 'desc' },
+            include: { donordetail: true },
         });
-        res.json(records);
+        res.json(records.map((record) => normalizeCollectionRecord(record)));
     } catch (error) {
         if (handleDatabaseFallback(req, res, error)) {
             return;
@@ -36,7 +83,8 @@ router.post('/', async (req, res) => {
         depositDate, 
         bankDepositReference, 
         recordedByAdminId, 
-        recordedByAdminName 
+        recordedByAdminName,
+        donors,
     } = req.body;
 
     if (!collectorName || !collectionDate || !amount || !purpose) {
@@ -49,6 +97,7 @@ router.post('/', async (req, res) => {
     }
 
     try {
+        const donorEntries = normalizeDonorEntries(donors);
         const newRecord = await prisma.collectionrecord.create({
             data: {
                 id: crypto.randomUUID(),                   // ✅ Required
@@ -69,10 +118,16 @@ router.post('/', async (req, res) => {
                 recordedByAdminId: recordedByAdminId || 'system',
                 recordedByAdminName: recordedByAdminName || 'System',
                 recordedAt: new Date(),
-            }
+                ...(donorEntries && donorEntries.length > 0
+                  ? { donordetail: { create: donorEntries } }
+                  : {}),
+            },
+            include: {
+              donordetail: true,
+            },
         });
 
-        res.status(201).json(newRecord);
+        res.status(201).json(normalizeCollectionRecord(newRecord));
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: 'Failed to create collection record.' });
@@ -93,7 +148,8 @@ router.put('/:id', async (req, res) => {
         countedBy, 
         isDeposited, 
         depositDate, 
-        bankDepositReference 
+        bankDepositReference,
+        donors,
     } = req.body;
     
     const normalizedPurpose = normalizeEnumValue(purpose, collectionrecord_purpose);
@@ -102,6 +158,7 @@ router.put('/:id', async (req, res) => {
     }
     
     try {
+        const donorEntries = normalizeDonorEntries(donors);
         const updatedRecord = await prisma.collectionrecord.update({
             where: { id },
             data: {
@@ -118,10 +175,22 @@ router.put('/:id', async (req, res) => {
                 bankDepositReference,
 
                 updatedAt: new Date(),                     // ✅ Required
+                ...(donorEntries
+                  ? {
+                      donordetail: {
+                        deleteMany: {},
+                        create: donorEntries,
+                      },
+                    }
+                  : {}),
             }
         });
 
-        res.json(updatedRecord);
+        const updatedWithDonors = await prisma.collectionrecord.findUnique({
+          where: { id },
+          include: { donordetail: true },
+        });
+        res.json(updatedWithDonors ? normalizeCollectionRecord(updatedWithDonors) : updatedRecord);
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Collection record not found.' });

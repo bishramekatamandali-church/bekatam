@@ -8,6 +8,7 @@ type DonorDonationEntry = {
   amount: number;
   date: string;
   collectionId: string;
+  purpose?: string | null;
 };
 
 type DonorListEntry = {
@@ -172,6 +173,7 @@ const DonorListReportPage: React.FC = () => {
                     <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Donated</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Latest Donation</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Latest Purpose</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -186,6 +188,7 @@ const DonorListReportPage: React.FC = () => {
                         <td className="px-4 py-2 text-slate-500">
                           {latestDonation ? formatDateADBS(latestDonation.date) : '—'}
                         </td>
+                        <td className="px-4 py-2 text-slate-500">{latestDonation?.purpose || '—'}</td>
                       </tr>
                     );
                   })}
