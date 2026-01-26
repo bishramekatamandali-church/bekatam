@@ -20,6 +20,15 @@ type DonorListEntry = {
   donations: DonorDonationEntry[];
 };
 
+type RefinedDonorEntry = {
+  donorName: string;
+  address: string | null;
+  contact: string | null;
+  totalAmount: number;
+  purposes: string[];
+  mergedCount: number;
+};
+
 const formatDate = (date: Date) => {
   try {
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
@@ -115,7 +124,54 @@ const addDonorDonation = (
   }
 };
 
-const buildDonorListPdfBuffer = (title: string, donors: DonorListEntry[]): Promise<Buffer> => {
+const buildRefinedDonorList = (donors: DonorListEntry[]): RefinedDonorEntry[] => {
+  const grouped = new Map<string, RefinedDonorEntry>();
+
+  donors.forEach((donor) => {
+    const normalizedName = donor.donorName.trim().toLowerCase();
+    if (!normalizedName) {
+      return;
+    }
+    const purposes = donor.donations
+      .map((donation) => donation.purpose?.trim())
+      .filter((purpose): purpose is string => Boolean(purpose))
+      .map((purpose) => purpose.toLowerCase());
+    const existing = grouped.get(normalizedName);
+
+    if (!existing) {
+      grouped.set(normalizedName, {
+        donorName: donor.donorName,
+        address: donor.address?.trim() || null,
+        contact: donor.contact?.trim() || null,
+        totalAmount: Number(donor.totalAmount) || 0,
+        purposes: [...purposes],
+        mergedCount: 1,
+      });
+      return;
+    }
+
+    existing.totalAmount += Number(donor.totalAmount) || 0;
+    existing.mergedCount += 1;
+    if (!existing.address && donor.address?.trim()) {
+      existing.address = donor.address.trim();
+    }
+    if (!existing.contact && donor.contact?.trim()) {
+      existing.contact = donor.contact.trim();
+    }
+    existing.purposes.push(...purposes);
+  });
+
+  return Array.from(grouped.values()).map((entry) => ({
+    ...entry,
+    purposes: Array.from(new Set(entry.purposes)),
+  }));
+};
+
+const buildDonorListPdfBuffer = (
+  title: string,
+  donors: DonorListEntry[],
+  refinedDonors: RefinedDonorEntry[]
+): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -156,6 +212,30 @@ const buildDonorListPdfBuffer = (title: string, donors: DonorListEntry[]): Promi
         }
       });
 
+      if (refinedDonors.length > 0) {
+        doc.addPage();
+        doc.fontSize(16).text('Refined Donor List', { align: 'left' });
+        doc.moveDown(0.6);
+
+        refinedDonors.forEach((donor, index) => {
+          if (index > 0) {
+            doc.moveDown(0.4);
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+            doc.moveDown(0.4);
+          }
+
+          const mergedLabel = donor.mergedCount > 1 ? ` (merged ${donor.mergedCount})` : '';
+          const purposes = donor.purposes.length > 0 ? donor.purposes.join(', ') : '—';
+          doc.fontSize(12).text(`${donor.donorName}${mergedLabel}`);
+          doc.fontSize(10).fillColor('#555555');
+          doc.text(`Address: ${donor.address ?? '—'}`);
+          doc.text(`Contact: ${donor.contact ?? '—'}`);
+          doc.text(`Total Donated: NPR ${donor.totalAmount.toFixed(2)}`);
+          doc.text(`Purposes: ${purposes}`);
+          doc.fillColor('#000000');
+        });
+      }
+
       doc.end();
     } catch (error) {
       reject(error);
@@ -163,7 +243,7 @@ const buildDonorListPdfBuffer = (title: string, donors: DonorListEntry[]): Promi
   });
 };
 
-const buildDonorListXml = (title: string, donors: DonorListEntry[]) => {
+const buildDonorListXml = (title: string, donors: DonorListEntry[], refinedDonors: RefinedDonorEntry[]) => {
   const donorsXml = donors
     .map((donor) => {
       const donationsXml = donor.donations
@@ -190,12 +270,33 @@ ${donationsXml}
     })
     .join('\n');
 
+  const refinedXml = refinedDonors
+    .map((donor) => {
+      const purposesXml = donor.purposes
+        .map((purpose) => `        <purpose>${purpose}</purpose>`)
+        .join('\n');
+      return `    <refinedDonor>
+      <name>${donor.donorName}</name>
+      <address>${donor.address ?? ''}</address>
+      <contact>${donor.contact ?? ''}</contact>
+      <totalAmount>${donor.totalAmount.toFixed(2)}</totalAmount>
+      <mergedCount>${donor.mergedCount}</mergedCount>
+      <purposes>
+${purposesXml}
+      </purposes>
+    </refinedDonor>`;
+    })
+    .join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <donorsList>
   <title>${title}</title>
   <donors>
 ${donorsXml}
   </donors>
+  <refinedDonors>
+${refinedXml}
+  </refinedDonors>
 </donorsList>`;
 };
 
@@ -285,16 +386,17 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
       end ? formatDate(end) : 'Present',
     ];
     const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
+    const refinedDonors = buildRefinedDonorList(donors);
 
     if (format === 'pdf') {
-      const pdfBuffer = await buildDonorListPdfBuffer(title, donors);
+      const pdfBuffer = await buildDonorListPdfBuffer(title, donors, refinedDonors);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.pdf"');
       return res.status(200).send(pdfBuffer);
     }
 
     if (format === 'xml') {
-      const xmlPayload = buildDonorListXml(title, donors);
+      const xmlPayload = buildDonorListXml(title, donors, refinedDonors);
       res.setHeader('Content-Type', 'application/xml');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.xml"');
       return res.status(200).send(xmlPayload);
