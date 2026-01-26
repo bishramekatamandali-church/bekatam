@@ -9,6 +9,7 @@ type DonorDonationEntry = {
   amount: number;
   date: Date;
   collectionId: string;
+  purpose?: string | null;
 };
 
 type DonorListEntry = {
@@ -147,7 +148,10 @@ const buildDonorListPdfBuffer = (title: string, donors: DonorListEntry[]): Promi
         if (donor.donations.length > 0) {
           doc.moveDown(0.3);
           donor.donations.forEach((donation) => {
-            doc.fontSize(9).text(`• ${formatDate(donation.date)} - NPR ${donation.amount.toFixed(2)}`);
+            const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : '';
+            doc
+              .fontSize(9)
+              .text(`• ${formatDate(donation.date)} - NPR ${donation.amount.toFixed(2)}${purposeLabel}`);
           });
         }
       });
@@ -169,6 +173,7 @@ const buildDonorListXml = (title: string, donors: DonorListEntry[]) => {
         <date>${donation.date.toISOString()}</date>
         <amount>${donation.amount.toFixed(2)}</amount>
         <collectionId>${donation.collectionId}</collectionId>
+        <purpose>${donation.purpose ?? ''}</purpose>
       </donation>`
         )
         .join('\n');
@@ -256,6 +261,7 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
           amount: Number(donor.amount ?? 0),
           date: record.collectionDate,
           collectionId: record.id,
+          purpose: record.purpose,
         };
         addDonorDonation(donorsByName, donor.donorName, donor.address, donor.contact, donationEntry);
       });
@@ -266,6 +272,7 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
         amount: Number(record.amount ?? 0),
         date: record.donationDate,
         collectionId: record.id,
+        purpose: record.purpose,
       };
       addDonorDonation(donorsByName, record.donorName, null, record.donorPhone ?? null, donationEntry);
     });
