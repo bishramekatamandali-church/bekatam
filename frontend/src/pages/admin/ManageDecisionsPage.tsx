@@ -52,6 +52,41 @@ const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustomPDF';
 const BASE_FONT_NAME = 'Helvetica';
 let isDevanagariFontSuccessfullyEmbedded = false;
 
+const normalizeBase64Font = (fontData: string): string => fontData.replace(/\s+/g, '');
+
+const isValidBase64Font = (fontData: string): boolean => {
+  if (!fontData || fontData === 'YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE') {
+    return false;
+  }
+
+  const normalizedFontData = normalizeBase64Font(fontData);
+
+  try {
+    atob(normalizedFontData);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const tryEmbedDevanagariFont = (doc: jsPDF): void => {
+  isDevanagariFontSuccessfullyEmbedded = false;
+
+  if (!isValidBase64Font(NotoSansDevanagariBase64)) {
+    console.warn('Skipping Devanagari font embedding: invalid base64 data.');
+    return;
+  }
+
+  try {
+    const fontData = normalizeBase64Font(NotoSansDevanagariBase64);
+    doc.addFileToVFS('NotoSansDevanagariCustom.ttf', fontData);
+    doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
+    isDevanagariFontSuccessfullyEmbedded = true;
+  } catch (error) {
+    console.error('Could not embed font for PDF', error);
+  }
+};
+
 const getCurrentFont = (text: string): string => {
   if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
     return DEVANAGARI_FONT_NAME;
@@ -104,14 +139,7 @@ const ManageDecisionsPage: React.FC = () => {
   const generateDecisionPdf = (decision: DecisionLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     
-    isDevanagariFontSuccessfullyEmbedded = false;
-    try {
-        if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE") {
-            doc.addFileToVFS('NotoSansDevanagariCustom.ttf', NotoSansDevanagariBase64);
-            doc.addFont('NotoSansDevanagariCustom.ttf', DEVANAGARI_FONT_NAME, 'normal');
-            isDevanagariFontSuccessfullyEmbedded = true;
-        }
-    } catch (e) { console.error("Could not embed font for PDF", e); }
+    tryEmbedDevanagariFont(doc);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
