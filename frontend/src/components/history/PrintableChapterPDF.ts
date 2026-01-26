@@ -1,11 +1,11 @@
 // components/history/PrintableChapterPDF.ts
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc } from '../../utils/pdfFonts';
 import { HistoryChapter } from '../../types';
 import { formatTimestampADBS, formatDateADBS } from '../../dateConverter';
 import { getMediaKindFromUrl } from '../../utils/media';
 
-const NotoSansDevanagariBase64: string = "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE"; 
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagariCustom'; 
+const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari'; 
 const BASE_FONT_NAME = 'Helvetica'; 
 let isDevanagariFontSuccessfullyEmbedded = false;
 
@@ -105,18 +105,8 @@ export const generateChapterPdf = async (
     format: paperSize,
   });
   
-  isDevanagariFontSuccessfullyEmbedded = false;
-  if (NotoSansDevanagariBase64 && NotoSansDevanagariBase64 !== "YOUR_DEVANAGARI_FONT_BASE64_STRING_HERE" && NotoSansDevanagariBase64.length > 100) {
-    try {
-      doc.addFileToVFS('NotoSansDevanagariCustomPDF.ttf', NotoSansDevanagariBase64); 
-      doc.addFont('NotoSansDevanagariCustomPDF.ttf', DEVANAGARI_FONT_NAME, 'normal');
-      isDevanagariFontSuccessfullyEmbedded = true;
-    } catch (e) {
-      console.error("Error embedding Devanagari font for PDF:", e);
-    }
-  } else {
-    console.warn("Devanagari font base64 string is a placeholder or too short. Nepali text may not render correctly in PDF.");
-  }
+  const fontState = await preparePdfDoc(doc);
+  isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
 
   const settings = getPaperSettings(doc, paperSize);
   const { margin, contentWidth, baseFontSize, titleFontSize, headerFontSize, footerFontSize, lineHeightFactor } = settings;

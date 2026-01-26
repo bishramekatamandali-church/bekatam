@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { applyPdfFont } from "./pdfFonts";
 
 export type DonationReceiptPdfData = {
   id: string;
@@ -22,6 +23,7 @@ export const buildDonationReceiptPdfBuffer = (data: DonationReceiptPdfData): Pro
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", margin: 50 });
+      applyPdfFont(doc);
       const chunks: Buffer[] = [];
 
       doc.on("data", (c: Buffer) => {

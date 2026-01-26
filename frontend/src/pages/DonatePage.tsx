@@ -5,6 +5,7 @@ import { useContent } from '../contexts/ContentContext';
 import { donationPurposeList, DonationRecord } from '../types';
 import { formatDateADBS } from '../dateConverter';
 import { jsPDF } from 'jspdf';
+import { preparePdfDoc } from '../utils/pdfFonts';
 import { useAuth } from '../contexts/AuthContext';
 
 const HeartIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -76,8 +77,9 @@ const DonationReceipt: React.FC<{ record: DonationRecord; verses?: string; onMak
   }, [verses]);
 
   const handlePrint = () => window.print();
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const doc = new jsPDF();
+    await preparePdfDoc(doc);
     doc.text(`Donation Receipt`, 10, 10);
     doc.text(`Thank you, ${record.donorName}!`, 10, 20);
     doc.text(`Amount: NPR ${Number(record.amount ?? 0).toFixed(2)}`, 10, 30);
