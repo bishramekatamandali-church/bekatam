@@ -114,6 +114,8 @@ const Sidebar: React.FC = () => {
             </Button>
         </section>
 
+        <AdSlot placementKey="sidebar_secondary" />
+
         <section>
           <h3 className="text-md font-semibold text-slate-800 mb-2 border-b pb-1.5 border-slate-300">Quick Links</h3>
           <ul className="space-y-1 text-sm">

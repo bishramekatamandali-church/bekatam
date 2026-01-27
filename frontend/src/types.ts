@@ -755,6 +755,7 @@ export const adPlacementList = [
   'news_list_top',
   'single_page_bottom',
   'sidebar_main',
+  'sidebar_secondary',
   'footer_banner'
 ] as const;
 export type AdPlacement = typeof adPlacementList[number];
