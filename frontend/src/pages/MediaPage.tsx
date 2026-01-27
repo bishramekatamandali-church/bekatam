@@ -120,7 +120,7 @@ const MediaPage: React.FC = () => {
           <p className="text-center text-slate-500 text-lg py-10">No media items found matching your criteria.</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {paginatedMedia.map((item) => (
                 <Card key={item.id} className="flex flex-col group overflow-hidden">
                   <div className="relative w-full aspect-[4/3] bg-slate-200 flex items-center justify-center">
