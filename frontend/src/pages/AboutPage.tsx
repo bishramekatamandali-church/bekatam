@@ -176,7 +176,7 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
           <section id="our-team" className="scroll-mt-20 text-center py-16">
             <h2 className="text-3xl font-bold text-slate-800 mb-2">Our Team</h2>
             <p className="text-slate-600 max-w-2xl mx-auto mb-10">Meet the dedicated leaders serving our church community.</p>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[50%] max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto">
               {keyPersons.map(person => <KeyPersonCard key={person.id} person={person} />)}
             </div>
           </section>
