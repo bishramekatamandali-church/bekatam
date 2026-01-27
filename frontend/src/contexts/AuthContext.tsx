@@ -19,7 +19,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_TOKEN_KEY = "bem_auth_token";
 const CURRENT_USER_KEY = "bem_current_user";
-const ADMIN_ACTION_LOGS_STORAGE_KEY = "bem_admin_action_logs";
 const USER_ACTIVITY_LOGS_STORAGE_KEY = "bem_user_activity_logs";
 
 const getStoredData = <T,>(key: string, defaultValue: T): T => {
@@ -50,9 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
   const [loadingAuthState, setLoadingAuthState] = useState(true);
 
-  const [adminActionLogs, setAdminActionLogs] = useState<AdminActionLog[]>(
-    () => getStoredData(ADMIN_ACTION_LOGS_STORAGE_KEY, [])
-  );
+  const [adminActionLogs, setAdminActionLogs] = useState<AdminActionLog[]>([]);
   const [userActivityLogs, setUserActivityLogs] = useState<FrontendActivityLog[]>(
     () => getStoredData(USER_ACTIVITY_LOGS_STORAGE_KEY, [])
   );
@@ -63,26 +60,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   /* --------------------------- LOGGING HELPERS --------------------------- */
 
   const logAdminAction = useCallback(
-    (action: string, targetId?: string, details?: string) => {
-      if (!currentUser || !isAdmin) return;
+    async (action: string, targetId?: string, details?: string, adminOverride?: User) => {
+      const admin = adminOverride ?? currentUser;
+      if (!admin || admin.role !== "admin") return;
 
-      const log: AdminActionLog = {
-        id: `admin-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        adminId: currentUser.id,
-        adminName: currentUser.fullName,
-        action,
-        targetId,
-        details,
-      };
+      try {
+        const res = await fetch(`${API_BASE_URL}/activity-logs/admin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({
+            adminId: admin.id,
+            adminName: admin.fullName,
+            action,
+            targetId,
+            details,
+          }),
+        });
 
-      setAdminActionLogs((prev) => {
-        const next = [log, ...prev.slice(0, 49)];
-        saveStoredData(ADMIN_ACTION_LOGS_STORAGE_KEY, next);
-        return next;
-      });
+      if (!res.ok) {
+          console.error("Failed to log admin action.");
+          return;
+        }
+
+        const created: AdminActionLog = await res.json();
+        setAdminActionLogs((prev) => [created, ...prev]);
+      } catch (error) {
+        console.error("Error logging admin action:", error);
+      }
     },
-    [currentUser, isAdmin]
+    [currentUser]
   );
 
   const logUserActivity = useCallback(
@@ -117,6 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = useCallback(() => {
     setCurrentUser(null);
+    setAdminActionLogs([]);
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(CURRENT_USER_KEY);
   }, []);
@@ -154,6 +161,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadSession();
   }, [logout]);
 
+  const fetchAdminActionLogs = useCallback(async () => {
+    if (!currentUser || !isAdmin) {
+      setAdminActionLogs([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/activity-logs/admin`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) {
+        console.error("Failed to load admin action logs.");
+        setAdminActionLogs([]);
+        return;
+      }
+      const logs = await res.json();
+      setAdminActionLogs(Array.isArray(logs) ? logs : []);
+    } catch (error) {
+      console.error("Error loading admin action logs:", error);
+      setAdminActionLogs([]);
+    }
+  }, [currentUser, isAdmin]);
+
+  useEffect(() => {
+    fetchAdminActionLogs();
+  }, [fetchAdminActionLogs]);
+
   /* --------------------------- BACKEND LOGIN --------------------------- */
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
@@ -177,7 +211,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCurrentUser(data.user);
 
       logUserActivity("User logged in", "user_login");
-      if (data.user.role === "admin") logAdminAction("Admin Logged In", data.user.id);
+      if (data.user.role === "admin") {
+        logAdminAction("Admin Logged In", data.user.id, undefined, data.user);
+      }
 
       setLoadingAuthState(false);
       return true;

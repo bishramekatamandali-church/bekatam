@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const db_1 = require("../db");
 const crypto_1 = __importDefault(require("crypto"));
+const contentUpdates_1 = require("../services/contentUpdates");
 const router = express_1.default.Router();
 // List ads with newest first
 router.get('/', async (_req, res) => {
@@ -47,6 +48,7 @@ router.post('/', async (req, res) => {
                 updatedAt: new Date(),
             },
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'advertisement', action: 'created', id: created.id, timestamp: new Date().toISOString() });
         res.status(201).json(created);
     }
     catch (error) {
@@ -78,6 +80,7 @@ router.put('/:id', async (req, res) => {
                 updatedAt: new Date(),
             },
         });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'advertisement', action: 'updated', id: updated.id, timestamp: new Date().toISOString() });
         res.json(updated);
     }
     catch (error) {
@@ -92,6 +95,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await db_1.prisma.advertisement.delete({ where: { id } });
+        (0, contentUpdates_1.publishContentUpdate)({ type: 'advertisement', action: 'deleted', id, timestamp: new Date().toISOString() });
         res.status(204).send();
     }
     catch (error) {

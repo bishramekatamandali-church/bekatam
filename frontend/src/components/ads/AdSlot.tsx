@@ -110,14 +110,14 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
           muted
           loop
           playsInline
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-md"
+          className="absolute top-0 left-0 w-full h-full object-contain rounded-md bg-black"
         />
       ) : currentAdToDisplay.imageUrl ? (
         <img 
           key={currentAdToDisplay.id + '-image'}
           src={currentAdToDisplay.imageUrl} 
           alt={currentAdToDisplay.altText || currentAdToDisplay.name} 
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-md"
+          className="absolute top-0 left-0 w-full h-full object-contain rounded-md bg-slate-50 dark:bg-slate-700"
         />
       ) : (
         <div className="absolute top-0 left-0 w-full h-full bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-slate-400 dark:text-slate-500 rounded-md">
@@ -132,7 +132,7 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
   return (
     <div 
       className={`bem-ad-slot ${placementKey} ${className || ''} my-4 relative flex justify-center w-full`}
-      style={{ maxWidth: `${adDimensions.width}px`}} // Slot takes full available width up to its max
+      style={{ maxWidth: `${adDimensions.width}px`, width: '100%' }} // Slot takes full available width up to its max
       role="complementary" 
       aria-label={`${adLabelText}: ${currentAdToDisplay.name}`}
     >

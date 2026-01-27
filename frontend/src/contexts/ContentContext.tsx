@@ -354,6 +354,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     donatePageContent: donatePageContent as DonatePageContent,
     meetingLogs: meetingLogs as MeetingLog[],
     decisionLogs: decisionLogs as DecisionLog[],
+    advertisements: advertisements as Advertisement[],
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -378,6 +379,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'donate-page', setter: setDonatePageContent, storageKey: 'bem_donatePageContent', getCurrent: () => contentRef.current.donatePageContent }, 
     { key: 'meeting-logs', setter: setMeetingLogs, storageKey: 'bem_meetingLogs', getCurrent: () => contentRef.current.meetingLogs },
     { key: 'decision-logs', setter: setDecisionLogs, storageKey: 'bem_decisionLogs', getCurrent: () => contentRef.current.decisionLogs },
+    { key: 'advertisements', setter: setAdvertisements, storageKey: 'bem_advertisements', getCurrent: () => contentRef.current.advertisements },
  ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
@@ -393,6 +395,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   hasLoggedNetworkErrorRef.current = false;
 	
+  const allowEmptyOverwriteKeys = new Set(['advertisements']);
   const fetchPromises = dataFetchConfig.map(async (config) => {
     const currentValue = config.getCurrent?.();
     const hasExistingContent = Array.isArray(currentValue)
@@ -426,7 +429,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         : Array.isArray(data)
           ? data.length > 0
           : !!data;
-      if (!hasServerContent && hasExistingContent) {
+      if (!hasServerContent && hasExistingContent && !allowEmptyOverwriteKeys.has(config.key)) {
         if (isDev) {
           console.warn(
             `Skipped overwriting ${config.key} with empty server response to preserve existing content.`
@@ -720,9 +723,9 @@ const nowTimestamp = new Date().toISOString();
   useEffect(() => { contentRef.current.donatePageContent = donatePageContent; saveStoredData('bem_donatePageContent', donatePageContent); }, [donatePageContent]);
   useEffect(() => { contentRef.current.meetingLogs = meetingLogs; saveStoredData('bem_meetingLogs', meetingLogs); }, [meetingLogs]);
   useEffect(() => { contentRef.current.decisionLogs = decisionLogs; saveStoredData('bem_decisionLogs', decisionLogs); }, [decisionLogs]);
+  useEffect(() => { contentRef.current.advertisements = advertisements; saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
-  useEffect(() => { saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
   useEffect(() => { saveStoredData('bem_churchMembers', churchMembers); }, [churchMembers]);
   useEffect(() => { saveStoredData('bem_expenseRecords', expenseRecords); }, [expenseRecords]);
   useEffect(() => { saveStoredData('bem_content_activity_logs', contentActivityLogs); }, [contentActivityLogs]);
@@ -778,6 +781,7 @@ const nowTimestamp = new Date().toISOString();
     expenseRecord: 'expense-records',
     meetingLog: 'meeting-logs',
     decisionLog: 'decision-logs',
+    advertisement: 'advertisements',
 };
 
     const newItemId = `${type}-${Date.now()}`;
@@ -822,7 +826,7 @@ const nowTimestamp = new Date().toISOString();
                   : type === 'decisionLog'
                     ? (normalizeDecisionLogItem(newItem) as ContentItem)
                     : newItem;
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => [normalizedNewItem, ...ensureArray(prev)]);
@@ -1030,7 +1034,7 @@ const nowTimestamp = new Date().toISOString();
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
  directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials',
  donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
- ministryJoinRequest: 'ministry-join-requests' };
+ ministryJoinRequest: 'ministry-join-requests', advertisement: 'advertisements' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
@@ -1084,6 +1088,7 @@ const nowTimestamp = new Date().toISOString();
           collectionRecord: setCollectionRecords,
           meetingLog: setMeetingLogs,
           decisionLog: setDecisionLogs,
+          advertisement: setAdvertisements,
         };
         const setter = setterMap[type];
         if (setter) {
@@ -1149,13 +1154,13 @@ const nowTimestamp = new Date().toISOString();
   }
 
   const deleteContent = async (type: ContentType, id: string): Promise<boolean> => {
-    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages', meetingLog: 'meeting-logs', decisionLog: 'decision-logs' };
+    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages', meetingLog: 'meeting-logs', decisionLog: 'decision-logs', advertisement: 'advertisements' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
             const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
             if (!response.ok && response.status !== 204) throw new Error(`Failed to delete ${type} from server`);
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => ensureArray(prev).filter(item => item.id !== id));
