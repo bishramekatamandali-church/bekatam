@@ -64,27 +64,27 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
   return (
     <>
       <Card className="text-center h-full min-h-screen flex flex-col">
-        <CardContent className="flex-grow flex flex-col gap-6">
+        <CardContent className="flex-grow flex flex-col gap-6 p-0">
           {person.imageUrl && (
             <button
               type="button"
               onClick={() => setIsImageOpen(true)}
-              className="flex-1 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
+              className="flex-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
               aria-label={`View ${person.name} portrait full screen`}
             >
               <AboutMedia
                 url={person.imageUrl}
                 alt={person.name}
-                className="h-full"
+                className="w-full aspect-square"
                 mediaClassName="w-full h-full object-cover"
               />
             </button>
           )}
-          <div className="space-y-2">
+          <div className="space-y-2 px-6">
             <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
             <p className="text-purple-600 font-medium">{person.role}</p>
           </div>
-          <p className="text-sm text-slate-600">{person.bio}</p>
+          <p className="text-sm text-slate-600 px-6 pb-6">{person.bio}</p>
         </CardContent>
       </Card>
       {person.imageUrl && (
@@ -173,10 +173,10 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
         </div>
         
         {keyPersons.length > 0 && (
-          <section id="our-team" className="scroll-mt-20 text-center py-16">
+          <section id="our-team" className="scroll-mt-20 text-center py-16 -mx-4">
             <h2 className="text-3xl font-bold text-slate-800 mb-2">Our Team</h2>
             <p className="text-slate-600 max-w-2xl mx-auto mb-10">Meet the dedicated leaders serving our church community.</p>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
               {keyPersons.map(person => <KeyPersonCard key={person.id} person={person} />)}
             </div>
           </section>
