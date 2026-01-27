@@ -63,13 +63,13 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
 
   return (
     <>
-      <Card className="text-center h-full flex flex-col">
-        <CardContent className="flex-grow flex flex-col">
+      <Card className="text-center h-full min-h-screen flex flex-col">
+        <CardContent className="flex-grow flex flex-col gap-6">
           {person.imageUrl && (
             <button
               type="button"
               onClick={() => setIsImageOpen(true)}
-              className="h-full focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
+              className="flex-1 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-lg"
               aria-label={`View ${person.name} portrait full screen`}
             >
               <AboutMedia
@@ -80,9 +80,11 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
               />
             </button>
           )}
-          <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
-          <p className="text-purple-600 font-medium mb-2">{person.role}</p>
-          <p className="text-sm text-slate-600 flex-grow">{person.bio}</p>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-slate-800">{person.name}</h3>
+            <p className="text-purple-600 font-medium">{person.role}</p>
+          </div>
+          <p className="text-sm text-slate-600">{person.bio}</p>
         </CardContent>
       </Card>
       {person.imageUrl && (
@@ -93,9 +95,9 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
           alt={person.name}
         />
       )}
-  </>
+    </>
   );
-};    
+};
   const AboutPage: React.FC = () => {
   const { aboutSections, keyPersons, historyMilestones, loadingContent, historyChapters } = useContent();
   const location = useLocation();
@@ -174,7 +176,7 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
           <section id="our-team" className="scroll-mt-20 text-center py-16">
             <h2 className="text-3xl font-bold text-slate-800 mb-2">Our Team</h2>
             <p className="text-slate-600 max-w-2xl mx-auto mb-10">Meet the dedicated leaders serving our church community.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[50%] max-w-6xl mx-auto">
               {keyPersons.map(person => <KeyPersonCard key={person.id} person={person} />)}
             </div>
           </section>
