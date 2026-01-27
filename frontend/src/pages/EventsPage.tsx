@@ -112,18 +112,18 @@ const EventsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-12 sm:space-y-16">
-        <header className="text-center sm:text-left pt-4">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-8 space-y-8 sm:space-y-10">
+        <header className="text-center sm:text-left pt-2">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
             Church Events
           </h1>
         </header>
 
-        <div className="mb-8 p-4 bg-white rounded-xl shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+        <div className="mb-5 p-3 bg-white rounded-xl shadow-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
             <div className="lg:col-span-1">
-              <label htmlFor="search-events" className="block text-sm font-medium text-slate-700 mb-1">
-                Search Events
+              <label htmlFor="search-events" className="sr-only">
+                Search events
               </label>
               <div className="relative">
                 <input
@@ -138,8 +138,8 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
             <div>
-              <label htmlFor="category-filter-events" className="block text-sm font-medium text-slate-700 mb-1">
-                Filter by Category
+              <label htmlFor="category-filter-events" className="sr-only">
+                Filter by category
               </label>
               <div className="relative">
                 <select
@@ -179,13 +179,13 @@ const EventsPage: React.FC = () => {
           </div>
         </div>
 
-        <AdSlot placementKey="event_list_top" className="my-6" />
+        <AdSlot placementKey="event_list_top" className="my-4" />
 
         {viewMode === 'list' ? (
           <>
             {featuredEvent && (
               <section aria-labelledby="featured-event-title" className="mt-0">
-                <h2 id="featured-event-title" className="text-2xl font-semibold text-slate-700 mb-4 sm:mb-6 text-center sm:text-left">
+                <h2 id="featured-event-title" className="text-2xl font-semibold text-slate-700 mb-3 sm:mb-4 text-center sm:text-left">
                   Remember This? Our Latest Highlight!
                 </h2>
                 <FeaturedEventDisplay event={featuredEvent} isPastEvent={true} />
@@ -193,7 +193,7 @@ const EventsPage: React.FC = () => {
             )}
 
             <section aria-labelledby="upcoming-events-title">
-              <h2 id="upcoming-events-title" className="text-2xl font-semibold text-slate-700 mb-6 sm:mb-8 text-center sm:text-left">Upcoming Events</h2>
+              <h2 id="upcoming-events-title" className="text-2xl font-semibold text-slate-700 mb-4 sm:mb-5 text-center sm:text-left">Upcoming Events</h2>
               {upcomingEventsSorted.length === 0 && !loadingContent ? (
                 <div className="bg-purple-50 rounded-xl shadow-md p-8 text-center">
                   <p className="text-slate-500 text-lg">
@@ -201,7 +201,7 @@ const EventsPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                   {upcomingEventsSorted.map((event) => (
                     <EventCard key={event.id} event={event} isPastEvent={false} />
                   ))}
@@ -211,8 +211,8 @@ const EventsPage: React.FC = () => {
 
             {pastEventsSorted.length > 0 && (
               <section aria-labelledby="past-events-title">
-                <h2 id="past-events-title" className="text-2xl font-semibold text-slate-700 mb-6 sm:mb-8 text-center sm:text-left">Past Events Archive</h2>
-                <div className="grid grid-cols-1 gap-6 md:gap-8">
+                <h2 id="past-events-title" className="text-2xl font-semibold text-slate-700 mb-4 sm:mb-5 text-center sm:text-left">Past Events Archive</h2>
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                   {pastEventsSorted.map((event) => (
                     <EventCard key={event.id} event={event} isPastEvent={true} />
                   ))}
