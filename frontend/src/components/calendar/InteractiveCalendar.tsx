@@ -22,7 +22,7 @@ const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
 );
 
-export type CalendarEntryType = 'event' | 'news' | 'sermon' | 'blog';
+export type CalendarEntryType = 'event' | 'news' | 'sermon' | 'blog' | 'notice';
 
 export interface CalendarEntry {
   id: string;
@@ -56,6 +56,7 @@ const TYPE_COLORS: Record<CalendarEntryType, string> = {
   news: 'bg-amber-500',
   sermon: 'bg-purple-500',
   blog: 'bg-blue-500',
+  notice: 'bg-rose-500',
 };
 
 
@@ -238,6 +239,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsDate.month && selectedBsDate?.year === currentBsDate.year;
       
       const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
+      const hasNotice = entriesOnDay.some((entry) => entry.type === 'notice');
 
       const isSaturday = getNepalDayOfWeek(adDateForBsDay) === 6;
 
@@ -277,7 +279,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
 
           {/* Events */}
           {entriesOnDay.length > 0 && (
-            <div className="flex justify-center items-end space-x-1 h-4">
+            <div className="flex flex-col items-center justify-end space-y-0.5 h-6">
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
                   <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
@@ -287,6 +289,11 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
                 </div>
               ))}
               {entriesOnDay.length > 4 && <div className="text-xs text-teal-600">+</div>}
+              {hasNotice && (
+                <span className="text-[9px] uppercase tracking-wide text-rose-600">
+                  notice
+                </span>
+              )}
             </div>
           )}
         </div>
