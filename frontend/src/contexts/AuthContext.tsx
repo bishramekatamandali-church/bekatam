@@ -233,7 +233,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     phone: string,
     password: string,
     profileImageUrl?: string
-  ): Promise<boolean> => {
+  ): Promise<{ ok: boolean; error?: string }> => {
     setLoadingAuthState(true);
 
     try {
@@ -246,7 +246,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await res.json();
       if (!res.ok) {
         setLoadingAuthState(false);
-        return false;
+        return { ok: false, error: data?.error };
       }
 
       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
@@ -256,11 +256,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logUserActivity("User registered", "user_registration");
 
       setLoadingAuthState(false);
-      return true;
+      return { ok: true };
     } catch (err) {
       console.error("Register error:", err);
       setLoadingAuthState(false);
-      return false;
+      return { ok: false, error: "Registration failed. Please try again." };
     }
   };
 
