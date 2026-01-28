@@ -28,6 +28,7 @@ import BranchesPage from './../pages/BranchesPage';
 import MediaPage from './../pages/MediaPage';
 import EventCalendarPage from './../pages/EventCalendarPage'; 
 import ChurchHistoryPage from './../pages/ChurchHistoryPage';
+import PrayerRequestsPage from './../pages/PrayerRequestsPage';
 import ResetPasswordPage from './../pages/ResetPasswordPage'; 
 import FellowshipProgramDetailPage from './../pages/FellowshipProgramDetailPage';
 import PublicProfilePage from './../pages/PublicProfilePage';
@@ -124,6 +125,7 @@ const AppContent: React.FC = () => {
             <Route path="/fellowship-program/:itemType/:itemId" element={<FellowshipProgramDetailPage />} />
             
             <Route path="/community" element={<CommunityPage />} /> 
+            <Route path="/prayer-requests" element={<PrayerRequestsPage />} />
             <Route 
               path="/profile" 
               element={<ProtectedRoute element={<ProfilePage />} />}

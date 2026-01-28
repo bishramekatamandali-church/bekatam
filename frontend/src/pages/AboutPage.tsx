@@ -175,7 +175,11 @@ const KeyPersonCard: React.FC<{ person: KeyPerson }> = ({ person }) => {
             <div className="relative max-w-2xl mx-auto">
               <div className="border-l-2 border-slate-300 absolute h-full top-0 left-4 sm:left-1/2 sm:-translate-x-1/2"></div>
               {sortedMilestones.map(milestone => (
-                <div key={milestone.id} className="relative pl-8 sm:pl-0 sm:grid sm:grid-cols-2 sm:gap-x-12 py-4">
+                <div
+                  key={milestone.id}
+                  id={`milestone-${milestone.id}`}
+                  className="relative pl-8 sm:pl-0 sm:grid sm:grid-cols-2 sm:gap-x-12 py-4 scroll-mt-24"
+                >
                     <div className="sm:text-right">
                         <div className="flex items-center mb-1 sm:justify-end">
                             <time className="text-xs font-semibold uppercase text-purple-600 bg-purple-100 rounded-full px-3 py-1">{milestone.year}</time>

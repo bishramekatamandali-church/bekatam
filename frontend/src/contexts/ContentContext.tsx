@@ -272,13 +272,68 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const contentNotificationConfig = useMemo(
     () => ({
-      sermon: { label: 'Sermon', linkPrefix: '/sermons' },
-      event: { label: 'Event', linkPrefix: '/events' },
-      blogPost: { label: 'Blog', linkPrefix: '/blog' },
-      news: { label: 'News', linkPrefix: '/news' },
-    }) satisfies Partial<Record<ContentType, { label: string; linkPrefix: string }>>,
+      sermon: { label: 'Sermon' },
+      event: { label: 'Event' },
+      blogPost: { label: 'Blog' },
+      news: { label: 'News' },
+      ministry: { label: 'Ministry' },
+      directMedia: { label: 'Media' },
+      prayerRequest: { label: 'Prayer Request' },
+      testimonial: { label: 'Testimonial' },
+      historyChapter: { label: 'History Chapter' },
+      historyMilestone: { label: 'History Milestone' },
+      aboutSection: { label: 'About Section' },
+      branchChurch: { label: 'Branch Update' },
+    }) satisfies Partial<Record<ContentType, { label: string }>>,
     [],
   );
+
+  const buildNotificationLink = useCallback((type: ContentType, item: ContentItem): string => {
+    const typedItem = item as any;
+    switch (type) {
+      case 'sermon':
+        return typedItem.linkPath || `/sermons/${typedItem.id}`;
+      case 'event':
+        return typedItem.linkPath || `/events/${typedItem.id}`;
+      case 'blogPost':
+        return typedItem.linkPath || `/blog/${typedItem.id}`;
+      case 'news':
+        return typedItem.linkPath || `/news/${typedItem.id}`;
+      case 'ministry':
+        return typedItem.linkPath || `/ministries/${typedItem.id}`;
+      case 'directMedia':
+        if (typedItem.linkPath && typedItem.linkPath.includes('#')) {
+          return typedItem.linkPath;
+        }
+        return `/media#media-${typedItem.id}`;
+      case 'prayerRequest':
+        if (typedItem.linkPath && typedItem.linkPath.includes('#')) {
+          return typedItem.linkPath;
+        }
+        return `/prayer-requests#prayer-${typedItem.id}`;
+      case 'testimonial':
+        if (typedItem.linkPath && typedItem.linkPath.includes('#')) {
+          return typedItem.linkPath;
+        }
+        return `/prayer-requests#testimonial-${typedItem.id}`;
+      case 'historyChapter':
+        if (typedItem.linkPath && typedItem.linkPath.includes('#')) {
+          return typedItem.linkPath;
+        }
+        return `/church-history#${typedItem.id}`;
+      case 'historyMilestone':
+        return `/about#milestone-${typedItem.id}`;
+      case 'aboutSection':
+        return `/about#${typedItem.id}`;
+      case 'branchChurch':
+        if (typedItem.linkPath && typedItem.linkPath.includes('#')) {
+          return typedItem.linkPath;
+        }
+        return `/branches#${typedItem.id}`;
+      default:
+        return typedItem.linkPath || '/';
+    }
+  }, []);
 
   const promptUnblockRequest = useCallback(async (blockReason?: string) => {
     const reasonText = blockReason?.trim() ? blockReason.trim() : 'an unspecified reason';
@@ -319,7 +374,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         action === 'added'
           ? `New ${config.label} published: "${title}"`
           : `${config.label} updated: "${title}"`;
-      const link = (item as any).linkPath || `${config.linkPrefix}/${item.id}`;
+      const link = buildNotificationLink(type, item);
       addNotification({
         targetUserId: 'all_users_for_content',
         message,
@@ -327,7 +382,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
         type: 'new_content_published',
       });
     },
-    [addNotification, contentNotificationConfig],
+    [addNotification, buildNotificationLink, contentNotificationConfig],
   );
 
   const [sermons, setSermons] = useState<Sermon[]>(() =>
@@ -575,11 +630,19 @@ const nowTimestamp = new Date().toISOString();
   const lastSeenTimestamp = lastSeenContentRef.current;
   if (lastSeenTimestamp) {
     const lastSeenTime = new Date(lastSeenTimestamp).getTime();
-    const contentConfig: Record<string, { label: string; fallbackLink: string }> = {
-      sermons: { label: 'Sermon', fallbackLink: '/sermons' },
-      events: { label: 'Event', fallbackLink: '/events' },
-      blogposts: { label: 'Blog', fallbackLink: '/blog' },
-      newsitems: { label: 'News', fallbackLink: '/news' },
+    const contentConfig: Record<string, { label: string; type: ContentType }> = {
+      sermons: { label: 'Sermon', type: 'sermon' },
+      events: { label: 'Event', type: 'event' },
+      blogposts: { label: 'Blog', type: 'blogPost' },
+      newsitems: { label: 'News', type: 'news' },
+      ministries: { label: 'Ministry', type: 'ministry' },
+      'direct-media': { label: 'Media', type: 'directMedia' },
+      'prayer-requests': { label: 'Prayer Request', type: 'prayerRequest' },
+      testimonials: { label: 'Testimonial', type: 'testimonial' },
+      historychapters: { label: 'History Chapter', type: 'historyChapter' },
+      historymilestones: { label: 'History Milestone', type: 'historyMilestone' },
+      aboutsections: { label: 'About Section', type: 'aboutSection' },
+      branchchurches: { label: 'Branch Update', type: 'branchChurch' },
     };
 
     const recentUpdates: Array<{ message: string; link: string; timestamp: string }> = [];
@@ -600,7 +663,7 @@ const nowTimestamp = new Date().toISOString();
         const title = item?.title || item?.name || 'New update';
         recentUpdates.push({
           message: `New ${config.label} update: "${title}"`,
-          link: item?.linkPath || `${config.fallbackLink}/${item?.id ?? ''}`.replace(/\/$/, ''),
+          link: buildNotificationLink(config.type, item as ContentItem),
           timestamp,
         });
       });
@@ -631,7 +694,7 @@ const nowTimestamp = new Date().toISOString();
   if (didUpdateContent) {
     updateLastSeenContent(nowTimestamp);
   }
-}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId, isDev, fellowshipRosters.length, generatedSchedules.length]);
+}, [dataFetchConfig, addGuestNotification, addNotification, updateLastSeenContent, isGuest, currentUser, activeUserId, isDev, fellowshipRosters.length, generatedSchedules.length, buildNotificationLink]);
 
   useEffect(() => {
     fetchContentBatch(true);

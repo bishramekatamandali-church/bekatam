@@ -303,6 +303,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     return safe.filter(notif => notif.targetUserId === activeUserId && !notif.read).length;
   }, [notifications, activeUserId, loadingNotifications]);
 
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return;
+    const updateBadge = async () => {
+      try {
+        if (isGuest) {
+          if ('clearAppBadge' in navigator) {
+            await navigator.clearAppBadge();
+          }
+          return;
+        }
+        if (unreadCount > 0) {
+          await navigator.setAppBadge(unreadCount);
+        } else if ('clearAppBadge' in navigator) {
+          await navigator.clearAppBadge();
+        }
+      } catch (error) {
+        console.error('Failed to update app badge', error);
+      }
+    };
+
+    updateBadge();
+  }, [unreadCount, isGuest]);
+
   const replaceNotificationsForUser = useCallback((userId: string, next: AppNotification[]) => {
     const key = getStorageKey(userId, userId.startsWith('guest-'));
     writeNotifications(key, next);
