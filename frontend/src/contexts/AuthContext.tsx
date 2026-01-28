@@ -383,7 +383,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         logout,
 
-        updateUserProfile: async () => false,
+        updateUserProfile: async (userId, payload) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              console.error("Failed to update profile:", data?.error || res.statusText);
+              return false;
+            }
+
+            if (data?.user?.id && currentUser?.id === data.user.id) {
+              setCurrentUser(data.user);
+              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(data.user));
+            }
+
+            logUserActivity("User updated profile", "user_update", userId, "userAccount");
+            return true;
+          } catch (e) {
+            console.error("updateUserProfile error:", e);
+            return false;
+          }
+        },
 
         adminActionLogs,
         logAdminAction,
