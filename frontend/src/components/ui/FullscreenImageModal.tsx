@@ -36,7 +36,7 @@ const FullscreenImageModal: React.FC<FullscreenImageModalProps> = ({
       aria-label={alt}
       onClick={onClose}
     >
-      <div className="relative max-h-[95vh] max-w-[95vw]" onClick={(event) => event.stopPropagation()}>
+      <div className="relative h-screen w-screen p-6" onClick={(event) => event.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
@@ -54,7 +54,7 @@ const FullscreenImageModal: React.FC<FullscreenImageModalProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <img src={imageUrl} alt={alt} className="max-h-[95vh] max-w-[95vw] rounded-lg shadow-2xl" />
+        <img src={imageUrl} alt={alt} className="h-full w-full rounded-lg object-contain shadow-2xl" />
       </div>
     </div>
   );

@@ -78,7 +78,9 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
       }
     }
     // Fallback dimensions if AD_SIZES key is invalid or not found
-    if (placementKey === 'sidebar_main' || placementKey === 'content_list_interspersed') return { width: 300, height: 250 };
+    if (placementKey === 'sidebar_main' || placementKey === 'sidebar_secondary' || placementKey === 'content_list_interspersed') {
+      return { width: 300, height: 250 };
+    }
     if (placementKey === 'homepage_banner_top' || placementKey === 'homepage_banner_bottom' || placementKey === 'footer_banner' || placementKey === 'sermon_list_top' || placementKey === 'event_list_top' || placementKey === 'blog_list_top' || placementKey === 'news_list_top') return { width: 728, height: 90 };
     return { width: 300, height: 250 }; // Generic fallback
   }, [currentAdToDisplay, placementKey]);
@@ -98,6 +100,9 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
   }
 
   const adLabelText = 'Ad';
+  const adSizeLabel = currentAdToDisplay.adSizeKey
+    ? AD_SIZES[currentAdToDisplay.adSizeKey]
+    : `${adDimensions.width}x${adDimensions.height}`;
 
   const adContentElement = (
     <>
@@ -110,14 +115,14 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
           muted
           loop
           playsInline
-          className="absolute top-0 left-0 w-full h-full object-contain rounded-md bg-black"
+          className="absolute top-0 left-0 w-full h-full object-cover rounded-md bg-black"
         />
       ) : currentAdToDisplay.imageUrl ? (
         <img 
           key={currentAdToDisplay.id + '-image'}
           src={currentAdToDisplay.imageUrl} 
           alt={currentAdToDisplay.altText || currentAdToDisplay.name} 
-          className="absolute top-0 left-0 w-full h-full object-contain rounded-md bg-slate-50 dark:bg-slate-700"
+          className="absolute top-0 left-0 w-full h-full object-cover rounded-md bg-slate-50 dark:bg-slate-700"
         />
       ) : (
         <div className="absolute top-0 left-0 w-full h-full bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-slate-400 dark:text-slate-500 rounded-md">
@@ -144,7 +149,8 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
         className={`relative w-full shadow-sm overflow-hidden rounded-md transition-opacity duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
         style={{ 
           aspectRatio: `${aspectRatio}`, // Maintain aspect ratio
-          maxHeight: `${adDimensions.height}px` // Cap height
+          maxHeight: `${adDimensions.height}px`, // Cap height
+          maxWidth: `${adDimensions.width}px`
         }} 
       >
         {currentAdToDisplay.linkUrl ? (
@@ -163,6 +169,9 @@ const AdSlot: React.FC<AdSlotProps> = ({ placementKey, className }) => {
           </div>
         )}
       </div>
+       <span className="absolute bottom-1 left-1 text-[9px] bg-black/50 text-white px-1.5 py-0.5 rounded-md z-20">
+        {adSizeLabel}
+      </span>
       <style>{`
         .bem-ad-slot .transition-opacity { transition-property: opacity; }
         .bem-ad-slot .duration-300 { transition-duration: 300ms; }

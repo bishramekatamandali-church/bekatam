@@ -2,9 +2,11 @@ import crypto from "crypto";
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authMiddleware } from "../middleware/auth";
 import { handleDatabaseFallback } from "../utils/databaseFallback";
+import { getJwtSecret } from "../utils/jwt";
 import { sendEmail } from "../services/emailService";
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
@@ -82,7 +84,7 @@ function createToken(user: any) {
       role: user.role,
       fullName: user.fullName,
     },
-    process.env.JWT_SECRET as string,
+    getJwtSecret(),
     { expiresIn: "7d" }
   );
 }
@@ -162,7 +164,7 @@ const verifyEmailOtp = async (email: string, purpose: string, code: string) => {
 ---------------------------------------------- */
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password, countryCode, phone } = req.body;
+    const { fullName, email, password, countryCode, phone, profileImageUrl } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -186,7 +188,17 @@ router.post("/register", async (req, res) => {
 
     const usernameCandidate = await generateUniqueUsername(baseUsername);
 
-    const phoneValue = (countryCode || "") + (phone || "");
+    const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+    const normalizedCountryCode = typeof countryCode === "string" ? countryCode.trim() : "";
+    const hasPhone = Boolean(normalizedPhone);
+    const phoneValue = hasPhone ? `${normalizedCountryCode}${normalizedPhone}` : "";
+
+    if (phoneValue) {
+      const existingPhone = await prisma.user.findFirst({ where: { phone: phoneValue } });
+      if (existingPhone) {
+        return res.status(400).json({ error: "Phone already exists" });
+      }
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -195,8 +207,9 @@ router.post("/register", async (req, res) => {
         email: normalizedEmail,
         username: usernameCandidate,
         role,
-        countryCode: countryCode ?? null,
+        countryCode: hasPhone ? normalizedCountryCode || null : null,
         phone: phoneValue ? phoneValue.replace(/\s+/g, "") : null,
+        profileImageUrl: typeof profileImageUrl === "string" ? profileImageUrl : null,
         // Store hashed password in password columns
         password: hashed as any,
         passwordHash: hashed as any,
@@ -219,6 +232,21 @@ router.post("/register", async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const targets = Array.isArray(error.meta?.target)
+        ? error.meta?.target
+        : [error.meta?.target].filter(Boolean);
+      if (targets.includes("email")) {
+        return res.status(409).json({ error: "Email already exists" });
+      }
+      if (targets.includes("phone")) {
+        return res.status(409).json({ error: "Phone already exists" });
+      }
+      if (targets.includes("username")) {
+        return res.status(409).json({ error: "Username already exists" });
+      }
+      return res.status(409).json({ error: "Duplicate value" });
+    }
     if (handleDatabaseFallback(req, res, error)) {
       return;
     }

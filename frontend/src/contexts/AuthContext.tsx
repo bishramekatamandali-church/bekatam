@@ -232,21 +232,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     countryCode: string,
     phone: string,
     password: string,
-    _profileImageUrl?: string
-  ): Promise<boolean> => {
+    profileImageUrl?: string
+  ): Promise<{ ok: boolean; error?: string }> => {
     setLoadingAuthState(true);
 
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password, countryCode, phone }),
+        body: JSON.stringify({ fullName, email, password, countryCode, phone, profileImageUrl }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         setLoadingAuthState(false);
-        return false;
+        return { ok: false, error: data?.error };
       }
 
       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
@@ -256,11 +256,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logUserActivity("User registered", "user_registration");
 
       setLoadingAuthState(false);
-      return true;
+      return { ok: true };
     } catch (err) {
       console.error("Register error:", err);
       setLoadingAuthState(false);
-      return false;
+      return { ok: false, error: "Registration failed. Please try again." };
     }
   };
 
@@ -383,7 +383,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         logout,
 
-        updateUserProfile: async () => false,
+        updateUserProfile: async (userId, payload) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              console.error("Failed to update profile:", data?.error || res.statusText);
+              return false;
+            }
+
+            if (data?.user?.id && currentUser?.id === data.user.id) {
+              setCurrentUser(data.user);
+              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(data.user));
+            }
+
+            logUserActivity("User updated profile", "user_update", userId, "userAccount");
+            return true;
+          } catch (e) {
+            console.error("updateUserProfile error:", e);
+            return false;
+          }
+        },
 
         adminActionLogs,
         logAdminAction,

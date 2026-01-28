@@ -113,6 +113,8 @@ const Sidebar: React.FC = () => {
                 <CalendarIcon className="mr-2 w-4 h-4"/> View Event Calendar
             </Button>
         </section>
+        
+        <AdSlot placementKey="sidebar_secondary" />
 
         <section>
           <h3 className="text-md font-semibold text-slate-800 mb-2 border-b pb-1.5 border-slate-300">Quick Links</h3>

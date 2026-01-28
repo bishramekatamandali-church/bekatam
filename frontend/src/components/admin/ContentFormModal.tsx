@@ -88,9 +88,9 @@ const FormSection: React.FC<{
   titleClassName?: string;
 }> = ({ title, children, className, titleClassName }) => (
   <div
-    className={`pt-5 mt-5 border-t border-slate-200 dark:border-slate-700 first:mt-0 first:pt-0 first:border-t-0 ${className}`}
+    className={`pt-5 mt-5 border-t border-slate-200 dark:border-slate-200 first:mt-0 first:pt-0 first:border-t-0 ${className}`}
   >
-    <h3 className={`text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 ${titleClassName || ''}`}>
+    <h3 className={`text-lg font-semibold text-slate-800 dark:text-slate-800 mb-4 ${titleClassName || ''}`}>
       {title}
     </h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
@@ -104,8 +104,8 @@ const FullWidthField: React.FC<{ children: React.ReactNode }> = ({ children }) =
 );
 
 const inputClasses =
-  'w-full p-2.5 border border-slate-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 disabled:bg-slate-100 dark:disabled:bg-slate-800';
-const labelClasses = 'block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1';
+  'w-full p-2.5 border border-slate-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white text-slate-700 dark:bg-white dark:text-slate-700 dark:border-slate-300 disabled:bg-slate-100 dark:disabled:bg-slate-100';
+const labelClasses = 'block text-xs font-medium text-slate-600 dark:text-slate-600 mb-1';
 
 // Unified media component for sermons/events/blog/news
 const UnifiedMediaInputs: React.FC<{
@@ -166,7 +166,7 @@ const UnifiedMediaInputs: React.FC<{
     const Icon = PhotoIcon;
 
     return (
-      <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 min-h-[120px] flex flex-col justify-center items-center text-center">
+      <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-300 rounded-lg p-3 min-h-[120px] flex flex-col justify-center items-center text-center">
         {url ? (
           <>
             {type === 'image' && (
@@ -184,7 +184,7 @@ const UnifiedMediaInputs: React.FC<{
                   [fieldName]: '',
                 }))
               }
-              className="absolute -top-2 -right-2 bg-white dark:bg-slate-700 rounded-full p-0.5"
+              className="absolute -top-2 -right-2 bg-white dark:bg-white rounded-full p-0.5"
             >
               <XCircleIcon className="w-5 h-5 text-red-500" />
             </button>
@@ -196,7 +196,7 @@ const UnifiedMediaInputs: React.FC<{
           </div>
         )}
         {isFieldUploading[fieldName] && uploadingStatus[fieldName] && (
-          <p className="absolute bottom-1 text-xs text-purple-600 dark:text-purple-400 animate-pulse">
+          <p className="absolute bottom-1 text-xs text-purple-600 dark:text-purple-600 animate-pulse">
             {uploadingStatus[fieldName]}
           </p>
         )}
@@ -210,8 +210,8 @@ const UnifiedMediaInputs: React.FC<{
   });
 
   return (
-    <div className={`rounded-lg space-y-4 sm:col-span-2 ${variant === 'compact' ? 'p-3' : 'p-4'} bg-slate-100 dark:bg-slate-800/50 ${containerClassName || ''}`}>
-      <h3 className={`font-semibold text-slate-800 dark:text-slate-200 ${titleClassName || ''}`}>Media Attachments</h3>
+    <div className={`rounded-lg space-y-4 sm:col-span-2 ${variant === 'compact' ? 'p-3' : 'p-4'} bg-white border border-slate-200 ${containerClassName || ''}`}>
+      <h3 className={`font-semibold text-slate-800 dark:text-slate-800 ${titleClassName || ''}`}>Media Attachments</h3>
       {variant === 'default' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MediaSlot type="image" url={(formData as any).imageUrl} />
@@ -219,7 +219,7 @@ const UnifiedMediaInputs: React.FC<{
           <MediaSlot type="audio" url={(formData as any).audioUrl} />
         </div>
       ) : (
-        <div className={`flex flex-wrap gap-3 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-300'}`}>
+        <div className={`flex flex-wrap gap-3 text-xs ${forceLightText ? 'text-black/70' : 'text-slate-600 dark:text-slate-600'}`}>
           {(['image', 'video', 'audio'] as const).map((type) => {
             const fieldName = type === 'image' ? 'imageUrl' : `${type}Url`;
             const currentUrl = (formData as any)[fieldName];
@@ -227,7 +227,7 @@ const UnifiedMediaInputs: React.FC<{
             return (
               <div
                 key={type}
-                className={`flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-slate-700 dark:border-slate-600'}`}
+                className={`flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 shadow-sm ${forceLightText ? 'bg-white text-black/80' : 'bg-white dark:bg-white dark:border-slate-300'}`}
               >
                 <div className="flex items-center justify-center">
                   {type === 'image' && (
@@ -259,7 +259,7 @@ const UnifiedMediaInputs: React.FC<{
           {!hasAnyMedia && <span>No media attached yet.</span>}
         </div>
       )}
-      <div className={`${variant === 'compact' ? '' : 'pt-2 border-t border-slate-200 dark:border-slate-700'} space-y-3`}>
+      <div className={`${variant === 'compact' ? '' : 'pt-2 border-t border-slate-200 dark:border-slate-200'} space-y-3`}>
         <input
           type="file"
           ref={unifiedMediaInputRef}
@@ -274,7 +274,7 @@ const UnifiedMediaInputs: React.FC<{
               type="button"
               onClick={() => unifiedMediaInputRef.current?.click()}
               disabled={anyMediaFieldUploading}
-              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'}`}
+              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-300 dark:text-slate-800 dark:hover:bg-slate-100'}`}
             >
               <PhotoIcon className="h-5 w-5" /> Add Media
             </button>
@@ -284,7 +284,7 @@ const UnifiedMediaInputs: React.FC<{
               disabled={anyMediaFieldUploading}
               size="sm"
               variant="outline"
-              className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600'}`}
+              className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-600 dark:border-slate-300 dark:hover:bg-slate-100'}`}
             >
               <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Gallery
             </Button>
@@ -294,8 +294,8 @@ const UnifiedMediaInputs: React.FC<{
             <div
               className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center transition ${
                 isDragging
-                  ? 'border-purple-400 bg-purple-50 dark:bg-purple-500/10'
-                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/40'
+                  ? 'border-purple-400 bg-purple-50 dark:bg-purple-50'
+                  : 'border-slate-300 dark:border-slate-300 bg-white dark:bg-white'
               }`}
               onDragOver={(event) => {
                 event.preventDefault();
@@ -314,11 +314,11 @@ const UnifiedMediaInputs: React.FC<{
                 type="button"
                 onClick={() => unifiedMediaInputRef.current?.click()}
                 disabled={anyMediaFieldUploading}
-              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'}`}
+              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 ${forceLightText ? 'text-black' : 'text-slate-700 dark:border-slate-300 dark:text-slate-800 dark:hover:bg-slate-100'}`}
             >
               <PhotoIcon className="h-5 w-5" /> Add Media
             </button>
-              <p className={forceLightText ? 'mt-2 text-xs text-black/70' : 'mt-2 text-xs text-slate-500 dark:text-slate-400'}>
+              <p className={forceLightText ? 'mt-2 text-xs text-black/70' : 'mt-2 text-xs text-slate-500 dark:text-slate-500'}>
                 Upload images, videos, or audio from your device (drag & drop works too).
               </p>
             </div>
@@ -329,7 +329,7 @@ const UnifiedMediaInputs: React.FC<{
                 disabled={anyMediaFieldUploading}
                 size="sm"
                 variant="outline"
-                className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-300 dark:border-slate-500 dark:hover:bg-slate-600'}`}
+                className={`text-xs ${forceLightText ? 'text-black border-slate-300 hover:bg-slate-100' : 'dark:text-slate-600 dark:border-slate-300 dark:hover:bg-slate-100'}`}
               >
                 <PhotoIcon className="w-4 h-4 mr-1.5" /> Select from Gallery
               </Button>
@@ -1399,7 +1399,7 @@ const updateActionItem = (
     <div className="relative">
       <label htmlFor={fieldName} className={resolvedLabelClasses}>
         {label}{' '}
-        <span className="font-normal text-purple-600 dark:text-purple-400 text-xs ml-2">
+        <span className="font-normal text-purple-600 dark:text-purple-600 text-xs ml-2">
           {bsDateDisplays[fieldName] || 'Select a date'}
         </span>
       </label>
@@ -1420,13 +1420,13 @@ const updateActionItem = (
           onClick={() =>
             setPickerVisibleFor(pickerVisibleFor === fieldName ? null : fieldName)
           }
-          className={`!p-1.5 ml-1 ${isSermonForm ? 'text-black hover:bg-slate-100' : 'dark:text-slate-300 dark:hover:bg-slate-600'}`}
+          className={`!p-1.5 ml-1 ${isSermonForm ? 'text-black hover:bg-slate-100' : 'dark:text-slate-600 dark:hover:bg-slate-100'}`}
         >
           <CalendarOutlineIcon className="w-5 h-5" />
         </Button>
       </div>
       {pickerVisibleFor === fieldName && (
-        <div className="absolute z-10 mt-1 bg-white dark:bg-slate-800 shadow-lg rounded-lg border dark:border-slate-600">
+        <div className="absolute z-10 mt-1 bg-white dark:bg-white shadow-lg rounded-lg border dark:border-slate-300">
           <DualNepaliCalendar
             initialAdDate={(formData as any)[fieldName]}
             onDateSelect={(payload) => handleBsDateSelect(fieldName, payload)}
@@ -1450,7 +1450,7 @@ const updateActionItem = (
         placeholder="Paste a YouTube, Facebook, X, Instagram, Threads, or other embed/share URL"
         className={resolvedInputClasses}
       />
-      <p className={isSermonForm ? 'mt-1 text-xs text-black/70' : 'mt-1 text-xs text-slate-500 dark:text-slate-400'}>
+      <p className={isSermonForm ? 'mt-1 text-xs text-black/70' : 'mt-1 text-xs text-slate-500 dark:text-slate-500'}>
         Use this for embedded videos from YouTube, Facebook, X, Instagram, Threads, or similar sources. Leave it
         blank if you upload media above.
       </p>
@@ -1556,7 +1556,7 @@ const updateActionItem = (
                     Use Current Location
                   </Button>
                   {locationLookupStatus && (
-                    <span className={isSermonForm ? 'text-xs text-black/60' : 'text-xs text-slate-500 dark:text-slate-400'}>
+                    <span className={isSermonForm ? 'text-xs text-black/60' : 'text-xs text-slate-500 dark:text-slate-500'}>
                       {locationLookupStatus}
                     </span>
                   )}
@@ -1662,7 +1662,7 @@ const updateActionItem = (
                   className={resolvedInputClasses}
                   placeholder="e.g., Sabbath Service, Shrestha Family Fellowship"
                 />
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
                   Use the household name for house fellowship or the program title for service schedules.
                 </p>
               </div>
@@ -1719,7 +1719,7 @@ const updateActionItem = (
 
             <FormSection title="Conduct, Speaker & Other Roles">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">
                   Add roles like Conduct, Speaker, Worship Leader, or Household Contact for each schedule.
                 </p>
                 <div className="space-y-2">
@@ -1748,7 +1748,7 @@ const updateActionItem = (
                         onClick={() => removeResponsibilityRow(resp.id)}
                         variant="ghost"
                         size="sm"
-                        className="col-span-1 !p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50"
+                        className="col-span-1 !p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-100"
                         aria-label="Remove responsibility"
                       >
                         <XCircleIcon className="w-4 h-4 mx-auto" />
@@ -1761,7 +1761,7 @@ const updateActionItem = (
                   onClick={addResponsibilityRow}
                   size="sm"
                   variant="outline"
-                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                  className="mt-3 text-xs dark:text-slate-600 dark:border-slate-300"
                 >
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Responsibility
@@ -1795,7 +1795,7 @@ const updateActionItem = (
                     onChange={handleChange}
                     className="h-4 w-4 text-purple-600 rounded"
                   />
-                  <label htmlFor="isTemplate" className="ml-2 text-sm font-medium dark:text-slate-300">
+                  <label htmlFor="isTemplate" className="ml-2 text-sm font-medium dark:text-slate-600">
                     Save as a reusable template
                   </label>
                 </div>
@@ -2005,7 +2005,7 @@ const updateActionItem = (
                         Use Current Location
                       </Button>
                       {locationLookupStatus && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-slate-500 dark:text-slate-500">
                           {locationLookupStatus}
                         </span>
                       )}
@@ -2035,7 +2035,7 @@ const updateActionItem = (
                       Use Current Location
                     </Button>
                     {locationLookupStatus && (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                      <span className="text-xs text-slate-500 dark:text-slate-500">
                         {locationLookupStatus}
                       </span>
                     )}
@@ -2112,7 +2112,7 @@ const updateActionItem = (
                   />
                   <label
                     htmlFor="isFeeRequired"
-                    className="ml-2 text-sm font-medium dark:text-slate-300"
+                    className="ml-2 text-sm font-medium dark:text-slate-600"
                   >
                     Fee Required?
                   </label>
@@ -2349,7 +2349,7 @@ const updateActionItem = (
               </div>
 
               <FullWidthField>
-                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-200 dark:bg-white">
                   <input
                     type="checkbox"
                     id="enableAutoNarration"
@@ -2359,10 +2359,10 @@ const updateActionItem = (
                     className="mt-1 h-4 w-4 rounded text-purple-600"
                   />
                   <div>
-                    <label htmlFor="enableAutoNarration" className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    <label htmlFor="enableAutoNarration" className="text-sm font-medium text-slate-800 dark:text-slate-800">
                       Narration
                     </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
                       Enable auto narration for this blog post (if supported). You can also upload an audio file below.
                     </p>
                   </div>
@@ -2443,7 +2443,7 @@ const updateActionItem = (
 
               
               <FullWidthField>
-                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-200 dark:bg-white">
                   <input
                     type="checkbox"
                     id="enableAutoNarration"
@@ -2453,10 +2453,10 @@ const updateActionItem = (
                     className="mt-1 h-4 w-4 rounded text-purple-600"
                   />
                   <div>
-                    <label htmlFor="enableAutoNarration" className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    <label htmlFor="enableAutoNarration" className="text-sm font-medium text-slate-800 dark:text-slate-800">
                       Narration
                     </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
                       Enable auto narration for this news item (if supported). You can also upload an audio file below.
                     </p>
                   </div>
@@ -2726,7 +2726,7 @@ const updateActionItem = (
                   onChange={handleChange}
                   className={resolvedInputClasses}
                 />
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
                   Auto-detected from existing chapters. Adjust if needed.
                 </p>
               </div>
@@ -3125,7 +3125,7 @@ const updateActionItem = (
 
             <FormSection title="AI Content Generation">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
                   Use a local helper to quickly suggest an ad name and alt text based on the Link
                   URL.
                 </p>
@@ -3140,7 +3140,7 @@ const updateActionItem = (
                   {isGeneratingAiContent ? 'Generating...' : 'Generate Name & Alt Text'}
                 </Button>
                 {!data.linkUrl && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-xs text-amber-600 dark:text-amber-600 mt-1">
                     Please enter a Link URL first to enable generation.
                   </p>
                 )}
@@ -3235,7 +3235,7 @@ const updateActionItem = (
                   />
                   <label
                     htmlFor="isActive"
-                    className="ml-2 text-sm font-medium dark:text-slate-300"
+                    className="ml-2 text-sm font-medium dark:text-slate-600"
                   >
                     Active
                   </label>
@@ -3244,7 +3244,7 @@ const updateActionItem = (
 
               <FullWidthField>
                 <label className={resolvedLabelClasses}>Placements</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1 border p-3 rounded-lg dark:border-slate-600">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1 border p-3 rounded-lg dark:border-slate-300">
                   {adPlacementList.map((p) => (
                     <div key={p} className="flex items-center">
                       <input
@@ -3258,7 +3258,7 @@ const updateActionItem = (
                       />
                       <label
                         htmlFor={`placement-${p}`}
-                        className="ml-2 text-xs dark:text-slate-300"
+                        className="ml-2 text-xs dark:text-slate-600"
                       >
                         {p.replace(/_/g, ' ')}
                       </label>
@@ -3280,7 +3280,7 @@ const updateActionItem = (
           <>
             <FormSection title="Meeting Overview">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Track the meeting purpose, participants, outcomes, and next steps. Include external organizations
                   in the attendee list or agenda when applicable (e.g., partner churches, NGOs, community leaders).
                 </p>
@@ -3414,14 +3414,14 @@ const updateActionItem = (
 
             <FormSection title="Action Items">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Capture assignments, owners, and due dates so teams can follow up after the meeting.
                 </p>
               </FullWidthField>
 
               <FullWidthField>
                 {actionItems.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-500 dark:text-slate-500">
                     No action items yet. Use the button below to add the first one.
                   </p>
                 )}
@@ -3480,7 +3480,7 @@ const updateActionItem = (
                           variant="ghost"
                           size="sm"
                           onClick={() => removeActionItem('actionItems', item.id)}
-                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-100 !p-2"
                           aria-label="Remove action item"
                         >
                           <XCircleIcon className="w-4 h-4" />
@@ -3494,7 +3494,7 @@ const updateActionItem = (
                   onClick={() => addActionItem('actionItems')}
                   size="sm"
                   variant="outline"
-                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                  className="mt-3 text-xs dark:text-slate-600 dark:border-slate-300"
                 >
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Action Item
@@ -3504,19 +3504,19 @@ const updateActionItem = (
 
             <FormSection title="Decision Points">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Record key decisions, who proposed them, and any follow-up notes.
                 </p>
               </FullWidthField>
               <FullWidthField>
                 {decisionPoints.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-500 dark:text-slate-500">
                     No decision points yet. Add them as decisions are made.
                   </p>
                 )}
                 <div className="space-y-4">
                   {decisionPoints.map((point, index) => (
-                    <div key={point.id || `dp-${index}`} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+                    <div key={point.id || `dp-${index}`} className="rounded-lg border border-slate-200 dark:border-slate-200 p-3 space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                         <div className="md:col-span-4">
                           <label className={resolvedLabelClasses}>Decision</label>
@@ -3567,7 +3567,7 @@ const updateActionItem = (
                             variant="ghost"
                             size="sm"
                             onClick={() => removeDecisionPoint(point.id)}
-                            className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                            className="text-red-500 hover:bg-red-100 dark:hover:bg-red-100 !p-2"
                             aria-label="Remove decision point"
                           >
                             <XCircleIcon className="w-4 h-4" />
@@ -3592,7 +3592,7 @@ const updateActionItem = (
                   onClick={addDecisionPoint}
                   size="sm"
                   variant="outline"
-                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                  className="mt-3 text-xs dark:text-slate-600 dark:border-slate-300"
                 >
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Decision Point
@@ -3611,7 +3611,7 @@ const updateActionItem = (
           <>
             <FormSection title="Decision Details">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Use this log for major resolutions, approvals, or leadership decisions that should be tracked
                   independently from meeting minutes.
                 </p>
@@ -3687,13 +3687,13 @@ const updateActionItem = (
 
             <FormSection title="Follow-up Actions">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Track the tasks needed to implement this decision and who is responsible.
                 </p>
               </FullWidthField>
               <FullWidthField>
                 {followUpActions.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-500 dark:text-slate-500">
                     No follow-up actions yet. Add them below if needed.
                   </p>
                 )}
@@ -3752,7 +3752,7 @@ const updateActionItem = (
                           variant="ghost"
                           size="sm"
                           onClick={() => removeActionItem('followUpActions', item.id)}
-                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-100 !p-2"
                           aria-label="Remove follow-up action"
                         >
                           <XCircleIcon className="w-4 h-4" />
@@ -3766,7 +3766,7 @@ const updateActionItem = (
                   onClick={() => addActionItem('followUpActions')}
                   size="sm"
                   variant="outline"
-                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                  className="mt-3 text-xs dark:text-slate-600 dark:border-slate-300"
                 >
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Follow-up Action
@@ -3980,7 +3980,7 @@ const updateActionItem = (
                   className={resolvedInputClasses}
                 />
                 {donors.length > 0 && (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
                     Total is auto-calculated from donor entries.
                   </p>
                 )}
@@ -4000,7 +4000,7 @@ const updateActionItem = (
 
               <div>
                 <label className={resolvedLabelClasses}>Deposit Status</label>
-                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-800">
                   <input
                     type="checkbox"
                     name="isDeposited"
@@ -4032,14 +4032,14 @@ const updateActionItem = (
 
             <FormSection title="Donor Details">
               <FullWidthField>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                   Add donor names and amounts if this collection includes multiple offerings. The total will update automatically.
                 </p>
               </FullWidthField>
 
               <FullWidthField>
                 {donors.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-500 dark:text-slate-500">
                     No donors added yet. Use the button below to add donor entries.
                   </p>
                 )}
@@ -4097,7 +4097,7 @@ const updateActionItem = (
                           variant="ghost"
                           size="sm"
                           onClick={() => removeDonorField(index)}
-                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 !p-2"
+                          className="text-red-500 hover:bg-red-100 dark:hover:bg-red-100 !p-2"
                           aria-label="Remove donor"
                         >
                           <XCircleIcon className="w-4 h-4" />
@@ -4111,7 +4111,7 @@ const updateActionItem = (
                   onClick={addDonorField}
                   size="sm"
                   variant="outline"
-                  className="mt-3 text-xs dark:text-slate-300 dark:border-slate-500"
+                  className="mt-3 text-xs dark:text-slate-600 dark:border-slate-300"
                 >
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Donor
@@ -4197,11 +4197,11 @@ const updateActionItem = (
       title={getModalTitle()}
       size={useFullscreen ? 'full' : 'lg'}
       overlayClassName={isSermonForm ? 'items-start pt-20 sm:pt-10 pb-6' : undefined}
-      panelClassName={isSermonForm ? 'text-black' : undefined}
+      panelClassName={`${isSermonForm ? 'text-black' : 'text-slate-800'} bg-white`}
     >
-      <form onSubmit={finalSubmit} className={`flex flex-col min-h-full ${isSermonForm ? 'text-black' : ''}`}>
+      <form onSubmit={finalSubmit} className={`flex flex-col min-h-full text-slate-800`}>
         <div className={`space-y-4 ${isBlogOrNewsForm ? 'rounded-2xl bg-white p-6 shadow-xl' : ''}`}>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600 dark:border-slate-200 dark:bg-white dark:text-slate-600">
             <span className="font-medium">Admin:</span>{' '}
             <span>{currentUser?.fullName || 'Admin'}</span>
           </div>
@@ -4224,13 +4224,13 @@ const updateActionItem = (
           {renderSpecificFields()}
         </div>
 
-        <div className="flex justify-end space-x-3 pt-6 mt-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex justify-end space-x-3 pt-6 mt-4 border-t border-slate-200 dark:border-slate-200">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={isLoading || anyFieldUploading}
-            className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
+            className="text-slate-700 border-slate-300 hover:bg-slate-100"
           >
             Cancel
           </Button>

@@ -139,7 +139,7 @@ model comment {
   id                  String          @id
   userId              String?
   userName            String
-  userProfileImageUrl String?         @db.Text
+  userProfileImageUrl String?         @db.LongText
   guestEmail          String?
   guestPhone          String?
   isGuest             Boolean         @default(false)
@@ -747,8 +747,8 @@ model user {
   countryCode                       String?
   phone                             String?
   role                              user_role                @default(user)
-  profileImageUrl                   String?                  @db.Text
-  coverPhotoUrl                     String?                  @db.Text
+  profileImageUrl                   String?                  @db.LongText
+  coverPhotoUrl                     String?                  @db.LongText
   bio                               String?                  @db.Text
   hometown                          String?
   currentCity                       String?

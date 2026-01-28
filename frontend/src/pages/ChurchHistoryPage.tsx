@@ -113,12 +113,12 @@ const ChurchHistoryPage: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-white text-slate-800">
       <div className="container mx-auto px-4 pb-12">
         {loadingContent ? (
           <div className="text-center py-10"><LoadingSpinner /> Loading Church History...</div>
         ) : publishedChapters.length === 0 ? (
-          <p className="text-center text-slate-500 dark:text-slate-400 py-10">
+          <p className="text-center text-slate-500 py-10">	
             The history of our church is currently being written. Please check back soon.
           </p>
         ) : (
@@ -127,12 +127,12 @@ const ChurchHistoryPage: React.FC = () => {
               const mediaKind = getMediaKindFromUrl(chapter.imageUrl);
               const comments = chapter.comments ?? [];
                return (
-                <Card key={chapter.id} id={chapter.id} className="scroll-mt-24 dark:bg-slate-800">
+               <Card key={chapter.id} id={chapter.id} className="scroll-mt-24">                
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">Chapter {chapter.chapterNumber}</span>
-                      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{chapter.title}</h2>
+                      <span className="text-sm font-semibold text-purple-600">Chapter {chapter.chapterNumber}</span>
+                      <h2 className="text-2xl font-bold text-slate-800 mt-1">{chapter.title}</h2>
                     </div>
                     <Button
                       variant="outline"
@@ -143,7 +143,7 @@ const ChurchHistoryPage: React.FC = () => {
                       {isGeneratingPdf === chapter.id ? <LoadingSpinner small /> : <span className="mr-2" title="Download PDF">📥</span>} PDF
                     </Button>
                   </div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-wrap gap-3">
+                  <div className="text-xs text-slate-500 mt-2 flex flex-wrap gap-3">
                     {chapter.authorName && (
                       <span className="flex items-center" title="Author">
                         👤 By {chapter.authorName}
@@ -167,7 +167,7 @@ const ChurchHistoryPage: React.FC = () => {
                           <img
                             src={chapter.imageUrl}
                             alt={chapter.title}
-                            className="w-full max-h-[450px] object-cover rounded-lg shadow"
+                            className="w-full h-[65vh] sm:h-[70vh] lg:h-[75vh] object-cover rounded-lg shadow"
                           />
                         </button>
                       )}
@@ -175,7 +175,7 @@ const ChurchHistoryPage: React.FC = () => {
                         <video
                           src={chapter.imageUrl}
                           controls
-                          className="w-full max-h-[450px] rounded-lg shadow mb-6"
+                          className="w-full h-[65vh] sm:h-[70vh] lg:h-[75vh] rounded-lg shadow mb-6"
                         />
                       )}
                       {mediaKind === 'audio' && (
@@ -193,7 +193,7 @@ const ChurchHistoryPage: React.FC = () => {
                       )}
                     </>
                   )}
-                  <div className="prose dark:prose-invert max-w-none whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  <div className="prose max-w-none whitespace-pre-line text-base leading-relaxed text-slate-700">
                     {chapter.content}
                   </div>
                 </CardContent>
@@ -211,7 +211,7 @@ const ChurchHistoryPage: React.FC = () => {
                   />
                 </CardFooter>
                 {openCommentForms[chapter.id] && (
-                  <div className="border-t border-slate-200 bg-slate-50 px-4 pb-4 pt-3 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="border-t border-slate-200 bg-white px-4 pb-4 pt-3">
                     <form
                       onSubmit={(event) => {
                         event.preventDefault();
@@ -219,7 +219,7 @@ const ChurchHistoryPage: React.FC = () => {
                       }}
                       className="space-y-3"
                     >
-                      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300" htmlFor={`chapter-comment-${chapter.id}`}>
+                      <label className="block text-sm font-medium text-slate-600" htmlFor={`chapter-comment-${chapter.id}`}>
                         Add a comment
                       </label>
                       <textarea
@@ -232,7 +232,7 @@ const ChurchHistoryPage: React.FC = () => {
                           }
                         }}
                         rows={3}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                        className="w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="Share your thoughts on this chapter."
                       />
                       {commentErrors[chapter.id] && (
@@ -259,8 +259,8 @@ const ChurchHistoryPage: React.FC = () => {
                   </div>
                 )}
                 {comments.length > 0 && (
-                  <div className="p-4 sm:p-6 border-t dark:border-slate-700">
-                    <h4 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-3">
+                  <div className="p-4 sm:p-6 border-t border-slate-200">
+                    <h4 className="text-md font-semibold text-slate-700 mb-3">
                       Comments ({comments.length})
                     </h4>
                     <div className="space-y-4">
@@ -274,7 +274,7 @@ const ChurchHistoryPage: React.FC = () => {
               );
             })}
             {commentSuccessMessage && (
-              <div className="text-green-600 dark:text-green-400 text-center mt-6">{commentSuccessMessage}</div>
+              <div className="text-green-600 text-center mt-6">{commentSuccessMessage}</div>
             )}
           </div>
         )}

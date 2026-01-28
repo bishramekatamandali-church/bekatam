@@ -7,9 +7,11 @@ const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const client_1 = require("@prisma/client");
 const db_1 = require("../db");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
+const jwt_1 = require("../utils/jwt");
 const emailService_1 = require("../services/emailService");
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "bishramekatamandali@15Done";
@@ -72,7 +74,7 @@ function createToken(user) {
         email: user.email,
         role: user.role,
         fullName: user.fullName,
-    }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    }, (0, jwt_1.getJwtSecret)(), { expiresIn: "7d" });
 }
 function sanitizeUser(user) {
     const { password, passwordHash, ...safeUser } = user;
@@ -135,7 +137,7 @@ const verifyEmailOtp = async (email, purpose, code) => {
 ---------------------------------------------- */
 router.post("/register", async (req, res) => {
     try {
-        const { fullName, email, password, countryCode, phone } = req.body;
+        const { fullName, email, password, countryCode, phone, profileImageUrl } = req.body;
         if (!fullName || !email || !password) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -152,7 +154,16 @@ router.post("/register", async (req, res) => {
                 .replace(/\s+/g, "")
                 .replace(/[^a-z0-9]/g, "");
         const usernameCandidate = await generateUniqueUsername(baseUsername);
-        const phoneValue = (countryCode || "") + (phone || "");
+        const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+        const normalizedCountryCode = typeof countryCode === "string" ? countryCode.trim() : "";
+        const hasPhone = Boolean(normalizedPhone);
+        const phoneValue = hasPhone ? `${normalizedCountryCode}${normalizedPhone}` : "";
+        if (phoneValue) {
+            const existingPhone = await db_1.prisma.user.findFirst({ where: { phone: phoneValue } });
+            if (existingPhone) {
+                return res.status(400).json({ error: "Phone already exists" });
+            }
+        }
         const user = await db_1.prisma.user.create({
             data: {
                 id: crypto_1.default.randomUUID(),
@@ -160,8 +171,9 @@ router.post("/register", async (req, res) => {
                 email: normalizedEmail,
                 username: usernameCandidate,
                 role,
-                countryCode: countryCode ?? null,
+                countryCode: hasPhone ? normalizedCountryCode || null : null,
                 phone: phoneValue ? phoneValue.replace(/\s+/g, "") : null,
+                profileImageUrl: typeof profileImageUrl === "string" ? profileImageUrl : null,
                 // Store hashed password in password columns
                 password: hashed,
                 passwordHash: hashed,
@@ -183,6 +195,21 @@ router.post("/register", async (req, res) => {
     }
     catch (error) {
         console.error("REGISTER ERROR:", error);
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            const targets = Array.isArray(error.meta?.target)
+                ? error.meta?.target
+                : [error.meta?.target].filter(Boolean);
+            if (targets.includes("email")) {
+                return res.status(409).json({ error: "Email already exists" });
+            }
+            if (targets.includes("phone")) {
+                return res.status(409).json({ error: "Phone already exists" });
+            }
+            if (targets.includes("username")) {
+                return res.status(409).json({ error: "Username already exists" });
+            }
+            return res.status(409).json({ error: "Duplicate value" });
+        }
         if ((0, databaseFallback_1.handleDatabaseFallback)(req, res, error)) {
             return;
         }

@@ -11,7 +11,6 @@ import useAITranslate from '../../../src/hooks/useAITranslate';
 import {
   CalendarDaysIcon as CalendarIconOutline,
   MapPinIcon as LocationIconOutline,
-  HeartIcon as HeartIconOutline,
   ChatBubbleLeftRightIcon as CommentIconOutline,
   ShareIcon as ShareIconOutline,
   TicketIcon as TicketIconOutline,
@@ -40,14 +39,12 @@ interface FeaturedEventDisplayProps {
 
 const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPastEvent = false }) => {
   const { isAuthenticated, currentUser } = useAuth();
-  const { logContentActivity, addCommentToItem, getContentById } = useContent();
+  const { addCommentToItem, getContentById } = useContent();
 
   const [currentEventState, setCurrentEventState] = useState(event);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isCommentFormOpen, setIsCommentFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isLiked, setIsLiked] = useState(false); 
-  const [likeCount, setLikeCount] = useState(currentEventState.likes || 0);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const locationDisplay =
@@ -68,18 +65,6 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
   const { translatedText: expectations, isLoading: isLoadingExpectations } = useAITranslate(currentEventState.expectations, 'en');
   const { translatedText: guests, isLoading: isLoadingGuests } = useAITranslate(guestsDisplay, 'en');
 
-
-  const handleLike = () => {
-    if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    logContentActivity(
-        `${currentUser?.fullName || 'User'} ${newLikedState ? 'liked' : 'unliked'} event: "${currentEventState.title}"`,
-        'content_update', 'event', currentEventState.id
-    );
-    alert(`Like updated for "${currentEventState.title}".`);
-  };
 
   const handleCommentClick = () => {
     if (!isAuthenticated) { setIsAuthModalOpen(true); return; }
@@ -161,9 +146,6 @@ const FeaturedEventDisplay: React.FC<FeaturedEventDisplayProps> = ({ event, isPa
           <div className="mt-6 pt-6 border-t border-purple-200">
             {isPastEvent && (
               <div className="flex items-center justify-start space-x-4 mb-4">
-                <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-slate-600 hover:text-red-500 px-1.5" aria-pressed={isLiked}>
-                  <HeartIconOutline className="w-5 h-5 mr-1.5" /> {likeCount}
-                </Button>
                 <Button variant="ghost" size="sm" onClick={handleCommentClick} className="flex items-center text-slate-600 hover:text-purple-500 px-1.5" aria-expanded={isCommentFormOpen}>
                   <CommentIconOutline className="w-5 h-5 mr-1.5" /> {currentCommentCount}
                 </Button>
