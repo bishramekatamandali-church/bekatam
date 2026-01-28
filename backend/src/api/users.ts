@@ -20,6 +20,48 @@ const sendUserActionEmail = async (params: {
   }
 };
 
+const notifyAdmins = async (params: {
+  message: string;
+  link?: string;
+  emailSubject: string;
+  emailText: string;
+  emailHtml: string;
+}) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: 'admin', accountStatus: 'active' },
+      select: { id: true, email: true },
+    });
+
+    if (admins.length === 0) return;
+
+    await prisma.notification.createMany({
+      data: admins.map((admin) => ({
+        id: crypto.randomUUID(),
+        targetUserId: admin.id,
+        message: params.message,
+        link: params.link,
+        type: 'admin_action',
+      })),
+    });
+
+    await Promise.all(
+      admins.map((admin) =>
+        sendEmail({
+          to: admin.email,
+          subject: params.emailSubject,
+          text: params.emailText,
+          html: params.emailHtml,
+        }).catch((error) => {
+          console.error('Failed to send admin notification email:', error);
+        })
+      )
+    );
+  } catch (error) {
+    console.error('Failed to notify admins:', error);
+  }
+};
+
 const applyUserAction = async (request: {
   id: string;
   actionType: 'block' | 'delete' | 'unblock';
@@ -371,6 +413,17 @@ router.post('/:id/actions', authenticateToken, authorizeAdmin, async (req, res) 
       },
     });
 
+    const actionLabel = actionType === 'block' ? 'block' : 'delete';
+    const requesterName = requester.fullName || 'An admin';
+    const adminMessage = `${requesterName} submitted a ${actionLabel} request for ${targetUser.fullName}. Reason: ${reason.trim()}`;
+    await notifyAdmins({
+      message: adminMessage,
+      link: '/admin',
+      emailSubject: `User ${actionLabel} request submitted`,
+      emailText: adminMessage,
+      emailHtml: `<p>${adminMessage}</p>`,
+    });
+
     const activeAdmins = await prisma.user.count({
       where: { role: 'admin', accountStatus: 'active' },
     });
@@ -393,6 +446,15 @@ router.post('/:id/actions', authenticateToken, authorizeAdmin, async (req, res) 
           processedAt: new Date(),
           processedByAdminId: requester.id,
         },
+      });
+
+      const approvalMessage = `User ${request.actionType} request approved for ${targetUser.fullName}.`;
+      await notifyAdmins({
+        message: approvalMessage,
+        link: '/admin',
+        emailSubject: `User ${request.actionType} request approved`,
+        emailText: approvalMessage,
+        emailHtml: `<p>${approvalMessage}</p>`,
       });
     }
 
@@ -530,6 +592,19 @@ router.post('/actions/:requestId/approve', authenticateToken, authorizeAdmin, as
           processedByAdminId: approver.id,
         },
       });
+
+      const targetUser = await prisma.user.findUnique({
+        where: { id: request.userId },
+        select: { fullName: true },
+      });
+      const approvalMessage = `User ${request.actionType} request approved for ${targetUser?.fullName || 'user'}.`;
+      await notifyAdmins({
+        message: approvalMessage,
+        link: '/admin',
+        emailSubject: `User ${request.actionType} request approved`,
+        emailText: approvalMessage,
+        emailHtml: `<p>${approvalMessage}</p>`,
+      });
     }
 
     return res.json({ success: true });
@@ -582,6 +657,15 @@ router.post('/unblock-request', authenticateToken, async (req, res) => {
         requestedByAdminId: requester.id,
         requestedByAdminName: requester.fullName || null,
       },
+    });
+
+    const unblockMessage = `${user.fullName} submitted an unblock request. Reason: ${reason.trim()}`;
+    await notifyAdmins({
+      message: unblockMessage,
+      link: '/admin',
+      emailSubject: 'Unblock request submitted',
+      emailText: unblockMessage,
+      emailHtml: `<p>${unblockMessage}</p>`,
     });
 
     return res.status(201).json({ success: true, requestId: request.id });

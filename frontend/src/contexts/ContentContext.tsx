@@ -253,7 +253,7 @@ const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const isDev = import.meta.env.DEV;
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, requestUnblockAccount } = useAuth();
   const {
     addNotification,
     addGuestNotification,
@@ -279,6 +279,36 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     }) satisfies Partial<Record<ContentType, { label: string; linkPrefix: string }>>,
     [],
   );
+
+  const promptUnblockRequest = useCallback(async (blockReason?: string) => {
+    const reasonText = blockReason?.trim() ? blockReason.trim() : 'an unspecified reason';
+    const shouldRequest = window.confirm(
+      `You have been blocked by admin for ${reasonText}. Send an unblock request?`
+    );
+    if (!shouldRequest) return;
+    const note = window.prompt('Please enter an apology or declaration note to request unblocking:');
+    if (!note || !note.trim()) {
+      alert('Unblock request cancelled because a note is required.');
+      return;
+    }
+    const result = await requestUnblockAccount(note.trim());
+    if (result.success) {
+      alert('Your unblock request has been sent to the admin team.');
+    } else {
+      alert(result.message || 'Failed to request unblock.');
+    }
+  }, [requestUnblockAccount]);
+
+  const handleBlockedResponse = useCallback(async (response: Response): Promise<boolean> => {
+    if (response.status !== 403) return false;
+    const data = await response.json().catch(() => ({}));
+    const errorText = typeof data?.error === 'string' ? data.error.toLowerCase() : '';
+    if (data?.code !== 'ACCOUNT_BLOCKED' && !data?.blockReason && !errorText.includes('blocked')) {
+      return false;
+    }
+    await promptUnblockRequest(data?.blockReason);
+    return true;
+  }, [promptUnblockRequest]);
 
   const sendContentUpdateNotification = useCallback(
     (action: 'added' | 'updated', type: ContentType, item: ContentItem) => {
@@ -1265,7 +1295,12 @@ const nowTimestamp = new Date().toISOString();
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error('Failed to post comment.');
+        if (!response.ok) {
+            if (await handleBlockedResponse(response)) {
+                return null;
+            }
+            throw new Error('Failed to post comment.');
+        }
 
         const newComment: Comment = await response.json();
 
@@ -1468,7 +1503,12 @@ const nowTimestamp = new Date().toISOString();
       }
     );
 
-    if (!response.ok) throw new Error('Failed to toggle like');
+    if (!response.ok) {
+      if (await handleBlockedResponse(response)) {
+        return null;
+      }
+      throw new Error('Failed to toggle like');
+    }
 
     const updated = await response.json();
 
