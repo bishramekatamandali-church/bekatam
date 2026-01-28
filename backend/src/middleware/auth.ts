@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../utils/jwt";
 
 export function authMiddleware(
   req: Request & { user?: any },
@@ -15,7 +16,7 @@ export function authMiddleware(
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     req.user = decoded; // attach decoded user (id, email, role)
 
