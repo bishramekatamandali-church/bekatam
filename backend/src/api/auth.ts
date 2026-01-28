@@ -162,7 +162,7 @@ const verifyEmailOtp = async (email: string, purpose: string, code: string) => {
 ---------------------------------------------- */
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password, countryCode, phone } = req.body;
+    const { fullName, email, password, countryCode, phone, profileImageUrl } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -186,7 +186,10 @@ router.post("/register", async (req, res) => {
 
     const usernameCandidate = await generateUniqueUsername(baseUsername);
 
-    const phoneValue = (countryCode || "") + (phone || "");
+    const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+    const normalizedCountryCode = typeof countryCode === "string" ? countryCode.trim() : "";
+    const hasPhone = Boolean(normalizedPhone);
+    const phoneValue = hasPhone ? `${normalizedCountryCode}${normalizedPhone}` : "";
 
     const user = await prisma.user.create({
       data: {
@@ -195,8 +198,9 @@ router.post("/register", async (req, res) => {
         email: normalizedEmail,
         username: usernameCandidate,
         role,
-        countryCode: countryCode ?? null,
+        countryCode: hasPhone ? normalizedCountryCode || null : null,
         phone: phoneValue ? phoneValue.replace(/\s+/g, "") : null,
+        profileImageUrl: typeof profileImageUrl === "string" ? profileImageUrl : null,
         // Store hashed password in password columns
         password: hashed as any,
         passwordHash: hashed as any,
