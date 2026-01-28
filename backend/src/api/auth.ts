@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authMiddleware } from "../middleware/auth";
 import { handleDatabaseFallback } from "../utils/databaseFallback";
+import { getJwtSecret } from "../utils/jwt";
 import { sendEmail } from "../services/emailService";
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "bishramekatamandali@gmail.com").toLowerCase().trim();
@@ -83,7 +84,7 @@ function createToken(user: any) {
       role: user.role,
       fullName: user.fullName,
     },
-    process.env.JWT_SECRET as string,
+    getJwtSecret(),
     { expiresIn: "7d" }
   );
 }
