@@ -7,7 +7,6 @@ import Button from '../ui/Button';
 import NotificationIcon from '../notifications/NotificationIcon';
 import { CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon } from '../icons/GenericIcons';
 import GlobalSearchModal from '../search/GlobalSearchModal'; 
-import { useNotification } from '../../contexts/NotificationContext';
 import { ArrowDownTrayIcon as HeroArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const ChurchIcon: React.FC = () => (
@@ -129,7 +128,6 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { isAuthenticated, isAdmin, logout, currentUser } = useAuth();
-  const { unreadCount } = useNotification();
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -229,13 +227,15 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
                     to="/profile"
                     className="flex items-center space-x-2 px-2 py-1 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-800"
                   >
-                    {currentUser.profileImageUrl ? (
-                      <img className="h-8 w-8 rounded-full object-cover" src={currentUser.profileImageUrl} alt="User profile" />
-                    ) : (
-                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600">
-                        <span className="text-sm font-medium leading-none text-white">{currentUser.fullName.charAt(0).toUpperCase()}</span>
-                      </span>
-                    )}
+                    <span className="relative inline-flex">
+                      {currentUser.profileImageUrl ? (
+                        <img className="h-8 w-8 rounded-full object-cover" src={currentUser.profileImageUrl} alt="User profile" />
+                      ) : (
+                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600">
+                          <span className="text-sm font-medium leading-none text-white">{currentUser.fullName.charAt(0).toUpperCase()}</span>
+                        </span>
+                      )}
+                    </span>
                   <span className="hidden sm:inline text-sm font-semibold">Profile</span>
                   </Link>
                   <Button onClick={logout} variant="ghost" size="sm" className="!text-white hover:!bg-indigo-700">Logout</Button>

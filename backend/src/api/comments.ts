@@ -73,6 +73,28 @@ router.post('/', async (req, res) => {
     if (isGuestComment && !(guestEmail || guestPhone)) {
         return res.status(400).json({ error: 'Guest comments require guestEmail or guestPhone.' });
     }
+    
+    if (!isGuestComment && userId) {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        if (user.accountStatus === 'blocked') {
+            const blockRequest = await prisma.useractionrequest.findFirst({
+                where: { userId: user.id, actionType: 'block', status: 'approved' },
+                orderBy: { createdAt: 'desc' },
+                select: { reason: true },
+            });
+            return res.status(403).json({
+                error: 'Your account is blocked from commenting.',
+                code: 'ACCOUNT_BLOCKED',
+                blockReason: blockRequest?.reason || 'Not specified.',
+            });
+        }
+        if (user.accountStatus === 'deleted') {
+            return res.status(403).json({ error: 'Deleted accounts cannot comment.' });
+        }
+    }
 
     let data: any = {
   id: crypto.randomUUID(),        // ✅ ADD THIS

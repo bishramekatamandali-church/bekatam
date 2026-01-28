@@ -12,6 +12,8 @@ import {
   UserRole,
   AdminActionLog,
   FrontendActivityLog,
+  UserActionRequest,
+  UserActionType,
 } from "../types";
 import { API_BASE_URL } from "../utils/apiConfig";
 
@@ -310,6 +312,88 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [currentUser, logAdminAction]
   );
 
+  const getUserActionRequests = useCallback(async (): Promise<UserActionRequest[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/actions`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) return [];
+      const requests = await res.json();
+      return Array.isArray(requests) ? requests : [];
+    } catch (e) {
+      console.error("getUserActionRequests error:", e);
+      return [];
+    }
+  }, []);
+
+  const createUserActionRequest = useCallback(
+    async (
+      userId: string,
+      actionType: UserActionType,
+      reason: string
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/${userId}/actions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ actionType, reason }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { success: false, message: data?.error || "Failed to create request." };
+        }
+        logAdminAction("Created user action request", userId, `action=${actionType}`);
+        return { success: true };
+      } catch (e) {
+        console.error("createUserActionRequest error:", e);
+        return { success: false, message: "Failed to create request." };
+      }
+    },
+    [logAdminAction]
+  );
+
+  const approveUserActionRequest = useCallback(
+    async (requestId: string): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/actions/${requestId}/approve`, {
+          method: "POST",
+          headers: { ...getAuthHeaders() },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { success: false, message: data?.error || "Failed to approve request." };
+        }
+        logAdminAction("Approved user action request", requestId);
+        return { success: true };
+      } catch (e) {
+        console.error("approveUserActionRequest error:", e);
+        return { success: false, message: "Failed to approve request." };
+      }
+    },
+    [logAdminAction]
+  );
+
+  const requestUnblockAccount = useCallback(
+    async (reason: string): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/unblock-request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ reason }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { success: false, message: data?.error || "Failed to request unblock." };
+        }
+        return { success: true };
+      } catch (e) {
+        console.error("requestUnblockAccount error:", e);
+        return { success: false, message: "Failed to request unblock." };
+      }
+    },
+    []
+  );
+
   /* --------------------------- PASSWORD --------------------------- */
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -415,6 +499,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         getAllUsers,
         updateUserRole,
+        getUserActionRequests,
+        createUserActionRequest,
+        approveUserActionRequest,
+        requestUnblockAccount,
 
         userActivityLogs,
         logUserActivity,

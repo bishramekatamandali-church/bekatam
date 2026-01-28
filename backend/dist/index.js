@@ -67,6 +67,7 @@ const financialSummary_1 = __importDefault(require("./api/financialSummary"));
 const fellowshipSchedules_1 = __importDefault(require("./api/fellowshipSchedules"));
 const activityLogs_1 = __importDefault(require("./api/activityLogs"));
 const contentUpdates_1 = __importDefault(require("./api/contentUpdates"));
+const notifications_1 = __importDefault(require("./api/notifications"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
 // --- Middlewares ---
@@ -129,6 +130,7 @@ app.use("/api/financial-summary", financialSummary_1.default);
 app.use("/api/fellowship-schedules", fellowshipSchedules_1.default);
 app.use("/api/activity-logs", activityLogs_1.default);
 app.use("/api/content-updates", contentUpdates_1.default);
+app.use("/api/notifications", notifications_1.default);
 // --- START SERVER ---
 app.listen(port, () => {
     console.log(`🚀 Server is running at http://localhost:${port}`);

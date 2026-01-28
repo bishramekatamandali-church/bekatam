@@ -70,6 +70,7 @@ import financialSummaryRoutes from "./api/financialSummary";
 import fellowshipScheduleRoutes from "./api/fellowshipSchedules";
 import activityLogRoutes from "./api/activityLogs";
 import contentUpdateRoutes from "./api/contentUpdates";
+import notificationRoutes from "./api/notifications";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -140,6 +141,7 @@ app.use("/api/financial-summary", financialSummaryRoutes);
 app.use("/api/fellowship-schedules", fellowshipScheduleRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
 app.use("/api/content-updates", contentUpdateRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // --- START SERVER ---
 app.listen(port, () => {

@@ -1,8 +1,9 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../contexts/ContentContext';
 import { PrayerRequest, Testimonial } from '../types';
+import { useLocation } from 'react-router-dom';
 
 import PrayerRequestCard from '../components/prayer/PrayerRequestCard';
 import TestimonialCard from '../components/prayer/TestimonialCard';
@@ -21,6 +22,7 @@ const getSortDate = (item: any): Date => {
 const PrayerRequestsPage: React.FC = () => {
     const { prayerRequests, testimonials, loadingContent, togglePrayerOnRequest, updatePrayerRequestStatusByUser, addCommentToItem } = useContent();
     const { isAuthenticated, isAdmin } = useAuth();
+    const location = useLocation();
   
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
@@ -52,6 +54,17 @@ const PrayerRequestsPage: React.FC = () => {
 
         return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [prayerRequests, testimonials, loadingContent]);
+    
+    useEffect(() => {
+        if (!location.hash || loadingContent) return;
+        const id = location.hash.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }, [location.hash, loadingContent, timelineFeed.length]);
 
     const openCreateModal = (type: 'prayer' | 'testimonial') => {
         if (!isAdmin) return;

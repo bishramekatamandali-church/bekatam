@@ -19,6 +19,28 @@ router.post('/toggle-like/:itemType/:itemId', async (req, res) => {
     return res.status(400).json({ error: 'userId OR guestEmail/guestPhone is required.' });
   }
 
+  if (isLoggedIn) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (user.accountStatus === 'blocked') {
+      const blockRequest = await prisma.useractionrequest.findFirst({
+        where: { userId: user.id, actionType: 'block', status: 'approved' },
+        orderBy: { createdAt: 'desc' },
+        select: { reason: true },
+      });
+      return res.status(403).json({
+        error: 'Your account is blocked from liking content.',
+        code: 'ACCOUNT_BLOCKED',
+        blockReason: blockRequest?.reason || 'Not specified.',
+      });
+    }
+    if (user.accountStatus === 'deleted') {
+      return res.status(403).json({ error: 'Deleted accounts cannot like content.' });
+    }
+  }
+
   const likeWhere: any = {
     itemType,
     itemId,

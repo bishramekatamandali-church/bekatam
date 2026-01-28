@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useContent } from '../contexts/ContentContext';
 import Card, { CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { formatDateADBS } from '../dateConverter';
 
 // Icons
@@ -21,6 +21,7 @@ const ITEMS_PER_PAGE = 12;
 
 const MediaPage: React.FC = () => {
   const { allDerivedMediaItems, loadingContent } = useContent();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video' | 'audio'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -57,6 +58,17 @@ const MediaPage: React.FC = () => {
   }, [filteredMedia, currentPage]);
 
   const totalPages = Math.ceil(filteredMedia.length / ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    if (!location.hash || loadingContent) return;
+    const id = location.hash.substring(1);
+    const element = document.getElementById(id);
+    if (element) {
+      setTimeout(() => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [location.hash, loadingContent, filteredMedia.length]);
 
   if (loadingContent && allDerivedMediaItems.length === 0) {
     return (
@@ -122,7 +134,7 @@ const MediaPage: React.FC = () => {
           <>
             <div className="grid grid-cols-1 gap-6">
               {paginatedMedia.map((item) => (
-                <Card key={item.id} className="flex flex-col group overflow-hidden">
+                <Card key={item.id} id={`media-${item.id}`} className="flex flex-col group overflow-hidden">
                   <div className="relative w-full aspect-[4/3] bg-slate-200 flex items-center justify-center">
                     {item.type === 'image' && (
                       <img src={item.thumbnailUrl || item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />

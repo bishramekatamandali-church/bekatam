@@ -1,9 +1,11 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { Notification as AppNotification, NotificationContextType, NotificationAddData, User } from '../types';
 import { useAuth } from './AuthContext';
+import { API_BASE_URL } from '../utils/apiConfig';
 
 const NOTIFICATIONS_STORAGE_KEY_PREFIX = 'bem_notifications_';
 const LAST_SEEN_CONTENT_KEY = 'bem_last_seen_content';
+const AUTH_TOKEN_KEY = 'bem_auth_token';
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -16,6 +18,10 @@ const getGuestId = (): string => {
 };
 const getStorageKey = (userId: string, isGuest: boolean) =>
   `${NOTIFICATIONS_STORAGE_KEY_PREFIX}${isGuest ? 'guest' : userId}`;
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const readLastSeenContent = (): string | null => {
   try {
@@ -111,6 +117,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [lastSeenContent, setLastSeenContent] = useState<string | null>(readLastSeenContent());
+  const [serverNotificationIds, setServerNotificationIds] = useState<Set<string>>(new Set());
 
   const activeUserId = currentUser?.id ?? getGuestId();
   const isGuest = !currentUser;
@@ -132,7 +139,48 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     } finally {
       setLoadingNotifications(false);
     }
-  }, [storageKey]);
+  }, [storageKey, serverNotificationIds]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let isActive = true;
+    const fetchServerNotifications = async () => {
+      if (!isActive) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/notifications`, {
+          headers: { ...getAuthHeaders() },
+        });
+        if (!res.ok) return;
+        const serverNotifications: AppNotification[] = await res.json();
+        if (!Array.isArray(serverNotifications)) return;
+
+        setServerNotificationIds(new Set(serverNotifications.map((notification) => notification.id)));
+
+        const localNotifications = readNotifications(storageKey);
+        const merged = new Map<string, AppNotification>();
+        localNotifications.forEach((notification) => merged.set(notification.id, notification));
+        serverNotifications.forEach((notification) => merged.set(notification.id, notification));
+
+        const next = Array.from(merged.values())
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 250);
+
+        writeNotifications(storageKey, next);
+        setNotifications(next);
+      } catch (error) {
+        console.error('Error loading notifications from API', error);
+      }
+    };
+
+    fetchServerNotifications();
+    const intervalId = window.setInterval(fetchServerNotifications, 60000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [currentUser, storageKey]);
 
   const addNotification = useCallback((notificationData: NotificationAddData) => {
     // 🔥 CRITICAL HARDENING: getAllUsers() must be treated as array
@@ -218,7 +266,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       writeNotifications(storageKey, next);
       return next;
     });
-  }, [storageKey]);
+
+    if (serverNotificationIds.has(notificationId)) {
+      fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders() },
+      }).catch((error) => {
+        console.error('Failed to mark notification as read', error);
+      });
+    }
+  }, [storageKey, currentUser]);
 
   const markAllAsRead = useCallback(() => {
     setNotifications(prevNotifications => {
@@ -229,6 +286,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       writeNotifications(storageKey, next);
       return next;
     });
+
+    if (currentUser) {
+      fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders() },
+      }).catch((error) => {
+        console.error('Failed to mark all notifications as read', error);
+      });
+    }
   }, [storageKey]);
 
   const unreadCount = useMemo(() => {
@@ -236,6 +302,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const safe = Array.isArray(notifications) ? notifications : [];
     return safe.filter(notif => notif.targetUserId === activeUserId && !notif.read).length;
   }, [notifications, activeUserId, loadingNotifications]);
+
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return;
+    const updateBadge = async () => {
+      try {
+        if (isGuest) {
+          if ('clearAppBadge' in navigator) {
+            await navigator.clearAppBadge();
+          }
+          return;
+        }
+        if (unreadCount > 0) {
+          await navigator.setAppBadge(unreadCount);
+        } else if ('clearAppBadge' in navigator) {
+          await navigator.clearAppBadge();
+        }
+      } catch (error) {
+        console.error('Failed to update app badge', error);
+      }
+    };
+
+    updateBadge();
+  }, [unreadCount, isGuest]);
 
   const replaceNotificationsForUser = useCallback((userId: string, next: AppNotification[]) => {
     const key = getStorageKey(userId, userId.startsWith('guest-'));
@@ -290,4 +379,4 @@ export const useNotification = (): NotificationContextType => {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;
-};
+}; 

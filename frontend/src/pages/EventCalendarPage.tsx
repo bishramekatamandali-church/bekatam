@@ -23,7 +23,7 @@ const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
 type PaperSizeType = 'a4' | 'a3' | 'a2' | 'a1';
 
 const EventCalendarPage: React.FC = () => {
-  const { events, loadingContent, newsItems, sermons, blogPosts } = useContent();
+  const { events, loadingContent, newsItems, sermons, blogPosts, fellowshipRosters, generatedSchedules } = useContent();
 
   const currentADDate = getLocalToday();
   const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
@@ -52,6 +52,37 @@ const EventCalendarPage: React.FC = () => {
       })
       .sort((a, b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
   }, [events, currentCalendarBsMonth, currentCalendarBsYear]);
+
+  const noticesForSelectedMonth = useMemo(() => {
+    const rosterNotices = fellowshipRosters
+      .filter(item => !!item.assignedDate)
+      .map(item => ({
+        id: `roster-${item.id}`,
+        title: item.groupNameOrEventTitle,
+        date: item.assignedDate,
+        timeSlot: item.timeSlot,
+        rosterType: item.rosterType,
+      }));
+
+    const scheduleNotices = generatedSchedules
+      .filter(item => !!item.scheduledDate)
+      .map(item => ({
+        id: `schedule-${item.id}`,
+        title: item.groupNameOrEventTitle,
+        date: item.scheduledDate,
+        timeSlot: item.timeSlot,
+        rosterType: item.rosterType,
+      }));
+
+    return [...rosterNotices, ...scheduleNotices]
+      .filter(notice => {
+        const noticeAdDate = new Date(notice.date);
+        if (Number.isNaN(noticeAdDate.getTime())) return false;
+        const noticeBsDate = adToBs(noticeAdDate);
+        return noticeBsDate.year === currentCalendarBsYear && noticeBsDate.month === currentCalendarBsMonth;
+      })
+      .sort((a, b) => getNepalDateParts(new Date(a.date)).day - getNepalDateParts(new Date(b.date)).day);
+  }, [fellowshipRosters, generatedSchedules, currentCalendarBsMonth, currentCalendarBsYear]);
 
   const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPdfBsYear(parseInt(event.target.value, 10));
@@ -97,9 +128,30 @@ const EventCalendarPage: React.FC = () => {
     const mappedBlogs: CalendarEntry[] = blogPosts
       .filter(post => !!post.date)
       .map(post => ({ id: post.id, title: post.title, date: post.date!, type: 'blog', link: `/blog/${post.id}` }));
+    
+    const mappedNotices: CalendarEntry[] = [
+      ...fellowshipRosters
+        .filter(item => !!item.assignedDate)
+        .map(item => ({
+          id: `roster-${item.id}`,
+          title: item.groupNameOrEventTitle,
+          date: item.assignedDate,
+          type: 'notice' as const,
+          link: '/notices',
+        })),
+      ...generatedSchedules
+        .filter(item => !!item.scheduledDate)
+        .map(item => ({
+          id: `schedule-${item.id}`,
+          title: item.groupNameOrEventTitle,
+          date: item.scheduledDate,
+          type: 'notice' as const,
+          link: '/notices',
+        })),
+    ];
 
-    return [...mappedEvents, ...mappedNews, ...mappedSermons, ...mappedBlogs];
-  }, [blogPosts, events, newsItems, sermons]);
+    return [...mappedEvents, ...mappedNews, ...mappedSermons, ...mappedBlogs, ...mappedNotices];
+  }, [blogPosts, events, fellowshipRosters, generatedSchedules, newsItems, sermons]);
 
   const currentDisplayedBsMonthName = BS_MONTH_NAMES_NP[currentCalendarBsMonth - 1];
 
@@ -130,14 +182,14 @@ const EventCalendarPage: React.FC = () => {
                 <div className="mt-4 border-t border-blue-200">
                   <CardHeader className="bg-blue-100">
                     <h2 className="text-xl font-semibold text-blue-800">
-                      Events in {currentDisplayedBsMonthName} {currentCalendarBsYear} BS
+                      Events & Notices in {currentDisplayedBsMonthName} {currentCalendarBsYear} BS
                     </h2>
                   </CardHeader>
                   <CardContent className="max-h-96 overflow-y-auto custom-scrollbar p-3 sm:p-4">
-                    {loadingContent && !eventsForSelectedMonth.length ? (
+                    {loadingContent && !eventsForSelectedMonth.length && !noticesForSelectedMonth.length ? (
                       <p className="text-slate-500 text-center py-6">Loading events...</p>
-                    ) : eventsForSelectedMonth.length === 0 ? (
-                      <p className="text-slate-500 text-center py-6">No events scheduled for this month.</p>
+                    ) : eventsForSelectedMonth.length === 0 && noticesForSelectedMonth.length === 0 ? (
+                      <p className="text-slate-500 text-center py-6">No events or notices scheduled for this month.</p>
                     ) : (
                       <ul className="space-y-3">
                         {eventsForSelectedMonth.map(event => {
@@ -146,11 +198,40 @@ const EventCalendarPage: React.FC = () => {
                           return (
                             <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
                               <Link to={`/events/${event.id}`} className="block">
-                                <h4 className="font-semibold text-blue-700">{event.title}</h4>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                                    Event
+                                  </span>
+                                  <h4 className="font-semibold text-blue-700">{event.title}</h4>
+                                </div>
                                 <div className="flex items-center text-sm text-slate-500 mt-1">
                                   <CalendarDaysIcon className="w-4 h-4 mr-2 text-slate-400" />
                                   <span>{eventBsDate.day} {currentDisplayedBsMonthName} ({adDatePart})</span>
                                   {event.time && <span className="ml-2">@ {event.time}</span>}
+                                </div>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                        {noticesForSelectedMonth.map(notice => {
+                          const noticeBsDate = adToBs(new Date(notice.date));
+                          const adDatePart = formatDateADBS(notice.date).split(' (')[1]?.replace(')', '');
+                          return (
+                            <li key={notice.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                              <Link to="/notices" className="block">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                                    Notice
+                                  </span>
+                                  <h4 className="font-semibold text-rose-700">{notice.title}</h4>
+                                  {notice.rosterType && (
+                                    <span className="text-xs text-slate-500">({notice.rosterType})</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center text-sm text-slate-500 mt-1">
+                                  <CalendarDaysIcon className="w-4 h-4 mr-2 text-slate-400" />
+                                  <span>{noticeBsDate.day} {currentDisplayedBsMonthName} ({adDatePart})</span>
+                                  {notice.timeSlot && <span className="ml-2">@ {notice.timeSlot}</span>}
                                 </div>
                               </Link>
                             </li>

@@ -241,6 +241,9 @@ router.post("/login", async (req, res) => {
         const storedPassword = user?.password || user?.passwordHash;
         if (!user || !storedPassword)
             return res.status(401).json({ error: "Invalid credentials" });
+        if (user.accountStatus === "deleted") {
+            return res.status(403).json({ error: "This account has been deleted." });
+        }
         const match = await bcryptjs_1.default.compare(password, storedPassword);
         if (!match)
             return res.status(401).json({ error: "Invalid credentials" });
