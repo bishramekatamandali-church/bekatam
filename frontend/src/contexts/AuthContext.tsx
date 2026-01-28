@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     countryCode: string,
     phone: string,
     password: string,
-    _profileImageUrl?: string
+    profileImageUrl?: string
   ): Promise<boolean> => {
     setLoadingAuthState(true);
 
@@ -240,7 +240,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password, countryCode, phone }),
+        body: JSON.stringify({ fullName, email, password, countryCode, phone, profileImageUrl }),
       });
 
       const data = await res.json();
