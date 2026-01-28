@@ -204,7 +204,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
 
     setLoading(true);
     try {
-      const ok = await register(
+      const result = await register(
         fullName.trim(),
         email.trim().toLowerCase(),
         phone.trim() ? countryCode.trim() : "",
@@ -213,8 +213,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         profileImageDataUrl ?? undefined
       );
 
-      if (!ok) {
-        setErrorMsg("Registration failed. Email or phone may already be used.");
+      if (!result.ok) {
+        setErrorMsg(
+          result.error || "Registration failed. Email or phone may already be used."
+        );
         return;
       }
 

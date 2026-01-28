@@ -901,7 +901,14 @@ export interface AuthContextType {
   isAdmin: boolean;
   loadingAuthState: boolean;
   login: (identifier: string, pass: string, rememberMe?: boolean) => Promise<boolean>; 
-  register: (fullName: string, email: string, countryCode: string, phone: string, pass: string, profileImageUrl?: string) => Promise<boolean>; // Updated signature
+  register: (
+    fullName: string,
+    email: string,
+    countryCode: string,
+    phone: string,
+    pass: string,
+    profileImageUrl?: string
+  ) => Promise<{ ok: boolean; error?: string }>; // Updated signature
   logout: () => void;
   updateUserProfile?: (userId: string, data: Partial<User>) => Promise<boolean>;
   adminActionLogs: AdminActionLog[];
