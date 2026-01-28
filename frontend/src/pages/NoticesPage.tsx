@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useContent } from "../contexts/ContentContext";
-import { formatDateADBS, getLocalToday } from "../dateConverter";
+import { formatDateADBS } from "../dateConverter";
 
 const languageCopy = {
   title: {
@@ -77,6 +77,33 @@ type NoticeItem = {
 };
 
 const toNoticeDate = (dateValue: string) => new Date(`${dateValue}T00:00:00`);
+const NEPAL_TIMEZONE_OFFSET = "+05:45";
+
+const parseTimeSlotEnd = (timeSlot?: string): { hour: number; minute: number } | null => {
+  if (!timeSlot) return null;
+  const matches = Array.from(timeSlot.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/gi));
+  if (matches.length === 0) return null;
+
+  const lastMatch = matches[matches.length - 1];
+  const hourPart = Number(lastMatch[1]);
+  const minutePart = Number(lastMatch[2] ?? "0");
+  const period = lastMatch[3]?.toUpperCase();
+
+  if (Number.isNaN(hourPart) || Number.isNaN(minutePart) || !period) return null;
+
+  let hour = hourPart % 12;
+  if (period === "PM") hour += 12;
+
+  return { hour, minute: minutePart };
+};
+
+const getNoticeEndDate = (dateValue: string, timeSlot: string): Date => {
+  const endTime = parseTimeSlotEnd(timeSlot);
+  const hour = endTime?.hour ?? 23;
+  const minute = endTime?.minute ?? 59;
+  const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  return new Date(`${dateValue}T${timeString}:00${NEPAL_TIMEZONE_OFFSET}`);
+};
 
 const pillBase =
   "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition";
@@ -99,7 +126,7 @@ const NoticesPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [viewMode, setViewMode] = useState<"detailed" | "compact">("detailed");
 
-  const today = getLocalToday();
+  const now = new Date();
 
   const copy = (key: keyof typeof languageCopy) => languageCopy[key][language];
 
@@ -143,8 +170,8 @@ const NoticesPage: React.FC = () => {
       if (typeFilter !== "all" && item.itemType !== typeFilter) return false;
 
       // when filter
-      const dateObj = toNoticeDate(item.date);
-      const isUpcoming = dateObj.getTime() >= today.getTime();
+      const endDateTime = getNoticeEndDate(item.date, item.timeSlot);
+      const isUpcoming = endDateTime.getTime() >= now.getTime();
       if (whenFilter === "upcoming" && !isUpcoming) return false;
       if (whenFilter === "past" && isUpcoming) return false;
 
@@ -172,7 +199,7 @@ const NoticesPage: React.FC = () => {
     });
 
     return sorted;
-  }, [notices, searchTerm, sortOrder, typeFilter, whenFilter, today]);
+  }, [notices, searchTerm, sortOrder, typeFilter, whenFilter, now]);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -372,8 +399,8 @@ const NoticesPage: React.FC = () => {
           <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="divide-y divide-slate-200">
               {filteredNotices.map((notice) => {
-                const noticeDate = toNoticeDate(notice.date);
-                const isUpcoming = noticeDate.getTime() >= today.getTime();
+                const endDateTime = getNoticeEndDate(notice.date, notice.timeSlot);
+                const isUpcoming = endDateTime.getTime() >= now.getTime();
 
                 return (
                   <Link
@@ -412,8 +439,8 @@ const NoticesPage: React.FC = () => {
         ) : (
           <div className="mx-auto mt-10 flex max-w-4xl flex-col gap-4">
             {filteredNotices.map((notice) => {
-              const noticeDate = toNoticeDate(notice.date);
-              const isUpcoming = noticeDate.getTime() >= today.getTime();
+              const endDateTime = getNoticeEndDate(notice.date, notice.timeSlot);
+              const isUpcoming = endDateTime.getTime() >= now.getTime();
 
               return (
                 <article
