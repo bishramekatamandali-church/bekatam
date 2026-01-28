@@ -103,6 +103,10 @@ router.put('/:id/profile', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    if (Object.prototype.hasOwnProperty.call(req.body, 'username')) {
+      return res.status(400).json({ error: 'Username cannot be changed.' });
+    }
+
     const {
       fullName,
       email,
