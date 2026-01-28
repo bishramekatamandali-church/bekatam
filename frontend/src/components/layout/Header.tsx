@@ -7,7 +7,6 @@ import Button from '../ui/Button';
 import NotificationIcon from '../notifications/NotificationIcon';
 import { CogIcon as HeroCog6ToothIcon, SearchIcon as HeroMagnifyingGlassIcon, ChevronDownIcon as HeroChevronDownIcon } from '../icons/GenericIcons';
 import GlobalSearchModal from '../search/GlobalSearchModal'; 
-import { useNotification } from '../../contexts/NotificationContext';
 import { ArrowDownTrayIcon as HeroArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const ChurchIcon: React.FC = () => (
@@ -129,7 +128,6 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { isAuthenticated, isAdmin, logout, currentUser } = useAuth();
-  const { unreadCount } = useNotification();
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -235,11 +233,6 @@ const Header: React.FC<{ installPrompt: any; onInstallClick: () => void; }> = ({
                       ) : (
                         <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600">
                           <span className="text-sm font-medium leading-none text-white">{currentUser.fullName.charAt(0).toUpperCase()}</span>
-                        </span>
-                      )}
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center ring-2 ring-indigo-800">
-                          {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
                     </span>
