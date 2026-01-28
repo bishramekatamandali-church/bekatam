@@ -806,6 +806,7 @@ export interface Advertisement {
 
 
 export type UserRole = 'admin' | 'user';
+export type UserAccountStatus = 'active' | 'blocked' | 'deleted';
 
 export type RelationshipStatus = 'Single' | 'In a relationship' | 'Engaged' | 'Married' | 'Its complicated' | 'Separated' | 'Divorced' | 'Widowed';
 export const relationshipStatusList: RelationshipStatus[] = ['Single', 'In a relationship', 'Engaged', 'Married', 'Its complicated', 'Separated', 'Divorced', 'Widowed'];
@@ -818,6 +819,9 @@ export interface User {
   countryCode?: string;
   phone?: string;
   role: UserRole;
+  accountStatus?: UserAccountStatus;
+  blockedAt?: string | null;
+  deletedAt?: string | null;
   profileImageUrl?: string;
   coverPhotoUrl?: string;
   
@@ -836,6 +840,32 @@ export interface User {
   receivePrayerRequestNotifications?: boolean;
   receiveTestimonialNotifications?: boolean;
   profileInSearchPrivacy?: boolean;
+}
+
+export type UserActionType = 'block' | 'delete' | 'unblock';
+export type UserActionStatus = 'pending' | 'approved' | 'rejected';
+
+export interface UserActionApproval {
+  id: string;
+  adminId: string;
+  adminName?: string | null;
+  approvedAt: string;
+}
+
+export interface UserActionRequest {
+  id: string;
+  userId: string;
+  actionType: UserActionType;
+  reason: string;
+  status: UserActionStatus;
+  requestedByAdminId: string;
+  requestedByAdminName?: string | null;
+  createdAt: string;
+  processedAt?: string | null;
+  processedByAdminId?: string | null;
+  approvals: UserActionApproval[];
+  requiredApprovals?: number;
+  user?: Pick<User, 'id' | 'fullName' | 'email' | 'accountStatus'>;
 }
  export interface AdminActionLog {
   id: string;
@@ -913,8 +943,16 @@ export interface AuthContextType {
   updateUserProfile?: (userId: string, data: Partial<User>) => Promise<boolean>;
   adminActionLogs: AdminActionLog[];
   logAdminAction: (action: string, targetId?: string, details?: string, adminOverride?: User) => void;
-  getAllUsers: () => User[];
+  getAllUsers: () => Promise<User[]>;
   updateUserRole: (targetUserId: string, newRole: UserRole) => Promise<{ success: boolean; message?: string }>;
+  getUserActionRequests: () => Promise<UserActionRequest[]>;
+  createUserActionRequest: (
+    userId: string,
+    actionType: UserActionType,
+    reason: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  approveUserActionRequest: (requestId: string) => Promise<{ success: boolean; message?: string }>;
+  requestUnblockAccount: (reason: string) => Promise<{ success: boolean; message?: string }>;
   userActivityLogs: FrontendActivityLog[];
   logUserActivity: (description: string, type: FrontendActivityLog['type'], itemId?: string, itemType?: FrontendActivityLog['itemType'], userId?: string) => void;
   changePassword?: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
