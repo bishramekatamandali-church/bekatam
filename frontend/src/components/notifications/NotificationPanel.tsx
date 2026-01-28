@@ -46,6 +46,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
     }
     if (notification.link) {
       navigate(notification.link);
+      const [, hash] = notification.link.split('#');
+      if (hash) {
+        window.setTimeout(() => {
+          const target = document.getElementById(hash);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
+      }
     }
     onClose();
   };
@@ -64,7 +73,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
   
   return (
     <div 
-      className="absolute right-0 z-20 mt-3 w-80 sm:w-96 origin-top-right rounded-md bg-white py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none max-h-[70vh] flex flex-col"
+      className="fixed inset-x-4 top-20 z-50 max-h-[calc(100vh-6rem)] w-auto origin-top-right rounded-md bg-white py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none flex flex-col sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-96 sm:max-h-[70vh]"
       role="menu" 
       aria-orientation="vertical" 
       aria-labelledby="notifications-button"
