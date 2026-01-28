@@ -747,6 +747,9 @@ model user {
   countryCode                       String?
   phone                             String?
   role                              user_role                @default(user)
+  accountStatus                     user_accountStatus       @default(active)
+  blockedAt                         DateTime?
+  deletedAt                         DateTime?
   profileImageUrl                   String?                  @db.LongText
   coverPhotoUrl                     String?                  @db.LongText
   bio                               String?                  @db.Text
@@ -774,6 +777,59 @@ model user {
   testimonial                       testimonial[]
   contentlike                       contentlike[]
   ministrymember                    ministrymember[]
+  useractionrequest                 useractionrequest[]      @relation("UserActionRequestUser")
+  useractionrequestcreated          useractionrequest[]      @relation("UserActionRequestRequester")
+  useractionapproval                useractionapproval[]
+}
+
+model useractionrequest {
+  id                 String                       @id
+  userId             String
+  actionType         useractionrequest_actionType
+  reason             String                       @db.Text
+  status             useractionrequest_status     @default(pending)
+  requestedByAdminId String
+  requestedByAdminName String?
+  createdAt          DateTime                     @default(now())
+  processedAt        DateTime?
+  processedByAdminId String?
+  user               user                         @relation("UserActionRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  requestedByAdmin   user                         @relation("UserActionRequestRequester", fields: [requestedByAdminId], references: [id], onDelete: Cascade)
+  approvals          useractionapproval[]
+
+  @@index([userId])
+  @@index([requestedByAdminId])
+}
+
+model useractionapproval {
+  id        String            @id
+  requestId String
+  adminId   String
+  adminName String?
+  approvedAt DateTime         @default(now())
+  request   useractionrequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  admin     user              @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, adminId])
+  @@index([adminId])
+}
+
+enum user_accountStatus {
+  active
+  blocked
+  deleted
+}
+
+enum useractionrequest_actionType {
+  block
+  delete
+  unblock
+}
+
+enum useractionrequest_status {
+  pending
+  approved
+  rejected
 }
 
 enum fellowshiprosteritem_rosterType {
