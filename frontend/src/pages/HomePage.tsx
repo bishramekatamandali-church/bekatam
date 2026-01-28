@@ -10,10 +10,17 @@ import CreatePostModal from '../components/post/CreatePostModal';
 import AuthModal from '../components/auth/AuthModal';
 
 // Helper to get a consistent, sortable date from any content item
-  const getPublishedAt = (item: any): Date => {
+const getPublishedAt = (item: any): Date => {
   const dateStr = item.publishedAt || item.createdAt || item.submittedAt || item.date || item.incidentAt || item.lastPublishedAt || item.uploadDate || item.updatedAt || item.expenseDate || item.collectionDate || item.meetingDate || item.decisionDate;
   return dateStr ? new Date(dateStr) : new Date(0);
 };
+
+const getContentUpdatedAt = (item: any): Date => {
+  const dateStr = item.updatedAt || item.lastPublishedAt || item.publishedAt || item.createdAt || item.submittedAt || item.date || item.incidentAt;
+  return dateStr ? new Date(dateStr) : new Date(0);
+};
+
+const buildContentKey = (typeKey: string, id: string | number) => `home:${typeKey}:${id}`;
 
 const getIncidentAt = (item: any): Date | null => {
   const dateStr = item.incidentAt || item.date;
@@ -54,6 +61,21 @@ const HomePage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('homepage_seen_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored) as Record<string, number>;
+        if (parsed && typeof parsed === 'object') {
+          setSeenContentMap(parsed);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load homepage seen content state.', error);
+    }
+  }, []);
 
   const openCreateModal = (type: 'prayer' | 'testimonial') => {
     if (!isAdmin) return;
@@ -126,6 +148,37 @@ const HomePage: React.FC = () => {
     return combined.sort((a, b) => getPublishedAt(b.item).getTime() - getPublishedAt(a.item).getTime());
   }, [sortedPrayerRequests, sortedTestimonials]);
 
+  const markContentSeen = (item: ContentItem, typeKey: string) => {
+    const id = (item as any).id;
+    if (!id) return;
+    const key = buildContentKey(typeKey, id);
+    const updatedAt = getContentUpdatedAt(item).getTime();
+    setSeenContentMap((prev) => {
+      if (prev[key] && prev[key] >= updatedAt) {
+        return prev;
+      }
+      const next = {
+        ...prev,
+        [key]: updatedAt,
+      };
+      try {
+        window.localStorage.setItem('homepage_seen_content_v1', JSON.stringify(next));
+      } catch (error) {
+        console.warn('Failed to persist homepage seen content state.', error);
+      }
+      return next;
+    });
+  };
+
+  const isContentNew = (item: ContentItem, typeKey: string) => {
+    const id = (item as any).id;
+    if (!id) return false;
+    const key = buildContentKey(typeKey, id);
+    const updatedAt = getContentUpdatedAt(item).getTime();
+    const seenAt = seenContentMap[key] || 0;
+    return updatedAt > seenAt;
+  };
+
   const renderMediaCard = (
     item: ContentItem,
     typeKey: string,
@@ -135,17 +188,24 @@ const HomePage: React.FC = () => {
     const publishedAt = info.publishedAt || getPublishedAt(item).toISOString();
     const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
+    const showNewBadge = isContentNew(item, typeKey);
     return (
       <Link
         to={info.linkPath}
         key={`${typeKey}-${info.id}`}
+        onClick={() => markContentSeen(item, typeKey)}
         className={`group flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${options.containerClass}`}
       >
-        <div className={`bg-slate-100 rounded-xl overflow-hidden ${options.imageClass}`}>
+        <div className={`relative bg-slate-100 rounded-xl overflow-hidden ${options.imageClass}`}>
           {info.imageUrl ? (
             <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
+          )}
+          {showNewBadge && (
+            <span className="absolute left-2 top-2 rounded-full bg-rose-500 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white shadow">
+              New
+            </span>
           )}
         </div>
         <div className="mt-2 px-1 space-y-1">
