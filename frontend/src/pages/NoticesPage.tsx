@@ -171,7 +171,8 @@ const NoticesPage: React.FC = () => {
 
       // when filter
       const endDateTime = getNoticeEndDate(item.date, item.timeSlot);
-      const isUpcoming = endDateTime.getTime() >= now.getTime();
+      const isPast = item.itemType === "schedule" && endDateTime.getTime() < now.getTime();
+      const isUpcoming = !isPast;
       if (whenFilter === "upcoming" && !isUpcoming) return false;
       if (whenFilter === "past" && isUpcoming) return false;
 
@@ -400,7 +401,9 @@ const NoticesPage: React.FC = () => {
             <div className="divide-y divide-slate-200">
               {filteredNotices.map((notice) => {
                 const endDateTime = getNoticeEndDate(notice.date, notice.timeSlot);
-                const isUpcoming = endDateTime.getTime() >= now.getTime();
+                const isPast =
+                  notice.itemType === "schedule" && endDateTime.getTime() < now.getTime();
+                const isUpcoming = !isPast;
 
                 return (
                   <Link
@@ -440,7 +443,9 @@ const NoticesPage: React.FC = () => {
           <div className="mx-auto mt-10 flex max-w-4xl flex-col gap-4">
             {filteredNotices.map((notice) => {
               const endDateTime = getNoticeEndDate(notice.date, notice.timeSlot);
-              const isUpcoming = endDateTime.getTime() >= now.getTime();
+              const isPast =
+                notice.itemType === "schedule" && endDateTime.getTime() < now.getTime();
+              const isUpcoming = !isPast;
 
               return (
                 <article
