@@ -243,13 +243,20 @@ const HomePage: React.FC = () => {
     const showVideo = ['sermons', 'events'].includes(typeKey) && Boolean(videoUrl);
     const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
     const embedUrl = youtubeEmbedUrl || videoUrl;
-    const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-      const currentVideo = event.currentTarget;
+    const pauseOtherVideos = (currentVideo: HTMLVideoElement) => {
       document.querySelectorAll('video').forEach((video) => {
         if (video !== currentVideo) {
           video.pause();
         }
       });
+    };
+
+    const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      pauseOtherVideos(event.currentTarget);
+    };
+
+    const handleVideoClick = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      pauseOtherVideos(event.currentTarget);
     };
     return (
       <Link
@@ -265,6 +272,7 @@ const HomePage: React.FC = () => {
                 src={videoUrl}
                 controls
                 onPlay={handleVideoPlay}
+                onClick={handleVideoClick}
                 className="w-full h-full object-cover"
                 aria-label={`Video preview for ${info.title}`}
               />
