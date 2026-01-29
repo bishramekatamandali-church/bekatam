@@ -87,13 +87,15 @@ const HomePage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
   const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
-  const pauseHomepageMedia = (currentElement?: HTMLElement | null) => {
+  const pauseHomepageHtmlVideos = (currentElement?: HTMLElement | null) => {
     document.querySelectorAll<HTMLVideoElement>('video[data-homepage-video]').forEach((video) => {
       if (video !== currentElement) {
         video.pause();
       }
     });
+  };
 
+  const pauseHomepageEmbeds = (currentElement?: HTMLElement | null) => {
     document.querySelectorAll<HTMLIFrameElement>('iframe[data-homepage-video]').forEach((iframe) => {
       if (iframe === currentElement) return;
       const contentWindow = iframe.contentWindow;
@@ -113,6 +115,11 @@ const HomePage: React.FC = () => {
       contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
       contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
     });
+  };
+
+  const pauseHomepageMedia = (currentElement?: HTMLElement | null) => {
+    pauseHomepageHtmlVideos(currentElement);
+    pauseHomepageEmbeds(currentElement);
   };
 
   useEffect(() => {
@@ -149,6 +156,36 @@ const HomePage: React.FC = () => {
       console.warn('Failed to load homepage seen content state.', error);
     }
   }, [currentUser, seenStorageKey]);
+
+  useEffect(() => {
+    const handleEmbedMessage = (event: MessageEvent) => {
+      if (!event.data) return;
+      let payload: any = null;
+
+      if (typeof event.data === 'string') {
+        try {
+          payload = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
+      } else if (typeof event.data === 'object') {
+        payload = event.data;
+      }
+
+      if (!payload) return;
+
+      const eventName = String(payload.event || payload.method || payload.type || '').toLowerCase();
+      const isYouTubePlay = payload.event === 'onStateChange' && (payload.info === 1 || payload.info === '1');
+      const isGenericPlay = eventName === 'play' || eventName === 'playing';
+
+      if (isYouTubePlay || isGenericPlay) {
+        pauseHomepageHtmlVideos();
+      }
+    };
+
+    window.addEventListener('message', handleEmbedMessage);
+    return () => window.removeEventListener('message', handleEmbedMessage);
+  }, []);
 
   const openCreateModal = (type: 'prayer' | 'testimonial') => {
     if (!isAdmin) return;
