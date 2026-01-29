@@ -21,6 +21,8 @@ const getContentUpdatedAt = (item: any): Date => {
 };
 
 const buildContentKey = (typeKey: string, id: string | number) => `home:${typeKey}:${id}`;
+const guestSeenStorageKey = 'homepage_seen_content_v1:guest';
+const userSeenStorageKey = (userId: string) => `homepage_seen_content_v1:user:${userId}`;
 
 const getIncidentAt = (item: any): Date | null => {
   const dateStr = item.incidentAt || item.date;
@@ -62,20 +64,42 @@ const HomePage: React.FC = () => {
   const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
+  const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem('homepage_seen_content_v1');
-      if (stored) {
-        const parsed = JSON.parse(stored) as Record<string, number>;
-        if (parsed && typeof parsed === 'object') {
-          setSeenContentMap(parsed);
+      if (currentUser) {
+        const storedUser = window.localStorage.getItem(seenStorageKey);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser) as Record<string, number>;
+          if (parsedUser && typeof parsedUser === 'object') {
+            setSeenContentMap(parsedUser);
+            return;
+          }
+        }
+        const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
+        if (storedGuest) {
+          const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
+          if (parsedGuest && typeof parsedGuest === 'object') {
+            setSeenContentMap(parsedGuest);
+            window.localStorage.setItem(seenStorageKey, JSON.stringify(parsedGuest));
+            return;
+          }
         }
       }
+      const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
+      if (storedGuest) {
+        const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
+        if (parsedGuest && typeof parsedGuest === 'object') {
+          setSeenContentMap(parsedGuest);
+          return;
+        }
+      }
+      setSeenContentMap({});
     } catch (error) {
       console.warn('Failed to load homepage seen content state.', error);
     }
-  }, []);
+  }, [currentUser, seenStorageKey]);
 
   const openCreateModal = (type: 'prayer' | 'testimonial') => {
     if (!isAdmin) return;
@@ -164,7 +188,7 @@ const HomePage: React.FC = () => {
         [key]: updatedAt,
       };
       try {
-        window.localStorage.setItem('homepage_seen_content_v1', JSON.stringify(next));
+        window.localStorage.setItem(seenStorageKey, JSON.stringify(next));
       } catch (error) {
         console.warn('Failed to persist homepage seen content state.', error);
       }
