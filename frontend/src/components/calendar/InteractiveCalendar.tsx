@@ -239,7 +239,6 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsDate.month && selectedBsDate?.year === currentBsDate.year;
       
       const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
-      const hasNotice = entriesOnDay.some((entry) => entry.type === 'notice');
 
       const isSaturday = getNepalDayOfWeek(adDateForBsDay) === 6;
 
@@ -279,7 +278,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
 
           {/* Events */}
           {entriesOnDay.length > 0 && (
-            <div className="flex flex-col items-center justify-end space-y-0.5 h-6">
+            <div className="flex items-center justify-center gap-1 h-6">
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
                   <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
@@ -289,11 +288,6 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
                 </div>
               ))}
               {entriesOnDay.length > 4 && <div className="text-xs text-teal-600">+</div>}
-              {hasNotice && (
-                <span className="text-[9px] uppercase tracking-wide text-rose-600">
-                  notice
-                </span>
-              )}
             </div>
           )}
         </div>
