@@ -95,7 +95,9 @@ const HomePage: React.FC = () => {
         ? `/prayer-requests#testimonial-${id}`
         : `/${typeKey}/${id}`;
     const rawLinkPath = (item as any).linkPath || defaultLinkPath;
-    const linkPath = rawLinkPath || defaultLinkPath;
+    const linkPath = ['prayer-requests', 'testimonials'].includes(typeKey)
+      ? defaultLinkPath
+      : rawLinkPath || defaultLinkPath;
     const mediaUrls = Array.isArray((item as any).mediaUrls) ? (item as any).mediaUrls : [];
 
     return ({
