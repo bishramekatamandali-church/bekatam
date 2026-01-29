@@ -2,7 +2,7 @@ export type CloudinaryResourceType = 'image' | 'video' | 'raw';
 
 const MB = 1024 * 1024;
 const IMAGE_MAX_BYTES = 5 * MB;
-const VIDEO_MAX_BYTES = 50 * MB;
+const VIDEO_MAX_BYTES = 300 * MB;
 const AUDIO_MAX_BYTES = 50 * MB;
 
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
