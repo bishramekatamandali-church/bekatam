@@ -1498,7 +1498,7 @@ const nowTimestamp = new Date().toISOString();
       addNotification({
         targetUserId: 'admin_group',
         message: `New ministry join request from ${newItem.userName} for ${newItem.ministryName}.`,
-        link: '/admin/ministry-join-requests',
+        link: `/admin/ministry-join-requests?requestId=${newItem.id}`,
         type: 'ministry_request_update',
       });
     }

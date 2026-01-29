@@ -3,12 +3,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useContent } from '../../contexts/ContentContext';
 import { useAuth } from '../../contexts/AuthContext';
-import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
+import Card, { CardContent, CardHeader } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { MinistryJoinRequest, MinistryJoinRequestStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
-import { Link } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -26,6 +26,7 @@ const XCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
 const ManageMinistryJoinRequestsPage: React.FC = () => {
   const { ministryJoinRequests, updateMinistryJoinRequestStatus, loadingContent } = useContent();
   const { isAdmin } = useAuth(); 
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<MinistryJoinRequest | null>(null);
@@ -42,6 +43,20 @@ const ManageMinistryJoinRequestsPage: React.FC = () => {
       setNewStatus(selectedRequest.status);
     }
   }, [selectedRequest]);
+
+  useEffect(() => {
+    const requestId = searchParams.get('requestId');
+    if (!requestId) return;
+    const matchedRequest = ministryJoinRequests.find(req => req.id === requestId);
+    if (matchedRequest) {
+      setSelectedRequest(matchedRequest);
+      setIsViewModalOpen(true);
+      setIsProcessModalOpen(false);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('requestId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, ministryJoinRequests]);
 
   const filteredAndSortedRequests = useMemo(() => {
     return ministryJoinRequests
