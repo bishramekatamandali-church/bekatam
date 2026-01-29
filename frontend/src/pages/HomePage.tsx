@@ -238,11 +238,19 @@ const HomePage: React.FC = () => {
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
     const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
     const showNewBadge = isContentNew(item, typeKey);
-    const videoUrl = typeKey === 'sermons' ? (item as any).videoUrl : undefined;
+    const videoUrl = ['sermons', 'events'].includes(typeKey) ? (item as any).videoUrl : undefined;
     const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
-    const showVideo = typeKey === 'sermons' && Boolean(videoUrl);
+    const showVideo = ['sermons', 'events'].includes(typeKey) && Boolean(videoUrl);
     const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
     const embedUrl = youtubeEmbedUrl || videoUrl;
+    const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const currentVideo = event.currentTarget;
+      document.querySelectorAll('video').forEach((video) => {
+        if (video !== currentVideo) {
+          video.pause();
+        }
+      });
+    };
     return (
       <Link
         to={info.linkPath}
@@ -256,6 +264,7 @@ const HomePage: React.FC = () => {
               <video
                 src={videoUrl}
                 controls
+                onPlay={handleVideoPlay}
                 className="w-full h-full object-cover"
                 aria-label={`Video preview for ${info.title}`}
               />
