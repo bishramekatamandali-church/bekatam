@@ -38,6 +38,28 @@ const formatDateLabel = (dateValue?: string | Date | null): string => {
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+const getYouTubeEmbedUrl = (url?: string): string | null => {
+  if (!url) return null;
+  let videoId = null;
+  const regExpStandard = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const matchStandard = url.match(regExpStandard);
+  if (matchStandard && matchStandard[2].length === 11) {
+    videoId = matchStandard[2];
+  } else {
+    const regExpShorts = /^.*(youtube.com\/shorts\/)([^#\&\?]*).*/;
+    const matchShorts = url.match(regExpShorts);
+    if (matchShorts && matchShorts[2]) {
+      videoId = matchShorts[2];
+    }
+  }
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+};
+
+const isDirectVideoUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
+};
+
 const incidentLabels: Record<string, string> = {
   events: 'Event date',
   sermons: 'Sermon date',
@@ -216,6 +238,11 @@ const HomePage: React.FC = () => {
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
     const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
     const showNewBadge = isContentNew(item, typeKey);
+    const videoUrl = typeKey === 'sermons' ? (item as any).videoUrl : undefined;
+    const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
+    const showVideo = typeKey === 'sermons' && Boolean(videoUrl);
+    const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
+    const embedUrl = youtubeEmbedUrl || videoUrl;
     return (
       <Link
         to={info.linkPath}
@@ -224,7 +251,27 @@ const HomePage: React.FC = () => {
         className={`group flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${options.containerClass}`}
       >
         <div className={`relative bg-slate-100 rounded-xl overflow-hidden ${options.imageClass}`}>
-          {info.imageUrl ? (
+          {showVideo ? (
+            useVideoPlayer ? (
+              <video
+                src={videoUrl}
+                controls
+                className="w-full h-full object-cover"
+                aria-label={`Video preview for ${info.title}`}
+              />
+            ) : (
+              embedUrl && (
+                <iframe
+                  src={embedUrl}
+                  title={`Video embed for ${info.title}`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              )
+            )
+          ) : info.imageUrl ? (
             <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
