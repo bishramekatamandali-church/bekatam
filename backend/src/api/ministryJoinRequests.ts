@@ -63,6 +63,27 @@ const notifyAdminsOfJoinRequest = async (params: {
     }
 };
 
+const notifyUserOfJoinRequest = async (params: {
+    userName: string;
+    userEmail: string;
+    ministryName: string;
+}) => {
+    try {
+        await sendEmail({
+            to: params.userEmail,
+            subject: `We received your request to join ${params.ministryName}`,
+            text: `Hello ${params.userName},\n\nWe have received your request to join ${params.ministryName}. Our team will review it soon, and we will notify you once a decision has been made.\n\nThank you for your interest!`,
+            html: `
+                <p>Hello ${params.userName},</p>
+                <p>We have received your request to join <strong>${params.ministryName}</strong>. Our team will review it soon, and we will notify you once a decision has been made.</p>
+                <p>Thank you for your interest!</p>
+            `,
+        });
+    } catch (error) {
+        console.error('Failed to send ministry join request confirmation email:', error);
+    }
+};
+
 // GET all ministry join requests
 router.get('/', async (req, res) => {
     try {
@@ -144,6 +165,11 @@ router.post('/', async (req, res) => {
         });
         await notifyAdminsOfJoinRequest({
             requestId: newRequest.id,
+            userName: newRequest.userName,
+            userEmail: newRequest.userEmail,
+            ministryName: newRequest.ministryName,
+        });
+        await notifyUserOfJoinRequest({
             userName: newRequest.userName,
             userEmail: newRequest.userEmail,
             ministryName: newRequest.ministryName,
