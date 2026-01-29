@@ -52,7 +52,7 @@ const getYouTubeEmbedUrl = (url?: string): string | null => {
       videoId = matchShorts[2];
     }
   }
-  return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  return videoId ? `https://www.youtube.com/embed/${videoId}?enablejsapi=1` : null;
 };
 
 const isDirectVideoUrl = (url?: string): boolean => {
@@ -87,6 +87,33 @@ const HomePage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
   const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
+  const pauseHomepageMedia = (currentElement?: HTMLElement | null) => {
+    document.querySelectorAll<HTMLVideoElement>('video[data-homepage-video]').forEach((video) => {
+      if (video !== currentElement) {
+        video.pause();
+      }
+    });
+
+    document.querySelectorAll<HTMLIFrameElement>('iframe[data-homepage-video]').forEach((iframe) => {
+      if (iframe === currentElement) return;
+      const contentWindow = iframe.contentWindow;
+      if (!contentWindow) return;
+      const src = iframe.getAttribute('src') || '';
+
+      if (src.includes('youtube.com/embed')) {
+        contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
+        return;
+      }
+
+      if (src.includes('player.vimeo.com')) {
+        contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+        return;
+      }
+
+      contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+      contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
+    });
+  };
 
   useEffect(() => {
     try {
@@ -243,20 +270,16 @@ const HomePage: React.FC = () => {
     const showVideo = ['sermons', 'events'].includes(typeKey) && Boolean(videoUrl);
     const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
     const embedUrl = youtubeEmbedUrl || videoUrl;
-    const pauseOtherVideos = (currentVideo: HTMLVideoElement) => {
-      document.querySelectorAll('video').forEach((video) => {
-        if (video !== currentVideo) {
-          video.pause();
-        }
-      });
-    };
-
     const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-      pauseOtherVideos(event.currentTarget);
+      pauseHomepageMedia(event.currentTarget);
     };
 
     const handleVideoClick = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-      pauseOtherVideos(event.currentTarget);
+      pauseHomepageMedia(event.currentTarget);
+    };
+
+    const handleEmbedInteract = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+      pauseHomepageMedia(event.currentTarget);
     };
     return (
       <Link
@@ -273,6 +296,7 @@ const HomePage: React.FC = () => {
                 controls
                 onPlay={handleVideoPlay}
                 onClick={handleVideoClick}
+                data-homepage-video
                 className="w-full h-full object-cover"
                 aria-label={`Video preview for ${info.title}`}
               />
@@ -282,6 +306,10 @@ const HomePage: React.FC = () => {
                   src={embedUrl}
                   title={`Video embed for ${info.title}`}
                   className="w-full h-full"
+                  data-homepage-video
+                  onClick={handleEmbedInteract}
+                  onPointerDown={handleEmbedInteract}
+                  onFocus={handleEmbedInteract}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   referrerPolicy="strict-origin-when-cross-origin"
                   allowFullScreen
