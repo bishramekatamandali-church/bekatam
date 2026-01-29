@@ -214,6 +214,7 @@ const HomePage: React.FC = () => {
     const publishedAt = info.publishedAt || getPublishedAt(item).toISOString();
     const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
+    const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
     const showNewBadge = isContentNew(item, typeKey);
     return (
       <Link
@@ -238,7 +239,7 @@ const HomePage: React.FC = () => {
           <h3 className={`font-semibold text-slate-900 line-clamp-2 ${options.titleClass}`}>{info.title}</h3>
           <div className="text-[0.7rem] text-slate-500 space-y-0.5">
             <div>Posted on: {formatDateLabel(publishedAt)}</div>
-            {incidentAt && <div>{incidentLabel}: {formatDateLabel(incidentAt)}</div>}
+            {showIncident && <div>{incidentLabel}: {formatDateLabel(incidentAt)}</div>}
           </div>
         </div>
       </Link>
