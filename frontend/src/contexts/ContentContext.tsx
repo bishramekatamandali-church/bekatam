@@ -875,6 +875,8 @@ const nowTimestamp = new Date().toISOString();
     meetingLog: 'meeting-logs',
     decisionLog: 'decision-logs',
     advertisement: 'advertisements',
+    fellowshipRoster: 'fellowship-schedules/rosters',
+    generatedSchedule: 'fellowship-schedules/generated',
 };
 
     const newItemId = `${type}-${Date.now()}`;
@@ -918,8 +920,12 @@ const nowTimestamp = new Date().toISOString();
                   ? (normalizeMeetingLogItem(newItem) as ContentItem)
                   : type === 'decisionLog'
                     ? (normalizeDecisionLogItem(newItem) as ContentItem)
-                    : newItem;
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements };
+                    : type === 'fellowshipRoster'
+                      ? (normalizeFellowshipRosterItem(newItem) as ContentItem)
+                      : type === 'generatedSchedule'
+                        ? (normalizeGeneratedScheduleItem(newItem) as ContentItem)
+                        : newItem;
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements, fellowshipRoster: setFellowshipRosters, generatedSchedule: setGeneratedSchedules };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => [normalizedNewItem, ...ensureArray(prev)]);
@@ -1127,7 +1133,7 @@ const nowTimestamp = new Date().toISOString();
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
  directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials',
  donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
- ministryJoinRequest: 'ministry-join-requests', advertisement: 'advertisements' };
+ ministryJoinRequest: 'ministry-join-requests', advertisement: 'advertisements', fellowshipRoster: 'fellowship-schedules/rosters', generatedSchedule: 'fellowship-schedules/generated' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
@@ -1155,14 +1161,18 @@ const nowTimestamp = new Date().toISOString();
           throw new Error(errorData.error || `Failed to update ${type}`);
         }
         const updatedItem: ContentItem = await response.json();
-        const normali1zedUpdatedItem =
+        const normalizedUpdatedItem =
           type === 'sermon'
             ? (normalizeSermonItem(updatedItem) as ContentItem)
             : type === 'meetingLog'
               ? (normalizeMeetingLogItem(updatedItem) as ContentItem)
               : type === 'decisionLog'
                 ? (normalizeDecisionLogItem(updatedItem) as ContentItem)
-                : updatedItem;
+                : type === 'fellowshipRoster'
+                  ? (normalizeFellowshipRosterItem(updatedItem) as ContentItem)
+                  : type === 'generatedSchedule'
+                    ? (normalizeGeneratedScheduleItem(updatedItem) as ContentItem)
+                    : updatedItem;
         const setterMap: Record<string, Function> = {
           sermon: setSermons,
           event: setEvents,
@@ -1179,6 +1189,8 @@ const nowTimestamp = new Date().toISOString();
           testimonial: setTestimonials,
           donation: setDonationRecords,
           collectionRecord: setCollectionRecords,
+          fellowshipRoster: setFellowshipRosters,
+          generatedSchedule: setGeneratedSchedules,
           meetingLog: setMeetingLogs,
           decisionLog: setDecisionLogs,
           advertisement: setAdvertisements,

@@ -66,7 +66,9 @@ type NoticeItem = {
   linkPath: string;
 };
 
-const toNoticeDate = (dateValue: string) => new Date(`${dateValue}T00:00:00`);
+const normalizeNoticeDate = (dateValue: string) =>
+  dateValue.includes("T") ? dateValue.split("T")[0] : dateValue;
+const toNoticeDate = (dateValue: string) => new Date(`${normalizeNoticeDate(dateValue)}T00:00:00`);
 const NEPAL_TIMEZONE_OFFSET = "+05:45";
 
 const parseTimeSlotEnd = (timeSlot?: string): { hour: number; minute: number } | null => {
@@ -88,11 +90,12 @@ const parseTimeSlotEnd = (timeSlot?: string): { hour: number; minute: number } |
 };
 
 const getNoticeEndDate = (dateValue: string, timeSlot: string): Date => {
+  const normalizedDate = normalizeNoticeDate(dateValue);
   const endTime = parseTimeSlotEnd(timeSlot);
   const hour = endTime?.hour ?? 23;
   const minute = endTime?.minute ?? 59;
   const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  return new Date(`${dateValue}T${timeString}:00${NEPAL_TIMEZONE_OFFSET}`);
+  return new Date(`${normalizedDate}T${timeString}:00${NEPAL_TIMEZONE_OFFSET}`);
 };
 
 const pillBase =
