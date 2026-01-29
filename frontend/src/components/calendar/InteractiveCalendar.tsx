@@ -245,7 +245,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
       days.push(
         <div
           key={day}
-          className={`relative border-r border-b border-blue-200 p-1.5 cursor-pointer hover:bg-blue-50 transition-colors duration-150 flex flex-col justify-between aspect-square
+          className={`relative border-r border-b border-blue-200 p-1.5 pb-7 cursor-pointer hover:bg-blue-50 transition-colors duration-150 flex flex-col justify-between aspect-square overflow-hidden
             ${isSaturday ? 'bg-green-50' : 'bg-white'} 
             ${isSelectedDay ? 'bg-purple-200 ring-2 ring-purple-500' : isToday ? 'ring-2 ring-amber-500' : ''}`}
           onClick={() => {
@@ -278,7 +278,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
 
           {/* Events */}
           {entriesOnDay.length > 0 && (
-            <div className="flex items-center justify-center gap-1 h-6">
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1 h-5">
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
                   <div className={`w-1 h-1 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
