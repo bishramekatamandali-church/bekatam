@@ -21,6 +21,8 @@ const getContentUpdatedAt = (item: any): Date => {
 };
 
 const buildContentKey = (typeKey: string, id: string | number) => `home:${typeKey}:${id}`;
+const guestSeenStorageKey = 'homepage_seen_content_v1:guest';
+const userSeenStorageKey = (userId: string) => `homepage_seen_content_v1:user:${userId}`;
 
 const getIncidentAt = (item: any): Date | null => {
   const dateStr = item.incidentAt || item.date;
@@ -34,6 +36,29 @@ const formatDateLabel = (dateValue?: string | Date | null): string => {
   const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
   if (Number.isNaN(date.getTime())) return 'Unknown';
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const getYouTubeEmbedUrl = (url?: string): string | null => {
+  if (!url) return null;
+  let videoId = null;
+  const regExpStandard = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const matchStandard = url.match(regExpStandard);
+  if (matchStandard && matchStandard[2].length === 11) {
+    videoId = matchStandard[2];
+  } else {
+    const regExpShorts = /^.*(youtube.com\/shorts\/)([^#\&\?]*).*/;
+    const matchShorts = url.match(regExpShorts);
+    if (matchShorts && matchShorts[2]) {
+      videoId = matchShorts[2];
+    }
+  }
+  const origin = typeof window !== 'undefined' ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
+  return videoId ? `https://www.youtube.com/embed/${videoId}?enablejsapi=1${origin}` : null;
+};
+
+const isDirectVideoUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 };
 
 const incidentLabels: Record<string, string> = {
@@ -62,19 +87,105 @@ const HomePage: React.FC = () => {
   const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
+  const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
+  const pauseHomepageHtmlVideos = (currentElement?: HTMLElement | null) => {
+    document.querySelectorAll<HTMLVideoElement>('video[data-homepage-video]').forEach((video) => {
+      if (video !== currentElement) {
+        video.pause();
+      }
+    });
+   };
+
+    const pauseHomepageEmbeds = (currentElement?: HTMLElement | null) => {
+    document.querySelectorAll<HTMLIFrameElement>('iframe[data-homepage-video]').forEach((iframe) => {
+      if (iframe === currentElement) return;
+      const contentWindow = iframe.contentWindow;
+      if (!contentWindow) return;
+      const src = iframe.getAttribute('src') || '';
+
+      if (src.includes('youtube.com/embed')) {
+        contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
+        return;
+      }
+
+      if (src.includes('player.vimeo.com')) {
+        contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+        return;
+      }
+
+      contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+      contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
+    });
+  };
+
+  const pauseHomepageMedia = (currentElement?: HTMLElement | null) => {
+    pauseHomepageHtmlVideos(currentElement);
+    pauseHomepageEmbeds(currentElement);
+  };
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem('homepage_seen_content_v1');
-      if (stored) {
-        const parsed = JSON.parse(stored) as Record<string, number>;
-        if (parsed && typeof parsed === 'object') {
-          setSeenContentMap(parsed);
+      if (currentUser) {
+        const storedUser = window.localStorage.getItem(seenStorageKey);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser) as Record<string, number>;
+          if (parsedUser && typeof parsedUser === 'object') {
+            setSeenContentMap(parsedUser);
+            return;
+          }
+        }
+        const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
+        if (storedGuest) {
+          const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
+          if (parsedGuest && typeof parsedGuest === 'object') {
+            setSeenContentMap(parsedGuest);
+            window.localStorage.setItem(seenStorageKey, JSON.stringify(parsedGuest));
+            return;
+          }
         }
       }
+      const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
+      if (storedGuest) {
+        const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
+        if (parsedGuest && typeof parsedGuest === 'object') {
+          setSeenContentMap(parsedGuest);
+          return;
+        }
+      }
+      setSeenContentMap({});
     } catch (error) {
       console.warn('Failed to load homepage seen content state.', error);
     }
+  }, [currentUser, seenStorageKey]);
+
+  useEffect(() => {
+    const handleEmbedMessage = (event: MessageEvent) => {
+      if (!event.data) return;
+      let payload: any = null;
+
+      if (typeof event.data === 'string') {
+        try {
+          payload = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
+      } else if (typeof event.data === 'object') {
+        payload = event.data;
+      }
+
+      if (!payload) return;
+
+      const eventName = String(payload.event || payload.method || payload.type || '').toLowerCase();
+      const isYouTubePlay = payload.event === 'onStateChange' && (payload.info === 1 || payload.info === '1');
+      const isGenericPlay = eventName === 'play' || eventName === 'playing';
+
+      if (isYouTubePlay || isGenericPlay) {
+        pauseHomepageHtmlVideos();
+      }
+    };
+
+    window.addEventListener('message', handleEmbedMessage);
+    return () => window.removeEventListener('message', handleEmbedMessage);
   }, []);
 
   const openCreateModal = (type: 'prayer' | 'testimonial') => {
@@ -95,7 +206,9 @@ const HomePage: React.FC = () => {
         ? `/prayer-requests#testimonial-${id}`
         : `/${typeKey}/${id}`;
     const rawLinkPath = (item as any).linkPath || defaultLinkPath;
-    const linkPath = rawLinkPath || defaultLinkPath;
+    const linkPath = ['prayer-requests', 'testimonials'].includes(typeKey)
+      ? defaultLinkPath
+      : rawLinkPath || defaultLinkPath;
     const mediaUrls = Array.isArray((item as any).mediaUrls) ? (item as any).mediaUrls : [];
 
     return ({
@@ -162,7 +275,7 @@ const HomePage: React.FC = () => {
         [key]: updatedAt,
       };
       try {
-        window.localStorage.setItem('homepage_seen_content_v1', JSON.stringify(next));
+        window.localStorage.setItem(seenStorageKey, JSON.stringify(next));
       } catch (error) {
         console.warn('Failed to persist homepage seen content state.', error);
       }
@@ -188,7 +301,28 @@ const HomePage: React.FC = () => {
     const publishedAt = info.publishedAt || getPublishedAt(item).toISOString();
     const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
+    const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
     const showNewBadge = isContentNew(item, typeKey);
+    const videoUrl = ['sermons', 'events'].includes(typeKey) ? (item as any).videoUrl : undefined;
+    const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
+    const showVideo = ['sermons', 'events'].includes(typeKey) && Boolean(videoUrl);
+    const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
+    const embedUrl = youtubeEmbedUrl || videoUrl;
+    const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      pauseHomepageMedia(event.currentTarget);
+    };
+
+    const handleVideoClick = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      pauseHomepageMedia(event.currentTarget);
+    };
+
+    const handleEmbedInteract = (event: React.SyntheticEvent<HTMLElement>) => {
+      const currentTarget = event.currentTarget;
+      const iframe = currentTarget instanceof HTMLIFrameElement
+        ? currentTarget
+        : currentTarget.querySelector('iframe');
+      pauseHomepageMedia(iframe ?? currentTarget);
+    };
     return (
       <Link
         to={info.linkPath}
@@ -197,7 +331,40 @@ const HomePage: React.FC = () => {
         className={`group flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${options.containerClass}`}
       >
         <div className={`relative bg-slate-100 rounded-xl overflow-hidden ${options.imageClass}`}>
-          {info.imageUrl ? (
+          {showVideo ? (
+            useVideoPlayer ? (
+              <video
+                src={videoUrl}
+                controls
+                onPlay={handleVideoPlay}
+                onClick={handleVideoClick}
+                data-homepage-video
+                className="w-full h-full object-cover"
+                aria-label={`Video preview for ${info.title}`}
+              />
+            ) : (
+              embedUrl && (
+                <div                 
+                  className="w-full h-full"
+                  onPointerDownCapture={handleEmbedInteract}
+                  onFocusCapture={handleEmbedInteract}
+                >
+                  <iframe
+                    src={embedUrl}
+                    title={`Video embed for ${info.title}`}
+                    className="w-full h-full"
+                    data-homepage-video
+                    onClick={handleEmbedInteract}
+                    onPointerDown={handleEmbedInteract}
+                    onFocus={handleEmbedInteract}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
+              )
+            )
+          ) : info.imageUrl ? (
             <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
@@ -212,7 +379,7 @@ const HomePage: React.FC = () => {
           <h3 className={`font-semibold text-slate-900 line-clamp-2 ${options.titleClass}`}>{info.title}</h3>
           <div className="text-[0.7rem] text-slate-500 space-y-0.5">
             <div>Posted on: {formatDateLabel(publishedAt)}</div>
-            {incidentAt && <div>{incidentLabel}: {formatDateLabel(incidentAt)}</div>}
+            {showIncident && <div>{incidentLabel}: {formatDateLabel(incidentAt)}</div>}
           </div>
         </div>
       </Link>

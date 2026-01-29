@@ -8,7 +8,68 @@ const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const databaseFallback_1 = require("../utils/databaseFallback");
+const emailService_1 = require("../services/emailService");
 const router = express_1.default.Router();
+const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
+const notifyAdminsOfJoinRequest = async (params) => {
+    try {
+        const admins = await db_1.prisma.user.findMany({
+            where: { role: 'admin', accountStatus: 'active' },
+            select: { id: true, email: true },
+        });
+        if (admins.length === 0)
+            return;
+        const linkPath = `/admin/ministry-join-requests?requestId=${params.requestId}`;
+        const linkUrl = `${getFrontendUrl()}${linkPath}`;
+        const message = `New ministry join request from ${params.userName} for ${params.ministryName}.`;
+        await db_1.prisma.notification.createMany({
+            data: admins.map((admin) => ({
+                id: crypto_1.default.randomUUID(),
+                targetUserId: admin.id,
+                message,
+                link: linkPath,
+                type: 'admin_action',
+            })),
+        });
+        await Promise.all(admins.map((admin) => (0, emailService_1.sendEmail)({
+            to: admin.email,
+            subject: `New Ministry Join Request: ${params.ministryName}`,
+            text: `A new ministry join request has been submitted.\n\nUser: ${params.userName} (${params.userEmail})\nMinistry: ${params.ministryName}\n\nReview and process the request in the admin panel: ${linkUrl}`,
+            html: `
+                        <p>A new ministry join request has been submitted.</p>
+                        <ul>
+                          <li><strong>User:</strong> ${params.userName} (${params.userEmail})</li>
+                          <li><strong>Ministry:</strong> ${params.ministryName}</li>
+                        </ul>
+                        <p>
+                          <a href="${linkUrl}">Review and process the request</a>
+                        </p>
+                    `,
+        }).catch((error) => {
+            console.error('Failed to send ministry join request notification email:', error);
+        })));
+    }
+    catch (error) {
+        console.error('Failed to notify admins about ministry join request:', error);
+    }
+};
+const notifyUserOfJoinRequest = async (params) => {
+    try {
+        await (0, emailService_1.sendEmail)({
+            to: params.userEmail,
+            subject: `We received your request to join ${params.ministryName}`,
+            text: `Hello ${params.userName},\n\nWe have received your request to join ${params.ministryName}. Our team will review it soon, and we will notify you once a decision has been made.\n\nThank you for your interest!`,
+            html: `
+                <p>Hello ${params.userName},</p>
+                <p>We have received your request to join <strong>${params.ministryName}</strong>. Our team will review it soon, and we will notify you once a decision has been made.</p>
+                <p>Thank you for your interest!</p>
+            `,
+        });
+    }
+    catch (error) {
+        console.error('Failed to send ministry join request confirmation email:', error);
+    }
+};
 // GET all ministry join requests
 router.get('/', async (req, res) => {
     try {
@@ -80,6 +141,17 @@ router.post('/', async (req, res) => {
                 },
             });
             return created;
+        });
+        await notifyAdminsOfJoinRequest({
+            requestId: newRequest.id,
+            userName: newRequest.userName,
+            userEmail: newRequest.userEmail,
+            ministryName: newRequest.ministryName,
+        });
+        await notifyUserOfJoinRequest({
+            userName: newRequest.userName,
+            userEmail: newRequest.userEmail,
+            ministryName: newRequest.ministryName,
         });
         res.status(201).json(newRequest);
     }

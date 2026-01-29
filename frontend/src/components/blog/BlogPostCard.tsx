@@ -8,18 +8,10 @@ import ShareModal from '../ui/ShareModal';
 import AuthModal from '../auth/AuthModal'; 
 import { useAuth } from '../../contexts/AuthContext'; 
 import { useContent } from '../../contexts/ContentContext'; 
-import { formatDateADBS } from '../../dateConverter'; 
 import useAITranslate from '../../../src/hooks/useAITranslate';
 import CommentItem from '../comments/CommentItem';
 import { ChatBubbleLeftEllipsisIcon, HandThumbUpIcon as HandThumbUpIconOutline, ShareIcon } from '@heroicons/react/24/outline';
 import { HandThumbUpIcon as HandThumbUpIconSolid } from '@heroicons/react/24/solid';
-
-// Icons
-const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${className || ''}`}>
-    <path fillRule="evenodd" d="M5.75 2.25A.75.75 0 016.5 3v.75h11V3A.75.75 0 0118.25 3v.75h.75a3 3 0 013 3v11.25a3 3 0 01-3 3H5a3 3 0 01-3-3V7.5a3 3 0 013-3H5.75V3A.75.75 0 015.75 2.25ZM4.5 10.5V18A1.5 1.5 0 006 19.5h12A1.5 1.5 0 0019.5 18v-7.5H4.5Z" clipRule="evenodd" />
-  </svg>
-);
 
 interface BlogPostCardProps {
   post: BlogPost;
@@ -126,10 +118,6 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, className = "" }) => 
           {post.category && <span className="text-xs font-medium uppercase tracking-wider text-purple-600">{category}</span>}
         </CardHeader>
         <CardContent className="flex-grow">
-          <div className="text-sm text-slate-500 mb-2 flex items-center">
-            <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
-            <span>{formatDateADBS(post.date)}</span>
-          </div>
           <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">{description}</p>
         </CardContent>
         

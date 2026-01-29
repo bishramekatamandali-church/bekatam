@@ -239,14 +239,13 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
       const isSelectedDay = selectedBsDate?.day === day && selectedBsDate?.month === currentBsDate.month && selectedBsDate?.year === currentBsDate.year;
       
       const entriesOnDay = itemsByDate.get(getAdDateKey(adDateForBsDay)) ?? [];
-      const hasNotice = entriesOnDay.some((entry) => entry.type === 'notice');
 
       const isSaturday = getNepalDayOfWeek(adDateForBsDay) === 6;
 
       days.push(
         <div
           key={day}
-          className={`relative border-r border-b border-blue-200 p-1.5 cursor-pointer hover:bg-blue-50 transition-colors duration-150 flex flex-col justify-between aspect-square
+          className={`relative border-r border-b border-blue-200 p-1.5 pb-7 cursor-pointer hover:bg-blue-50 transition-colors duration-150 flex flex-col justify-between aspect-square overflow-hidden
             ${isSaturday ? 'bg-green-50' : 'bg-white'} 
             ${isSelectedDay ? 'bg-purple-200 ring-2 ring-purple-500' : isToday ? 'ring-2 ring-amber-500' : ''}`}
           onClick={() => {
@@ -279,21 +278,16 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
 
           {/* Events */}
           {entriesOnDay.length > 0 && (
-            <div className="flex flex-col items-center justify-end space-y-0.5 h-6">
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1 h-5">
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
-                  <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
+                  <div className={`w-1 h-1 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[200px] px-2 py-1 bg-slate-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 transform-gpu text-center" role="tooltip">
                     {entry.title}
                   </div>
                 </div>
               ))}
               {entriesOnDay.length > 4 && <div className="text-xs text-teal-600">+</div>}
-              {hasNotice && (
-                <span className="text-[9px] uppercase tracking-wide text-rose-600">
-                  notice
-                </span>
-              )}
             </div>
           )}
         </div>
@@ -327,11 +321,11 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
             </Button>
           </div>
           <div className="text-center space-y-1">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Calendar</p>
+            <p className="text-xs uppercase tracking-wide text-blue-100"></p>
             <h2 className="text-lg sm:text-xl font-semibold tracking-wide">
               {currentMonthNameShort} {currentBsDate.year} BS
             </h2>
-            <p className="text-xs text-blue-100">AD Range: {currentBsMonthAdRangeLabel}</p>
+            <p className="text-xs text-blue-100"> {currentBsMonthAdRangeLabel}</p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 bg-blue-500/35 px-3 py-2 rounded-lg lg:justify-end">
             <div className="flex items-center gap-2">

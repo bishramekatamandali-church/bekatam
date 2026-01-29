@@ -5,12 +5,12 @@ import { formatDateADBS } from "../dateConverter";
 
 const languageCopy = {
   title: {
-    ne: "फेलोसिप कार्यक्रम सूचना",
-    en: "Fellowship Program Notices",
+     ne: "कार्यक्रम तालिका सूचना",
+    en: "Program Schedule Notices",
   },
   description: {
-    ne: "यहाँ फेलोसिप कार्यक्रमका सार्वजनिक रोस्टर र तालिकाहरू छन्। खोज, फिल्टर, क्रमबद्ध र विवरण हेर्न सक्नुहुन्छ।",
-    en: "Browse public fellowship rosters and schedules. Search, filter, sort, and review program details easily.",
+     ne: "यहाँ कार्यक्रम तालिकाहरू छन्। खोज, फिल्टर र विवरण हेर्न सक्नुहुन्छ।",
+    en: "Browse public program schedules. Search, filter, and review program details easily.",
   },
   nepali: { ne: "नेपाली", en: "Nepali" },
   english: { ne: "अंग्रेजी", en: "English" },
@@ -28,16 +28,7 @@ const languageCopy = {
   showUpcoming: { ne: "आगामी", en: "Upcoming" },
   showPast: { ne: "सम्पन्न", en: "Past" },
 
-  typeAll: { ne: "सबै प्रकार", en: "All types" },
-  typeRoster: { ne: "रोस्टर", en: "Roster" },
-  typeSchedule: { ne: "तालिका", en: "Schedule" },
-
-  sortLabel: { ne: "क्रमबद्ध गर्नुहोस्", en: "Sort by" },
-  sortNewest: { ne: "नयाँदेखि पुराना", en: "Newest first" },
-  sortOldest: { ne: "पुरानादेखि नयाँ", en: "Oldest first" },
-
-  rosterTag: { ne: "रोस्टर", en: "Roster" },
-  scheduleTag: { ne: "तालिका", en: "Schedule" },
+  categoryLabel: { ne: "वर्ग", en: "Category" },
   upcoming: { ne: "आगामी", en: "Upcoming" },
   past: { ne: "सम्पन्न", en: "Past" },
 
@@ -64,8 +55,7 @@ type Language = "ne" | "en";
 
 type NoticeItem = {
   id: string;
-  itemType: "roster" | "schedule";
-  rosterType: string;
+  category: string;
   title: string;
   date: string;
   timeSlot: string;
@@ -76,7 +66,9 @@ type NoticeItem = {
   linkPath: string;
 };
 
-const toNoticeDate = (dateValue: string) => new Date(`${dateValue}T00:00:00`);
+const normalizeNoticeDate = (dateValue: string) =>
+  dateValue.includes("T") ? dateValue.split("T")[0] : dateValue;
+const toNoticeDate = (dateValue: string) => new Date(`${normalizeNoticeDate(dateValue)}T00:00:00`);
 const NEPAL_TIMEZONE_OFFSET = "+05:45";
 
 const parseTimeSlotEnd = (timeSlot?: string): { hour: number; minute: number } | null => {
@@ -98,11 +90,12 @@ const parseTimeSlotEnd = (timeSlot?: string): { hour: number; minute: number } |
 };
 
 const getNoticeEndDate = (dateValue: string, timeSlot: string): Date => {
+  const normalizedDate = normalizeNoticeDate(dateValue);
   const endTime = parseTimeSlotEnd(timeSlot);
   const hour = endTime?.hour ?? 23;
   const minute = endTime?.minute ?? 59;
   const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  return new Date(`${dateValue}T${timeString}:00${NEPAL_TIMEZONE_OFFSET}`);
+  return new Date(`${normalizedDate}T${timeString}:00${NEPAL_TIMEZONE_OFFSET}`);
 };
 
 const pillBase =
@@ -120,10 +113,8 @@ const NoticesPage: React.FC = () => {
 
   // filters
   const [whenFilter, setWhenFilter] = useState<"all" | "upcoming" | "past">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "roster" | "schedule">("all");
-
+  
   // sort + view
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [viewMode, setViewMode] = useState<"detailed" | "compact">("detailed");
 
   const now = new Date();
@@ -132,9 +123,8 @@ const NoticesPage: React.FC = () => {
 
   const notices = useMemo<NoticeItem[]>(() => {
     const rosterNotices = fellowshipRosters.map((item) => ({
-      id: item.id,
-      itemType: "roster" as const,
-      rosterType: item.rosterType,
+      id: `manual-${item.id}`,
+      category: item.rosterType,
       title: item.groupNameOrEventTitle,
       date: item.assignedDate,
       timeSlot: item.timeSlot,
@@ -146,9 +136,8 @@ const NoticesPage: React.FC = () => {
     }));
 
     const scheduleNotices = generatedSchedules.map((item) => ({
-      id: item.id,
-      itemType: "schedule" as const,
-      rosterType: item.rosterType,
+      id: `draft-${item.id}`,
+      category: item.rosterType,
       title: item.groupNameOrEventTitle,
       date: item.scheduledDate,
       timeSlot: item.timeSlot,
@@ -166,9 +155,6 @@ const NoticesPage: React.FC = () => {
     const term = searchTerm.trim().toLowerCase();
 
     const filtered = [...notices].filter((item) => {
-      // type filter
-      if (typeFilter !== "all" && item.itemType !== typeFilter) return false;
-
       // when filter
       const endDateTime = getNoticeEndDate(item.date, item.timeSlot);
       const isPast = endDateTime.getTime() < now.getTime();
@@ -180,7 +166,7 @@ const NoticesPage: React.FC = () => {
       if (!term) return true;
       const haystack = [
         item.title,
-        item.rosterType,
+        item.category,
         item.location,
         item.details,
         item.timeSlot,
@@ -193,14 +179,17 @@ const NoticesPage: React.FC = () => {
 
       return haystack.includes(term);
     });
+    
+    const upcomingNotices = filtered
+      .filter((item) => getNoticeEndDate(item.date, item.timeSlot).getTime() >= now.getTime())
+      .sort((a, b) => toNoticeDate(a.date).getTime() - toNoticeDate(b.date).getTime());
 
-    const sorted = filtered.sort((a, b) => {
-      const diff = toNoticeDate(b.date).getTime() - toNoticeDate(a.date).getTime();
-      return sortOrder === "newest" ? diff : -diff;
-    });
+    const pastNotices = filtered
+      .filter((item) => getNoticeEndDate(item.date, item.timeSlot).getTime() < now.getTime())
+      .sort((a, b) => toNoticeDate(b.date).getTime() - toNoticeDate(a.date).getTime());
 
-    return sorted;
-  }, [notices, searchTerm, sortOrder, typeFilter, whenFilter, now]);
+    return [...upcomingNotices, ...pastNotices];
+  }, [notices, searchTerm, whenFilter, now]);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -211,8 +200,6 @@ const NoticesPage: React.FC = () => {
     setSearchInput("");
     setSearchTerm("");
     setWhenFilter("all");
-    setTypeFilter("all");
-    setSortOrder("newest");
   };
 
   const totalCount = notices.length;
@@ -253,7 +240,7 @@ const NoticesPage: React.FC = () => {
           {/* Search + Filters */}
           <div className="rounded-lg border border-indigo-100 bg-white p-4 shadow-sm">
             <form className="grid grid-cols-1 gap-4" onSubmit={handleSearchSubmit}>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr,0.8fr]">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label htmlFor="notice-search" className="block text-sm font-medium text-slate-700">
                     {copy("searchLabel")}
@@ -287,21 +274,6 @@ const NoticesPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-
-                <div>
-                  <label htmlFor="notice-sort" className="block text-sm font-medium text-slate-700">
-                    {copy("sortLabel")}
-                  </label>
-                  <select
-                    id="notice-sort"
-                    value={sortOrder}
-                    onChange={(event) => setSortOrder(event.target.value as "newest" | "oldest")}
-                    className="mt-2 w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                  >
-                    <option value="newest">{copy("sortNewest")}</option>
-                    <option value="oldest">{copy("sortOldest")}</option>
-                  </select>
-                </div>
               </div>
 
               <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
@@ -329,30 +301,6 @@ const NoticesPage: React.FC = () => {
                     className={`${pillBase} ${whenFilter === "past" ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-700 hover:bg-orange-100"}`}
                   >
                     {copy("showPast")}
-                  </button>
-
-                  {/* Type filter */}
-                  <span className="mx-1 h-4 w-px bg-slate-200" />
-                  <button
-                    type="button"
-                    onClick={() => setTypeFilter("all")}
-                    className={`${chipBase} ${typeFilter === "all" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-                  >
-                    {copy("typeAll")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTypeFilter("roster")}
-                    className={`${chipBase} ${typeFilter === "roster" ? "border-indigo-600 bg-indigo-600 text-white" : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"}`}
-                  >
-                    {copy("typeRoster")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTypeFilter("schedule")}
-                    className={`${chipBase} ${typeFilter === "schedule" ? "border-indigo-600 bg-indigo-600 text-white" : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"}`}
-                  >
-                    {copy("typeSchedule")}
                   </button>
 
                   {/* View mode */}
@@ -406,7 +354,7 @@ const NoticesPage: React.FC = () => {
 
                 return (
                   <Link
-                    key={`${notice.itemType}-${notice.id}`}
+                    key={notice.id}
                     to={notice.linkPath}
                     className="block p-4 hover:bg-slate-50"
                   >
@@ -422,7 +370,7 @@ const NoticesPage: React.FC = () => {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
-                          {notice.itemType === "roster" ? copy("rosterTag") : copy("scheduleTag")}
+                          {copy("categoryLabel")}: {notice.category}
                         </span>
                         <span
                           className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
@@ -447,17 +395,14 @@ const NoticesPage: React.FC = () => {
 
               return (
                 <article
-                  key={`${notice.itemType}-${notice.id}`}
-                  className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+               key={notice.id}  
+               className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                        <span className="rounded-full bg-indigo-100 px-2 py-1 text-indigo-700">
-                          {notice.itemType === "roster" ? copy("rosterTag") : copy("scheduleTag")}
-                        </span>
                         <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
-                          {notice.rosterType}
+                          {copy("categoryLabel")}: {notice.category}
                         </span>
                         <span
                           className={`rounded-full px-2 py-1 ${

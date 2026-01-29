@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -6,9 +6,9 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { EditScheduleDraftModal } from '../../components/admin/EditScheduleDraftModal';
 // Removed ViewGeneratedScheduleModal and ViewRosterItemModal as they are replaced by the detail page
 import { generateSchedulePDF, generateRosterItemPDF } from '../../components/admin/PrintableSchedulePDF';
-import { FellowshipRosterItem, GeneratedScheduleItem, FellowshipRosterFormData, GenericContentFormData, RosterType, rosterTypeList, Responsibility } from '../../types';
+import { FellowshipRosterItem, GeneratedScheduleItem, FellowshipRosterFormData, GenericContentFormData, Responsibility } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
-import { PlusIcon as HeroPlusIcon, ArrowPathIcon, PencilSquareIcon, TrashIcon, ShareIcon as HeroShareIcon, CalendarDaysIcon, EllipsisVerticalIcon, DocumentArrowDownIcon, EnvelopeIcon, MegaphoneIcon, EyeIcon as HeroEyeIcon, TableCellsIcon as HeroTableCellsIcon, Squares2X2Icon as HeroSquares2X2Icon, ListBulletIcon as HeroListBulletIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon as HeroPlusIcon, TrashIcon, ShareIcon as HeroShareIcon, EllipsisVerticalIcon, DocumentArrowDownIcon, EnvelopeIcon, MegaphoneIcon, EyeIcon as HeroEyeIcon, TableCellsIcon as HeroTableCellsIcon, Squares2X2Icon as HeroSquares2X2Icon, ListBulletIcon as HeroListBulletIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { Link } from "react-router-dom"; // Import Link
@@ -51,7 +51,6 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
     addContent, 
     updateContent, 
     deleteContent, 
-    generateNextSchedules,
     updateGeneratedSchedule, 
     deleteGeneratedSchedule,
     publishGeneratedScheduleToEvent,
@@ -68,9 +67,6 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
   // Removed viewGeneratedSchedule state
   
   const [activeTab, setActiveTab] = useState<'inputtedRosters' | 'generatedSchedules'>('inputtedRosters');
-  
-  const [selectedRosterTypeForGeneration, setSelectedRosterTypeForGeneration] = useState<RosterType>(rosterTypeList[0]);
-  const [numberOfSchedulesToGenerate, setNumberOfSchedulesToGenerate] = useState<number>(4);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
   const [rosterSearchTerm, setRosterSearchTerm] = useState('');
@@ -114,7 +110,7 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
     else await addContent('fellowshipRoster', data as FellowshipRosterFormData);
     handleCloseRosterModal();
   };
-  const handleRosterDelete = async (id: string) => { if (window.confirm('Are you sure you want to delete this roster item?')) await deleteContent('fellowshipRoster', id); };
+  const handleRosterDelete = async (id: string) => { if (window.confirm('Are you sure you want to delete this schedule entry?')) await deleteContent('fellowshipRoster', id); };
   const handleDownloadRosterPDF = async (roster: FellowshipRosterItem) => {
     alert("PDF generation started...");
     await generateRosterItemPDF(roster, "BEM Church", window.location.origin);
@@ -134,15 +130,15 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
     const data = [rosterExcelHeaders, rosterItemToExcelRow(roster)];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Roster Item");
-    XLSX.writeFile(wb, `Roster_${roster.groupNameOrEventTitle.replace(/\s+/g, '_')}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Schedule Entry");
+    XLSX.writeFile(wb, `Schedule_${roster.groupNameOrEventTitle.replace(/\s+/g, '_')}.xlsx`);
   };
   const downloadAllRostersExcel = () => {
     const data = [rosterExcelHeaders, ...filteredRosters.map(rosterItemToExcelRow)];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "All Rosters");
-    XLSX.writeFile(wb, "All_Fellowship_Rosters.xlsx");
+     XLSX.utils.book_append_sheet(wb, ws, "All Schedules");
+    XLSX.writeFile(wb, "All_Schedules.xlsx");
   };
 
   // Generated Schedule Handlers
@@ -152,11 +148,6 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
     if (await updateGeneratedSchedule(draftId, data)) handleCloseEditDraftModal(); else alert("Update failed.");
   };
   // Removed handleViewGeneratedSchedule as it's replaced by detail page link
-  const handleTriggerGenerateSchedules = async () => {
-    if (!selectedRosterTypeForGeneration || numberOfSchedulesToGenerate < 1) return alert("Invalid selection.");
-    const generated = await generateNextSchedules(selectedRosterTypeForGeneration, numberOfSchedulesToGenerate);
-    alert(generated && generated.length > 0 ? `${generated.length} draft schedules generated for ${selectedRosterTypeForGeneration}!` : "Failed to generate schedules. Check console for details.");
-  };
   const handlePublishToEvent = async (scheduleId: string) => {
     setActiveDropdownId(null);
     if(!window.confirm('Are you sure you want to publish this schedule to the public event calendar?')) return;
@@ -170,7 +161,7 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
   const handleCopyForSharing = (schedule: GeneratedScheduleItem) => {
     setActiveDropdownId(null);
     const responsibilitiesText = (schedule.responsibilities || []).map(r => `\n${r.role}: ${r.assignedTo}`).join('');
-    const details = `Type: ${schedule.rosterType}\nTitle: ${schedule.groupNameOrEventTitle}\nDate: ${formatDateADBS(schedule.scheduledDate)}\nTime: ${schedule.timeSlot}${responsibilitiesText}${schedule.location ? `\nLocation: ${schedule.location}`:''}${schedule.additionalNotesOrProgramDetails ? `\nDetails:\n${schedule.additionalNotesOrProgramDetails}`:''}${schedule.adminNotes ? `\nAdmin Notes:\n${schedule.adminNotes}`:''}`.trim();
+    const details = `Category: ${schedule.rosterType}\nTitle: ${schedule.groupNameOrEventTitle}\nDate: ${formatDateADBS(schedule.scheduledDate)}\nTime: ${schedule.timeSlot}${responsibilitiesText}${schedule.location ? `\nLocation: ${schedule.location}`:''}${schedule.additionalNotesOrProgramDetails ? `\nDetails:\n${schedule.additionalNotesOrProgramDetails}`:''}${schedule.adminNotes ? `\nAdmin Notes:\n${schedule.adminNotes}`:''}`.trim();
     navigator.clipboard.writeText(details).then(() => alert('Schedule details copied to clipboard!')).catch(err => console.error('Copy failed: ', err));
   };
   const handleSimulateEmail = (schedule: GeneratedScheduleItem) => {
@@ -318,27 +309,27 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
   return (
     <div className="w-full">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Fellowship Schedules Management</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Manage recurring program rosters and generate schedules.</p>
+        <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Program Schedule Management</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Manage schedules across all programs and publish updates.</p>
       </header>
 
       <div className="flex flex-wrap border-b border-slate-200 dark:border-slate-700 mb-6">
         <button onClick={() => setActiveTab('inputtedRosters')} className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'inputtedRosters' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
-          Inputted Rosters ({fellowshipRosters.length})
+          Schedule Entries ({fellowshipRosters.length})
         </button>
         <button onClick={() => setActiveTab('generatedSchedules')} className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'generatedSchedules' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
-          Generated Schedule Drafts ({generatedSchedules.length})
+          Draft Schedules ({generatedSchedules.length})
         </button>
       </div>
 
       {activeTab === 'inputtedRosters' && (
         <section>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200">List of Inputted Roster Data</h2>
-            <Button onClick={() => handleOpenRosterModal()} variant="primary" size="sm"><HeroPlusIcon className="w-4 h-4 mr-1.5"/> Add New Roster Item</Button>
+            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200">List of Schedule Entries</h2>
+            <Button onClick={() => handleOpenRosterModal()} variant="primary" size="sm"><HeroPlusIcon className="w-4 h-4 mr-1.5"/> Add New Schedule</Button>
           </div>
-          {renderSearchAndToggle(rosterViewMode, setRosterViewMode, rosterSearchTerm, setRosterSearchTerm, downloadAllRostersExcel, "Rosters")}
-          {loadingContent ? <p>Loading...</p> : filteredRosters.length === 0 ? <p>No roster items inputted yet.</p> : (
+          {renderSearchAndToggle(rosterViewMode, setRosterViewMode, rosterSearchTerm, setRosterSearchTerm, downloadAllRostersExcel, "Schedules")}
+          {loadingContent ? <p>Loading...</p> : filteredRosters.length === 0 ? <p>No schedules added yet.</p> : (
             rosterViewMode === 'card' ? 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{filteredRosters.map(renderRosterCard)}</div> :
               <div className="overflow-x-auto"><table className="min-w-full divide-y dark:divide-slate-700"><thead>{/* List view table headers here */}</thead><tbody>{/* List view table rows here */}</tbody></table></div>
@@ -348,25 +339,9 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
 
       {activeTab === 'generatedSchedules' && (
          <section>
-            <Card className="mb-6 dark:bg-slate-800">
-              <CardHeader className="dark:border-slate-700"><h3 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center"><ArrowPathIcon className="w-5 h-5 mr-2 text-purple-500 dark:text-purple-400"/> Generate Next Schedules</h3></CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-3 items-end">
-                  <div className="flex-grow w-full sm:w-auto">
-                    <label htmlFor="rosterTypeSelect" className="text-xs font-medium text-slate-600 dark:text-slate-400">Roster Type to Generate</label>
-                    <select id="rosterTypeSelect" value={selectedRosterTypeForGeneration} onChange={e => setSelectedRosterTypeForGeneration(e.target.value as RosterType)} className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-slate-200">
-                        {rosterTypeList.map(rt => <option key={rt} value={rt}>{rt}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex-shrink-0">
-                     <label htmlFor="numToGenerate" className="text-xs font-medium text-slate-600 dark:text-slate-400">Number to Generate</label>
-                     <input id="numToGenerate" type="number" value={numberOfSchedulesToGenerate} onChange={e => setNumberOfSchedulesToGenerate(Math.max(1, parseInt(e.target.value)))} min="1" max="52" className="w-24 p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-slate-200"/>
-                  </div>
-                  <Button onClick={handleTriggerGenerateSchedules} className="w-full sm:w-auto">Generate</Button>
-              </CardContent>
-            </Card>
-            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4">List of Generated Schedule Drafts</h2>
+            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4">Draft Schedules</h2>
             {renderSearchAndToggle(generatedViewMode, setGeneratedViewMode, generatedSearchTerm, setGeneratedSearchTerm, downloadAllSchedulesExcel, "Schedules")}
-            {loadingContent ? <p>Loading...</p> : filteredGeneratedSchedules.length === 0 ? <p>No schedules generated yet.</p> : (
+            {loadingContent ? <p>Loading...</p> : filteredGeneratedSchedules.length === 0 ? <p>No draft schedules available yet.</p> : (
               generatedViewMode === 'card' ?
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{filteredGeneratedSchedules.map(renderScheduleCard)}</div> :
                 <div className="overflow-x-auto"><table className="min-w-full divide-y dark:divide-slate-700"><thead>{/* List view table headers here */}</thead><tbody>{/* List view table rows here */}</tbody></table></div>
