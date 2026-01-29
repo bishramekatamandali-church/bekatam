@@ -281,7 +281,7 @@ const formatBsYearOptionLabel = useCallback((bsYear: number) => {
             <div className="flex items-center justify-center gap-1 h-6">
               {entriesOnDay.slice(0, 4).map(entry => (
                 <div key={entry.id} className="relative group">
-                  <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
+                  <div className={`w-1 h-1 rounded-full ${TYPE_COLORS[entry.type]}`}></div>
                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[200px] px-2 py-1 bg-slate-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 transform-gpu text-center" role="tooltip">
                     {entry.title}
                   </div>
