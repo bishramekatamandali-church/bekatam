@@ -158,7 +158,10 @@ const MediaPage: React.FC = () => {
                   <CardContent className="flex-grow p-3">
                     <h3 className="text-sm font-semibold text-slate-700 truncate mb-0.5" title={item.title}>{item.title}</h3>
                     {item.description && (
-                      <p className="text-sm text-slate-600 mb-1 break-words">{item.description}</p>
+                      <div
+                        className="prose prose-sm max-w-none text-slate-600 mb-1 break-words prose-img:rounded-lg prose-img:my-2"
+                        dangerouslySetInnerHTML={{ __html: item.description }}
+                      />
                     )}
                     <p className="text-xs text-slate-500 truncate" title={item.sourceTitle}>Source: {item.sourceTitle}</p>
                     {item.date && <p className="text-xs text-slate-400 mt-0.5">Posted on: {formatDateADBS(item.date)}</p>}

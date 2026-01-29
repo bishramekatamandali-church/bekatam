@@ -125,7 +125,10 @@ const NewsItemCard: React.FC<NewsItemCardProps> = ({ item, className = "" }) => 
             <CalendarDaysIcon className="mr-2 text-slate-400 flex-shrink-0" />
             <span>{formatDateADBS(item.date)}</span>
           </div>
-          <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">{description}</p>
+          <div
+            className="prose prose-sm max-w-none text-slate-600 leading-relaxed line-clamp-3 prose-img:rounded-lg prose-img:my-2"
+            dangerouslySetInnerHTML={{ __html: description }}
+          />
         </CardContent>
         <CardFooter className="bg-purple-100 mt-auto grid grid-cols-3 gap-px p-0 border-t border-purple-200">
             <Button variant="ghost" onClick={handleLike} className="flex items-center justify-center w-full !rounded-none py-2 text-slate-600 hover:!bg-purple-200" aria-pressed={isLiked} aria-label={isLiked ? `Unlike news, ${likeCount} likes` : `Like news, ${likeCount} likes`}>
