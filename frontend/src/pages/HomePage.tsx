@@ -307,7 +307,7 @@ const HomePage: React.FC = () => {
       (item as any).videoUrl ||
       mediaUrls.find((url: string) => isDirectVideoUrl(url) || Boolean(getYouTubeEmbedUrl(url)));
     const youtubeEmbedUrl = getYouTubeEmbedUrl(candidateVideoUrl);
-    const showVideo = ['sermons', 'events', 'prayer-requests', 'testimonials'].includes(typeKey) && Boolean(candidateVideoUrl);
+    const showVideo = ['sermons', 'events', 'prayer-requests', 'testimonials', 'news', 'blog'].includes(typeKey) && Boolean(candidateVideoUrl);
     const useVideoPlayer = showVideo && isDirectVideoUrl(candidateVideoUrl);
     const embedUrl = youtubeEmbedUrl || candidateVideoUrl;
     const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
