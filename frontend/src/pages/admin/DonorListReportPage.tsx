@@ -101,7 +101,7 @@ const DonorListReportPage: React.FC = () => {
     setErrorMessage(null);
     try {
       const query = buildQuery();
-      const response = await fetch(`${API_BASE_URL}/donor-lists?${query}`);
+      const response = await fetch(`${API_BASE_URL}/donor-lists?${query}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to fetch donor list.');
       }
@@ -115,10 +115,11 @@ const DonorListReportPage: React.FC = () => {
   };
 
   const downloadReport = async (format: 'pdf' | 'xml') => {
+    setIsLoading(true);
     setErrorMessage(null);
     try {
       const query = buildQuery(format);
-      const response = await fetch(`${API_BASE_URL}/donor-lists?${query}`);
+      const response = await fetch(`${API_BASE_URL}/donor-lists?${query}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to download report.');
       }
@@ -133,6 +134,8 @@ const DonorListReportPage: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to download report.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -314,4 +317,4 @@ const DonorListReportPage: React.FC = () => {
   );
 };
 
-export default DonorListReportPage;
+export default DonorListReportPage; 

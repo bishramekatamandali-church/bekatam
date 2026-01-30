@@ -1,6 +1,6 @@
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
-import { applyPdfFont } from '../utils/pdfFonts';
+import { applyPdfFont, registerPdfFonts } from '../utils/pdfFonts';
 import { prisma } from '../db';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -61,6 +61,16 @@ const normalizeDateRange = (startDate?: string, endDate?: string) => {
 };
 
 const normalizeMatchValue = (value?: string | null) => (value ?? '').trim().toLowerCase();
+
+const escapeXmlValue = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+const safeXmlText = (value?: string | null) => escapeXmlValue((value ?? '').toString());
 
 const findMatchingDonor = (
   donorsByName: Map<string, DonorListEntry[]>,
@@ -176,12 +186,16 @@ const buildDonorListPdfBuffer = (
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      applyPdfFont(doc);
+      const fontRegistry = registerPdfFonts(doc);
+        return doc.text(text, options as any);
+      };
       const chunks: Buffer[] = [];
       doc.on('data', (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
+      applyPdfFont(doc, fontRegistry, title);
+      applyPdfFont(doc, fontRegistry, title);
       doc.fontSize(18).text(title, { align: 'center' });
       doc.moveDown(1);
 
@@ -192,14 +206,19 @@ const buildDonorListPdfBuffer = (
           doc.moveDown(0.6);
         }
 
+        applyPdfFont(doc, fontRegistry, donor.donorName);
+
         doc.fontSize(12).text(donor.donorName, { continued: false });
         doc.fontSize(10).fillColor('#555555');
         if (donor.address) {
+          applyPdfFont(doc, fontRegistry, `Address: ${donor.address}`);
           doc.text(`Address: ${donor.address}`);
         }
         if (donor.contact) {
+          applyPdfFont(doc, fontRegistry, `Contact: ${donor.contact}`);
           doc.text(`Contact: ${donor.contact}`);
         }
+        applyPdfFont(doc, fontRegistry, `Total Donated: NPR ${donor.totalAmount.toFixed(2);
         doc.text(`Total Donated: NPR ${donor.totalAmount.toFixed(2)}`);
         doc.fillColor('#000000');
 
@@ -216,6 +235,7 @@ const buildDonorListPdfBuffer = (
 
       if (refinedDonors.length > 0) {
         doc.addPage();
+        applyPdfFont(doc, fontRegistry, 'refined doners list');
         doc.fontSize(16).text('refined doners list', { align: 'left' });
         doc.moveDown(0.6);
 
@@ -228,11 +248,16 @@ const buildDonorListPdfBuffer = (
 
           const mergedLabel = donor.mergedCount > 1 ? ` (merged ${donor.mergedCount})` : '';
           const purposes = donor.purposes.length > 0 ? donor.purposes.join(', ') : '—';
+          applyPdfFont(doc, fontRegistry, `${donor.donorName}${mergedLabel}`);
           doc.fontSize(12).text(`${donor.donorName}${mergedLabel}`);
           doc.fontSize(10).fillColor('#555555');
+          applyPdfFont(doc, fontRegistry, `Address: ${donor.address ?? '—'}`);
           doc.text(`Address: ${donor.address ?? '—'}`);
+          applyPdfFont(doc, fontRegistry, `Contact: ${donor.contact ?? '—'}`);
           doc.text(`Contact: ${donor.contact ?? '—'}`);
+          applyPdfFont(doc, fontRegistry, `Total Donated: NPR ${donor.totalAmount.toFixed(2);
           doc.text(`Total Donated: NPR ${donor.totalAmount.toFixed(2)}`);
+          applyPdfFont(doc, fontRegistry, `Purposes: ${purposes}`);
           doc.text(`Purposes: ${purposes}`);
           doc.fillColor('#000000');
         });
@@ -254,16 +279,16 @@ const buildDonorListXml = (title: string, donors: DonorListEntry[], refinedDonor
             `      <donation>
         <date>${donation.date.toISOString()}</date>
         <amount>${donation.amount.toFixed(2)}</amount>
-        <collectionId>${donation.collectionId}</collectionId>
-        <purpose>${donation.purpose ?? ''}</purpose>
+        <collectionId>${safeXmlText(donation.collectionId)}</collectionId>
+        <purpose>${safeXmlText(donation.purpose)}</purpose>
       </donation>`
         )
         .join('\n');
 
       return `    <donor>
-      <name>${donor.donorName}</name>
-      <address>${donor.address ?? ''}</address>
-      <contact>${donor.contact ?? ''}</contact>
+      <name>${safeXmlText(donor.donorName)}</name>
+      <address>${safeXmlText(donor.address)}</address>
+      <contact>${safeXmlText(donor.contact)}</contact>
       <totalAmount>${donor.totalAmount.toFixed(2)}</totalAmount>
       <donations>
 ${donationsXml}
@@ -275,12 +300,12 @@ ${donationsXml}
   const refinedXml = refinedDonors
     .map((donor) => {
       const purposesXml = donor.purposes
-        .map((purpose) => `        <purpose>${purpose}</purpose>`)
+        .map((purpose) => `        <purpose>${safeXmlText(purpose)}</purpose>`)
         .join('\n');
       return `    <refinedDonor>
-      <name>${donor.donorName}</name>
-      <address>${donor.address ?? ''}</address>
-      <contact>${donor.contact ?? ''}</contact>
+      <name>${safeXmlText(donor.donorName)}</name>
+      <address>${safeXmlText(donor.address)}</address>
+      <contact>${safeXmlText(donor.contact)}</contact>
       <totalAmount>${donor.totalAmount.toFixed(2)}</totalAmount>
       <mergedCount>${donor.mergedCount}</mergedCount>
       <purposes>
@@ -292,7 +317,7 @@ ${purposesXml}
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <donorsList>
-  <title>${title}</title>
+  <title>${safeXmlText(title)}</title>
   <donors>
 ${donorsXml}
   </donors>
@@ -400,7 +425,7 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
 
     if (format === 'xml') {
       const xmlPayload = buildDonorListXml(title, donors, refinedDonors);
-      res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.xml"');
       return res.status(200).send(xmlPayload);
     }

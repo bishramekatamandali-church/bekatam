@@ -72,9 +72,9 @@ const Button: React.FC<ButtonProps> = (props) => {
     
     // FIX: The type attribute conflicts. By casting props to ButtonAsButton in this branch,
     // we ensure TypeScript correctly infers the types for the rest props, resolving the conflict.
-    const { variant: _v, size: _s, className: _c, children: _ch, asLink, ...buttonProps } = props as ButtonAsButton;
+    const { variant: _v, size: _s, className: _c, children: _ch, asLink, type = 'button', ...buttonProps } = props as ButtonAsButton;
     return (
-        <button {...buttonProps} className={classes}>
+        <button {...buttonProps} type={type} className={classes}>
             {children}
         </button>
     );

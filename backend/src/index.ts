@@ -91,12 +91,24 @@ app.use("/api", (req, res, next) => {
 });
 
 // --- CORS CONFIGURATION ---
+// Allow multiple frontend origins (comma-separated) via FRONTEND_URL, and also allow same-origin / server-to-server requests.
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((v) => v.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      // No Origin header: curl, server-to-server, or same-origin.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Content-Disposition"],
   })
 );
 
@@ -146,4 +158,4 @@ app.use("/api/notifications", notificationRoutes);
 // --- START SERVER ---
 app.listen(port, () => {
   console.log(`🚀 Server is running at http://localhost:${port}`);
-});
+}); 
