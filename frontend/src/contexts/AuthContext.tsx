@@ -190,6 +190,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fetchAdminActionLogs();
   }, [fetchAdminActionLogs]);
 
+  const readJsonResponse = async (res: Response) => {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return res.json();
+    }
+
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return { error: text };
+    }
+  };
+
   /* --------------------------- BACKEND LOGIN --------------------------- */
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
@@ -202,8 +216,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         body: JSON.stringify({ identifier, password }),
       });
 
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       if (!res.ok) {
+        console.error("Login failed:", data?.error || res.statusText);
         setLoadingAuthState(false);
         return false;
       }
