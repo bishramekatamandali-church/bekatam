@@ -187,18 +187,23 @@ const buildDonorListPdfBuffer = (
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const fontRegistry = registerPdfFonts(doc);
-        return doc.text(text, options as any);
-      };
+
       const chunks: Buffer[] = [];
       doc.on('data', (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      applyPdfFont(doc, fontRegistry, title);
+      const line = (text: string, options?: Record<string, unknown>) => {
+        applyPdfFont(doc, fontRegistry, text);
+        doc.text(text, options as any);
+      };
+
+      // Title
       applyPdfFont(doc, fontRegistry, title);
       doc.fontSize(18).text(title, { align: 'center' });
       doc.moveDown(1);
 
+      // Donors list
       donors.forEach((donor, index) => {
         if (index > 0) {
           doc.moveDown(0.5);
@@ -207,36 +212,31 @@ const buildDonorListPdfBuffer = (
         }
 
         applyPdfFont(doc, fontRegistry, donor.donorName);
+        doc.fontSize(12).text(donor.donorName);
 
-        doc.fontSize(12).text(donor.donorName, { continued: false });
         doc.fontSize(10).fillColor('#555555');
-        if (donor.address) {
-          applyPdfFont(doc, fontRegistry, `Address: ${donor.address}`);
-          doc.text(`Address: ${donor.address}`);
-        }
-        if (donor.contact) {
-          applyPdfFont(doc, fontRegistry, `Contact: ${donor.contact}`);
-          doc.text(`Contact: ${donor.contact}`);
-        }
-        applyPdfFont(doc, fontRegistry, `Total Donated: NPR ${donor.totalAmount.toFixed(2);
-        doc.text(`Total Donated: NPR ${donor.totalAmount.toFixed(2)}`);
+        if (donor.address) line(`Address: ${donor.address}`);
+        if (donor.contact) line(`Contact: ${donor.contact}`);
+        line(`Total Donated: NPR ${Number(donor.totalAmount || 0).toFixed(2)}`);
         doc.fillColor('#000000');
 
         if (donor.donations.length > 0) {
           doc.moveDown(0.3);
           donor.donations.forEach((donation) => {
             const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : '';
-            doc
-              .fontSize(9)
-              .text(`• ${formatDate(donation.date)} - NPR ${donation.amount.toFixed(2)}${purposeLabel}`);
+            const bullet = `• ${formatDate(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
+            applyPdfFont(doc, fontRegistry, bullet);
+            doc.fontSize(9).text(bullet);
           });
         }
       });
 
+      // Refined donors (merged)
       if (refinedDonors.length > 0) {
         doc.addPage();
-        applyPdfFont(doc, fontRegistry, 'refined doners list');
-        doc.fontSize(16).text('refined doners list', { align: 'left' });
+        const heading = 'Refined donors list';
+        applyPdfFont(doc, fontRegistry, heading);
+        doc.fontSize(16).text(heading);
         doc.moveDown(0.6);
 
         refinedDonors.forEach((donor, index) => {
@@ -248,17 +248,13 @@ const buildDonorListPdfBuffer = (
 
           const mergedLabel = donor.mergedCount > 1 ? ` (merged ${donor.mergedCount})` : '';
           const purposes = donor.purposes.length > 0 ? donor.purposes.join(', ') : '—';
-          applyPdfFont(doc, fontRegistry, `${donor.donorName}${mergedLabel}`);
-          doc.fontSize(12).text(`${donor.donorName}${mergedLabel}`);
+
+          line(`${donor.donorName}${mergedLabel}`);
           doc.fontSize(10).fillColor('#555555');
-          applyPdfFont(doc, fontRegistry, `Address: ${donor.address ?? '—'}`);
-          doc.text(`Address: ${donor.address ?? '—'}`);
-          applyPdfFont(doc, fontRegistry, `Contact: ${donor.contact ?? '—'}`);
-          doc.text(`Contact: ${donor.contact ?? '—'}`);
-          applyPdfFont(doc, fontRegistry, `Total Donated: NPR ${donor.totalAmount.toFixed(2);
-          doc.text(`Total Donated: NPR ${donor.totalAmount.toFixed(2)}`);
-          applyPdfFont(doc, fontRegistry, `Purposes: ${purposes}`);
-          doc.text(`Purposes: ${purposes}`);
+          line(`Address: ${donor.address ?? '—'}`);
+          line(`Contact: ${donor.contact ?? '—'}`);
+          line(`Total Donated: NPR ${Number(donor.totalAmount || 0).toFixed(2)}`);
+          line(`Purposes: ${purposes}`);
           doc.fillColor('#000000');
         });
       }

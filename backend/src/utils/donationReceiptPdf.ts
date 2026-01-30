@@ -13,75 +13,80 @@ export type DonationReceiptPdfData = {
 
 const formatDate = (d: Date) => {
   try {
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "2-digit" });
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+    });
   } catch {
     return d.toISOString().split("T")[0];
   }
 };
 
-export const buildDonationReceiptPdfBuffer = (data: DonationReceiptPdfData): Promise<Buffer> => {
+/**
+ * Builds a PDF buffer with embedded fonts so Nepali/Devanagari text remains visible after download.
+ */
+export const buildDonationReceiptPdfBuffer = (
+  data: DonationReceiptPdfData
+): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", margin: 50 });
       const fontRegistry = registerPdfFonts(doc);
-      applyPdfFont(doc, fontRegistry);
+
+      // Ensure we have a safe default font before any text render.
+      // (This prevents PDFKit from throwing if the first text call happens before a font is set.)
+      applyPdfFont(doc, fontRegistry, "A");
+
       const chunks: Buffer[] = [];
-
-      doc.on("data", (c: Buffer) => {
-        chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
-      });
+      doc.on("data", (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", (e: Error) => reject(e));
+      doc.on("error", reject);
 
-      applyPdfFont(doc, fontRegistry, "Donation Receipt");
+      const textLine = (
+        text: string,
+        options?: Record<string, unknown>,
+        fontSize?: number
+      ) => {
+        applyPdfFont(doc, fontRegistry, text);
+        if (typeof fontSize === "number") doc.fontSize(fontSize);
+        doc.text(text, options as any);
+      };
 
-      doc.fontSize(18).text("Donation Receipt", { align: "center" });
+      // Header
+      textLine("Donation Receipt", { align: "center" }, 18);
       doc.moveDown(0.3);
-      applyPdfFont(doc, fontRegistry, "Bishram Ekata Mandali");
-      doc.fontSize(11).text("Bishram Ekata Mandali", { align: "center" });
+
+      textLine("Bishram Ekata Mandali", { align: "center" }, 11);
       doc.moveDown(1);
 
       doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
       doc.moveDown(1);
 
-      applyPdfFont(doc, fontRegistry, `Thank you);
-
-      doc.fontSize(12).text(`Thank you, ${data.donorName}, for your generous support.`);
+      // Body
+      textLine(`Thank you, ${data.donorName}, for your generous support.`, undefined, 12);
       doc.moveDown(0.8);
 
-      applyPdfFont(doc, fontRegistry, `Transaction ID: ${data.id}`);
-
-      doc.fontSize(12).text(`Transaction ID: ${data.id}`);
-      applyPdfFont(doc, fontRegistry, `Donor Email: ${data.donorEmail}`);
-      doc.text(`Donor Email: ${data.donorEmail}`);
-      applyPdfFont(doc, fontRegistry, `Amount: NPR ${Number(data.amount || 0);
-      doc.text(`Amount: NPR ${Number(data.amount || 0).toFixed(2)}`);
-      applyPdfFont(doc, fontRegistry, `Purpose: ${data.purpose}`);
-      doc.text(`Purpose: ${data.purpose}`);
-      applyPdfFont(doc, fontRegistry, `Date Logged: ${formatDate(data.donationDate);
-      doc.text(`Date Logged: ${formatDate(data.donationDate)}`);
+      textLine(`Transaction ID: ${data.id}`);
+      textLine(`Donor Email: ${data.donorEmail}`);
       if (data.transactionReference) {
-        applyPdfFont(doc, fontRegistry, `Transaction Reference: ${data.transactionReference}`);
-        doc.text(`Transaction Reference: ${data.transactionReference}`);
+        textLine(`Reference: ${data.transactionReference}`);
       }
+      textLine(`Purpose: ${data.purpose || "—"}`);
+      textLine(`Amount: NPR ${Number(data.amount || 0).toFixed(2)}`);
+      textLine(`Date Logged: ${formatDate(data.donationDate)}`);
 
-      doc.moveDown(1);
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-      doc.moveDown(0.8);
+      doc.moveDown(1.2);
 
-      doc.fontSize(9).fillColor("#444444").text(
-        "Note: Please ensure you have completed the actual transfer via your chosen method. This system is for record-keeping purposes.",
-        { align: "left" }
-      );
-      doc.moveDown(0.5);
-      doc.fontSize(9).fillColor("#444444").text(
-        "The fund will be used as purposed by the donor; however, the final authority to manage all funds remains under the high authority of the church.",
-        { align: "left" }
+      textLine(
+        "This receipt is generated electronically and is valid without a signature.",
+        undefined,
+        9
       );
 
       doc.end();
-    } catch (e) {
-      reject(e as Error);
+    } catch (error) {
+      reject(error);
     }
   });
-}; 
+};

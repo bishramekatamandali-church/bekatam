@@ -11,70 +11,9 @@ const enumNormalization_1 = require("../utils/enumNormalization");
 const emailService_1 = require("../services/emailService");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const contentUpdates_1 = require("../services/contentUpdates");
-const pdfkit_1 = __importDefault(require("pdfkit"));
-const pdfFonts_1 = require("../utils/pdfFonts");
+const donationReceiptPdf_1 = require("../utils/donationReceiptPdf");
 const router = express_1.default.Router();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'bishramekatamandali@gmail.com').toLowerCase().trim();
-const formatDate = (d) => {
-    try {
-        return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: '2-digit' });
-    }
-    catch {
-        return d.toISOString().split('T')[0];
-    }
-};
-const buildDonationReceiptPdfBuffer = (data) => {
-    return new Promise((resolve, reject) => {
-        try {
-            const doc = new pdfkit_1.default({ size: 'A4', margin: 50 });
-            (0, pdfFonts_1.applyPdfFont)(doc);
-            const chunks = [];
-            doc.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
-            doc.on('end', () => resolve(Buffer.concat(chunks)));
-            doc.on('error', reject);
-            // Header
-            doc.fontSize(18).text('Donation Receipt', { align: 'center' });
-            doc.moveDown(0.3);
-            doc.fontSize(11).text('Bishram Ekata Mandali', { align: 'center' });
-            doc.moveDown(1);
-            doc
-                .moveTo(50, doc.y)
-                .lineTo(545, doc.y)
-                .stroke();
-            doc.moveDown(1);
-            // Content
-            doc.fontSize(12).text(`Thank you, ${data.donorName}, for your generous support.`);
-            doc.moveDown(0.8);
-            doc.fontSize(12).text(`Transaction ID: ${data.id}`);
-            doc.text(`Donor Email: ${data.donorEmail}`);
-            doc.text(`Amount: NPR ${Number(data.amount || 0).toFixed(2)}`);
-            doc.text(`Purpose: ${data.purpose}`);
-            doc.text(`Date Logged: ${formatDate(data.donationDate)}`);
-            if (data.transactionReference) {
-                doc.text(`Transaction Reference: ${data.transactionReference}`);
-            }
-            doc.moveDown(1);
-            doc
-                .moveTo(50, doc.y)
-                .lineTo(545, doc.y)
-                .stroke();
-            doc.moveDown(0.8);
-            doc
-                .fontSize(9)
-                .fillColor('#444444')
-                .text('Note: Please ensure you have completed the actual transfer via your chosen method. This system is for record-keeping purposes.', { align: 'left' });
-            doc.moveDown(0.5);
-            doc
-                .fontSize(9)
-                .fillColor('#444444')
-                .text('The fund will be used as purposed by the donor; however, the final authority to manage all funds remains under the high authority of the church.', { align: 'left' });
-            doc.end();
-        }
-        catch (e) {
-            reject(e);
-        }
-    });
-};
 // GET all donation records
 router.get('/', async (req, res) => {
     try {
@@ -126,7 +65,7 @@ router.post('/', async (req, res) => {
         // Build receipt PDF once (best effort)
         let pdfBuffer = null;
         try {
-            pdfBuffer = await buildDonationReceiptPdfBuffer({
+            pdfBuffer = await (0, donationReceiptPdf_1.buildDonationReceiptPdfBuffer)({
                 id: newRecord.id,
                 donorName,
                 donorEmail,
