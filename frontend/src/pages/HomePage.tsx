@@ -10,6 +10,9 @@ import AdSlot from '../components/ads/AdSlot';
 import CreatePostModal from '../components/post/CreatePostModal';
 import AuthModal from '../components/auth/AuthModal';
 import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
+import ContentSection from '../components/home/ContentSection';
+import MinistryPreviewList from '../components/home/MinistryPreviewList';
+import BranchChurchPreviewList from '../components/home/BranchChurchPreviewList';
 import { adToBs, BS_MONTH_NAMES_NP, formatDateADBS, getLocalToday, getNepalDateParts } from '../dateConverter';
 
 // Helper to get a consistent, sortable date from any content item
@@ -87,6 +90,8 @@ const HomePage: React.FC = () => {
     blogPosts,
     prayerRequests,
     testimonials,
+    ministries,
+    branchChurches,
     donatePageContent,
     fellowshipRosters,
     generatedSchedules,
@@ -806,6 +811,30 @@ const HomePage: React.FC = () => {
             </Card>
           </div>
         </div>
+
+        <ContentSection
+          title="Community Life"
+          subtitle="Explore our ministries"
+          action={(
+            <Button asLink to="/ministries" variant="outline" size="sm">
+              View All Ministries
+            </Button>
+          )}
+        >
+          <MinistryPreviewList ministries={ministries} loading={loadingContent} maxItems={3} />
+        </ContentSection>
+
+        <ContentSection
+          title="Church Network"
+          subtitle="Find a branch church near you"
+          action={(
+            <Button asLink to="/branches" variant="outline" size="sm">
+              View All Branches
+            </Button>
+          )}
+        >
+          <BranchChurchPreviewList branchChurches={branchChurches} loading={loadingContent} maxItems={3} />
+        </ContentSection>
 
         <AdSlot placementKey="homepage_banner_bottom" className="my-8" />
       </div>
