@@ -81,7 +81,7 @@ const HomePage: React.FC = () => {
     loadingContent,
   } = useContent();
 
-  const { isAuthenticated, isAdmin, currentUser } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
@@ -189,13 +189,12 @@ const HomePage: React.FC = () => {
   }, []);
 
   const openCreateModal = (type: 'prayer' | 'testimonial') => {
-    if (!isAdmin) return;
-    if (isAuthenticated) {
-      setCreateModalInitialType(type);
-      setIsCreateModalOpen(true);
-    } else {
+    if (!isAuthenticated) {
       setIsAuthModalOpen(true);
+      return;
     }
+    setCreateModalInitialType(type);
+    setIsCreateModalOpen(true);
   };
 
   const mapToFeatureInfo = (item: ContentItem, typeKey: string): FeatureInfo => {
@@ -303,11 +302,14 @@ const HomePage: React.FC = () => {
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
     const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
     const showNewBadge = isContentNew(item, typeKey);
-    const videoUrl = ['sermons', 'events'].includes(typeKey) ? (item as any).videoUrl : undefined;
-    const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
-    const showVideo = ['sermons', 'events'].includes(typeKey) && Boolean(videoUrl);
-    const useVideoPlayer = showVideo && isDirectVideoUrl(videoUrl);
-    const embedUrl = youtubeEmbedUrl || videoUrl;
+    const mediaUrls = Array.isArray((item as any).mediaUrls) ? (item as any).mediaUrls : [];
+    const candidateVideoUrl =
+      (item as any).videoUrl ||
+      mediaUrls.find((url: string) => isDirectVideoUrl(url) || Boolean(getYouTubeEmbedUrl(url)));
+    const youtubeEmbedUrl = getYouTubeEmbedUrl(candidateVideoUrl);
+    const showVideo = ['sermons', 'events', 'prayer-requests', 'testimonials'].includes(typeKey) && Boolean(candidateVideoUrl);
+    const useVideoPlayer = showVideo && isDirectVideoUrl(candidateVideoUrl);
+    const embedUrl = youtubeEmbedUrl || candidateVideoUrl;
     const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
       pauseHomepageMedia(event.currentTarget);
     };
@@ -334,7 +336,7 @@ const HomePage: React.FC = () => {
           {showVideo ? (
             useVideoPlayer ? (
               <video
-                src={videoUrl}
+                src={candidateVideoUrl}
                 controls
                 onPlay={handleVideoPlay}
                 onClick={handleVideoClick}
@@ -553,7 +555,7 @@ const HomePage: React.FC = () => {
       <div className="w-full px-1 sm:px-2">
         <AdSlot placementKey="homepage_banner_top" className="my-8" />
 
-        {isAdmin && currentUser && (
+        {isAuthenticated && currentUser && (
           <div className="bg-white border border-slate-200 shadow-md shadow-slate-300/60 rounded-2xl px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 mb-8">
             <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
               {currentUser.profileImageUrl ? (
@@ -593,7 +595,7 @@ const HomePage: React.FC = () => {
       </div>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-      {isAdmin && isCreateModalOpen && (
+      {isAuthenticated && isCreateModalOpen && (
         <CreatePostModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
