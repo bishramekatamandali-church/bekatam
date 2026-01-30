@@ -92,17 +92,52 @@ app.use("/api", (req, res, next) => {
 
 // --- CORS CONFIGURATION ---
 // Allow multiple frontend origins (comma-separated) via FRONTEND_URL, and also allow same-origin / server-to-server requests.
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
+const rawOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .split(",")
   .map((v) => v.trim())
   .filter(Boolean);
+
+const normalizeOrigin = (origin: string) => origin.replace(/\/$/, "");
+
+const buildAllowedOrigins = (origins: string[]) => {
+  const allowed = new Set<string>();
+
+  origins.forEach((origin) => {
+    const normalized = normalizeOrigin(origin);
+    if (!normalized) return;
+    allowed.add(normalized);
+
+    try {
+      const url = new URL(normalized);
+      if (["localhost", "127.0.0.1"].includes(url.hostname)) {
+        return;
+      }
+
+      if (url.hostname.startsWith("www.")) {
+        const nonWww = new URL(normalized);
+        nonWww.hostname = url.hostname.replace(/^www\./, "");
+        allowed.add(normalizeOrigin(nonWww.toString()));
+      } else {
+        const withWww = new URL(normalized);
+        withWww.hostname = `www.${url.hostname}`;
+        allowed.add(normalizeOrigin(withWww.toString()));
+      }
+    } catch (error) {
+      console.warn("⚠️ Skipping invalid FRONTEND_URL origin:", origin);
+    }
+  });
+
+  return allowed;
+};
+
+const allowedOrigins = buildAllowedOrigins(rawOrigins);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // No Origin header: curl, server-to-server, or same-origin.
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (allowedOrigins.has(origin)) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,

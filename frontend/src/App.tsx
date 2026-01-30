@@ -72,16 +72,20 @@ import ManageFellowshipSchedulesPage from "./pages/admin/ManageFellowshipSchedul
 import ChatbotFab from "./components/chatbot/ChatbotFab";
 import ChatbotPanel from "./components/chatbot/ChatbotPanel";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+}
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      e.preventDefault();
       console.log("beforeinstallprompt event fired");
-      setInstallPrompt(e);
+      setInstallPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);
 
@@ -99,8 +103,8 @@ const AppContent: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
-    await (installPrompt as any).prompt();
-    const { outcome } = await (installPrompt as any).userChoice;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
     if (outcome === "accepted") {
       console.log("User accepted the install prompt");
     } else {
@@ -259,5 +263,4 @@ const App: React.FC = () => {
 };
 
 export default App;
-
 
