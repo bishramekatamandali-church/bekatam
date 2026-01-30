@@ -62,6 +62,16 @@ const normalizeDateRange = (startDate?: string, endDate?: string) => {
 
 const normalizeMatchValue = (value?: string | null) => (value ?? '').trim().toLowerCase();
 
+const escapeXmlValue = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+const safeXmlText = (value?: string | null) => escapeXmlValue((value ?? '').toString());
+
 const findMatchingDonor = (
   donorsByName: Map<string, DonorListEntry[]>,
   donorName: string,
@@ -254,16 +264,16 @@ const buildDonorListXml = (title: string, donors: DonorListEntry[], refinedDonor
             `      <donation>
         <date>${donation.date.toISOString()}</date>
         <amount>${donation.amount.toFixed(2)}</amount>
-        <collectionId>${donation.collectionId}</collectionId>
-        <purpose>${donation.purpose ?? ''}</purpose>
+        <collectionId>${safeXmlText(donation.collectionId)}</collectionId>
+        <purpose>${safeXmlText(donation.purpose)}</purpose>
       </donation>`
         )
         .join('\n');
 
       return `    <donor>
-      <name>${donor.donorName}</name>
-      <address>${donor.address ?? ''}</address>
-      <contact>${donor.contact ?? ''}</contact>
+      <name>${safeXmlText(donor.donorName)}</name>
+      <address>${safeXmlText(donor.address)}</address>
+      <contact>${safeXmlText(donor.contact)}</contact>
       <totalAmount>${donor.totalAmount.toFixed(2)}</totalAmount>
       <donations>
 ${donationsXml}
@@ -275,12 +285,12 @@ ${donationsXml}
   const refinedXml = refinedDonors
     .map((donor) => {
       const purposesXml = donor.purposes
-        .map((purpose) => `        <purpose>${purpose}</purpose>`)
+        .map((purpose) => `        <purpose>${safeXmlText(purpose)}</purpose>`)
         .join('\n');
       return `    <refinedDonor>
-      <name>${donor.donorName}</name>
-      <address>${donor.address ?? ''}</address>
-      <contact>${donor.contact ?? ''}</contact>
+      <name>${safeXmlText(donor.donorName)}</name>
+      <address>${safeXmlText(donor.address)}</address>
+      <contact>${safeXmlText(donor.contact)}</contact>
       <totalAmount>${donor.totalAmount.toFixed(2)}</totalAmount>
       <mergedCount>${donor.mergedCount}</mergedCount>
       <purposes>
@@ -292,7 +302,7 @@ ${purposesXml}
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <donorsList>
-  <title>${title}</title>
+  <title>${safeXmlText(title)}</title>
   <donors>
 ${donorsXml}
   </donors>
@@ -400,7 +410,7 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
 
     if (format === 'xml') {
       const xmlPayload = buildDonorListXml(title, donors, refinedDonors);
-      res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.xml"');
       return res.status(200).send(xmlPayload);
     }

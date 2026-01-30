@@ -8,6 +8,8 @@ type PdfFontState = {
 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const BASE_FONT_NAME = 'Helvetica';
+const DEFAULT_FONT_REGULAR_FILENAME = 'NotoSansDevanagari-Regular.ttf';
+const DEFAULT_FONT_BOLD_FILENAME = 'NotoSansDevanagari-Bold.ttf';
 
 let cachedRegularFont: string | null = null;
 let cachedBoldFont: string | null = null;
@@ -25,12 +27,24 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   return btoa(binary);
 };
 
+const ensureTrailingSlash = (value: string) => (value.endsWith('/') ? value : `${value}/`);
+
+const getDefaultFontUrl = (filename: string) => {
+  const baseUrl = ensureTrailingSlash(import.meta.env.BASE_URL || '/');
+  return `${baseUrl}fonts/${filename}`;
+};
+
 const loadFontFromUrl = async (url?: string): Promise<string | null> => {
   if (!url) return null;
-  const response = await fetch(url);
-  if (!response.ok) return null;
-  const buffer = await response.arrayBuffer();
-  return arrayBufferToBase64(buffer);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    return arrayBufferToBase64(buffer);
+  } catch (error) {
+    console.warn('Failed to load PDF font from URL:', url, error);
+    return null;
+  }
 };
 
 const loadDevanagariFonts = async (): Promise<{ regular?: string; bold?: string }> => {
@@ -41,8 +55,8 @@ const loadDevanagariFonts = async (): Promise<{ regular?: string; bold?: string 
   cachedLoadAttempt = true;
   const envRegular = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BASE64 as string | undefined);
   const envBold = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BOLD_BASE64 as string | undefined);
-  const urlRegular = import.meta.env.VITE_DEVANAGARI_FONT_URL as string | undefined;
-  const urlBold = import.meta.env.VITE_DEVANAGARI_FONT_BOLD_URL as string | undefined;
+  const urlRegular = (import.meta.env.VITE_DEVANAGARI_FONT_URL as string | undefined) || getDefaultFontUrl(DEFAULT_FONT_REGULAR_FILENAME);
+  const urlBold = (import.meta.env.VITE_DEVANAGARI_FONT_BOLD_URL as string | undefined) || getDefaultFontUrl(DEFAULT_FONT_BOLD_FILENAME);
 
   cachedRegularFont = envRegular || (await loadFontFromUrl(urlRegular));
   cachedBoldFont = envBold || (await loadFontFromUrl(urlBold));

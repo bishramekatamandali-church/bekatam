@@ -4,10 +4,18 @@ import PDFDocument from 'pdfkit';
 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const DEFAULT_FONT_NAME = 'Helvetica';
-const DEVANAGARI_FONT_PATH = path.resolve(process.cwd(), 'backend', 'assets', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+const DEFAULT_FONT_RELATIVE_PATH = path.resolve(__dirname, '..', '..', 'assets', 'fonts', 'NotoSansDevanagari-Regular.ttf');
 type PdfFontDocument = PDFDocument & {
   registerFont(name: string, src: string | Buffer): PDFDocument;
   font(name: string): PDFDocument;
+};
+
+const resolveFontPath = () => {
+  const envPath = process.env.PDF_DEVANAGARI_FONT_PATH;
+  if (envPath) return envPath;
+  const repoRootPath = path.resolve(process.cwd(), 'backend', 'assets', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+  if (fs.existsSync(repoRootPath)) return repoRootPath;
+  return DEFAULT_FONT_RELATIVE_PATH;
 };
 
 const loadFontFromEnv = (): Buffer | null => {
@@ -31,8 +39,9 @@ export const applyPdfFont = (doc: PDFDocument): string => {
       return DEVANAGARI_FONT_NAME;
     }
 
-    if (fs.existsSync(DEVANAGARI_FONT_PATH)) {
-      pdfDoc.registerFont(DEVANAGARI_FONT_NAME, DEVANAGARI_FONT_PATH);
+    const fontPath = resolveFontPath();
+    if (fontPath && fs.existsSync(fontPath)) {
+      pdfDoc.registerFont(DEVANAGARI_FONT_NAME, fontPath);
       pdfDoc.font(DEVANAGARI_FONT_NAME);
       return DEVANAGARI_FONT_NAME;
     }
