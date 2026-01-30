@@ -16,7 +16,14 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)),
+    caches.open(STATIC_CACHE).then((cache) =>
+      Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset))).then((results) => {
+        const failures = results.filter((result) => result.status === 'rejected');
+        if (failures.length) {
+          console.warn('Service worker precache failures:', failures.length);
+        }
+      }),
+    ),
   );
   self.skipWaiting();
 });

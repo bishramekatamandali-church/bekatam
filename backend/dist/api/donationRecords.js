@@ -28,6 +28,35 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch donation records.' });
     }
 });
+// Download receipt PDF for a donation record
+router.get("/:id/receipt.pdf", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const donation = await db_1.prisma.donationrecord.findUnique({
+            where: { id },
+        });
+        if (!donation) {
+            return res.status(404).json({ error: "Donation record not found" });
+        }
+        const pdfBuffer = await (0, donationReceiptPdf_1.buildDonationReceiptPdfBuffer)({
+            id: donation.id,
+            donorName: donation.donorName || "",
+            donorEmail: donation.donorEmail || "",
+            amount: Number(donation.amount || 0),
+            purpose: donation.purpose || "—",
+            donationDate: new Date(donation.donationDate),
+            transactionReference: donation.transactionReference ?? null,
+        });
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="donation_receipt_${donation.id}.pdf"`);
+        res.setHeader("Content-Length", String(pdfBuffer.length));
+        return res.status(200).send(pdfBuffer);
+    }
+    catch (err) {
+        console.error("Receipt PDF download error:", err);
+        return res.status(500).json({ error: "Failed to generate receipt PDF" });
+    }
+});
 // POST a new donation record
 router.post('/', async (req, res) => {
     const { donorName, donorEmail, amount, purpose, donationDate, paymentMethod, transactionReference, notes, isReceiptSent, postedByAdminId, postedByAdminName, } = req.body;
