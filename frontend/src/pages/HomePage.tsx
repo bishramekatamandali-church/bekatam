@@ -78,6 +78,7 @@ const HomePage: React.FC = () => {
     blogPosts,
     prayerRequests,
     testimonials,
+    donatePageContent,
     loadingContent,
   } = useContent();
 
@@ -589,6 +590,45 @@ const HomePage: React.FC = () => {
           && sortedTestimonials.length === 0
           && sortedNews.length === 0 && (
           <p className="text-center text-slate-500 py-10">No recent updates to show.</p>
+        )}
+
+        {!loadingContent && (
+          <Link to="/donate" className="block">
+            <div className="group relative overflow-hidden rounded-3xl border border-cyan-100 bg-gradient-to-br from-cyan-600 via-teal-600 to-blue-700 text-white shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:-translate-y-1">
+              {donatePageContent.homepageCardImageUrl && (
+                <img
+                  src={donatePageContent.homepageCardImageUrl}
+                  alt={donatePageContent.homepageCardTitle}
+                  className="absolute inset-0 h-full w-full object-cover opacity-30 transition-opacity duration-300 group-hover:opacity-40"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-900/40 to-transparent" />
+              <div className="relative z-10 grid gap-6 px-6 py-8 sm:px-10 sm:py-10 lg:grid-cols-[1.2fr_auto] lg:items-center">
+                <div>
+                  <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/90">
+                    Make an Impact Today
+                  </p>
+                  <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+                    {donatePageContent.homepageCardTitle}
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm text-white/90 sm:text-base">
+                    {donatePageContent.homepageCardSubtitle}
+                  </p>
+                  <p className="mt-4 text-sm font-semibold text-cyan-100">
+                    {donatePageContent.homepageCardHighlight}
+                  </p>
+                </div>
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-start">
+                  <span className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white/80">
+                    Secure Giving
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 shadow-sm shadow-slate-900/20">
+                    {donatePageContent.homepageCardCtaText}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Link>
         )}
 
         <AdSlot placementKey="homepage_banner_bottom" className="my-8" />
