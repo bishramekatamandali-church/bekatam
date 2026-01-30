@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../contexts/ContentContext';
 import { ContentItem, FeatureInfo } from '../types';
 
 import Button from '../components/ui/Button';
+import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import AdSlot from '../components/ads/AdSlot';
 import CreatePostModal from '../components/post/CreatePostModal';
 import AuthModal from '../components/auth/AuthModal';
+import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
+import { adToBs, BS_MONTH_NAMES_NP, formatDateADBS, getLocalToday, getNepalDateParts } from '../dateConverter';
 
 // Helper to get a consistent, sortable date from any content item
   const getPublishedAt = (item: any): Date => {
@@ -70,6 +73,12 @@ const incidentLabels: Record<string, string> = {
   news: 'Happened on',
 };
 
+const CalendarDaysIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${className || ''}`}>
+    <path fillRule="evenodd" d="M5.75 2.25A.75.75 0 016.5 3v.75h11V3A.75.75 0 0118.25 3v.75h.75a3 3 0 013 3v11.25a3 3 0 01-3 3H5a3 3 0 01-3-3V7.5a3 3 0 013-3H5.75V3A.75.75 0 015.75 2.25ZM4.5 10.5V18A1.5 1.5 0 006 19.5h12A1.5 1.5 0 0019.5 18v-7.5H4.5Z" clipRule="evenodd" />
+  </svg>
+);
+
 const HomePage: React.FC = () => {
   const {
     sermons,
@@ -79,6 +88,8 @@ const HomePage: React.FC = () => {
     prayerRequests,
     testimonials,
     donatePageContent,
+    fellowshipRosters,
+    generatedSchedules,
     loadingContent,
   } = useContent();
 
@@ -89,6 +100,10 @@ const HomePage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
   const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
+  const currentADDate = getLocalToday();
+  const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
+  const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
+  const [currentCalendarBsYear, setCurrentCalendarBsYear] = useState<number>(initialBsDate.year);
   const pauseHomepageHtmlVideos = (currentElement?: HTMLElement | null) => {
     document.querySelectorAll<HTMLVideoElement>('video[data-homepage-video]').forEach((video) => {
       if (video !== currentElement) {
@@ -158,6 +173,84 @@ const HomePage: React.FC = () => {
       console.warn('Failed to load homepage seen content state.', error);
     }
   }, [currentUser, seenStorageKey]);
+
+  const handleCalendarMonthChange = useCallback((month: number, year: number) => {
+    setCurrentCalendarBsMonth(month);
+    setCurrentCalendarBsYear(year);
+  }, []);
+
+  const eventsForSelectedMonth = useMemo(() => {
+    return events
+      .filter((event) => {
+        if (!event.date) return false;
+        const eventAdDate = new Date(event.date);
+        const eventBsDate = adToBs(eventAdDate);
+        return eventBsDate.year === currentCalendarBsYear && eventBsDate.month === currentCalendarBsMonth;
+      })
+      .sort((a, b) => getNepalDateParts(new Date(a.date!)).day - getNepalDateParts(new Date(b.date!)).day);
+  }, [events, currentCalendarBsMonth, currentCalendarBsYear]);
+
+  const noticesForSelectedMonth = useMemo(() => {
+    const rosterNotices = fellowshipRosters
+      .filter((item) => !!item.assignedDate)
+      .map((item) => ({
+        id: `roster-${item.id}`,
+        title: item.groupNameOrEventTitle,
+        date: item.assignedDate,
+        timeSlot: item.timeSlot,
+        rosterType: item.rosterType,
+      }));
+
+    const scheduleNotices = generatedSchedules
+      .filter((item) => !!item.scheduledDate)
+      .map((item) => ({
+        id: `schedule-${item.id}`,
+        title: item.groupNameOrEventTitle,
+        date: item.scheduledDate,
+        timeSlot: item.timeSlot,
+        rosterType: item.rosterType,
+      }));
+
+    return [...rosterNotices, ...scheduleNotices]
+      .filter((notice) => {
+        const noticeAdDate = new Date(notice.date);
+        if (Number.isNaN(noticeAdDate.getTime())) return false;
+        const noticeBsDate = adToBs(noticeAdDate);
+        return noticeBsDate.year === currentCalendarBsYear && noticeBsDate.month === currentCalendarBsMonth;
+      })
+      .sort((a, b) => getNepalDateParts(new Date(a.date)).day - getNepalDateParts(new Date(b.date)).day);
+  }, [fellowshipRosters, generatedSchedules, currentCalendarBsMonth, currentCalendarBsYear]);
+
+  const calendarItems: CalendarEntry[] = useMemo(() => {
+    const mappedEvents: CalendarEntry[] = events
+      .filter((event) => !!event.date)
+      .map((event) => ({ id: event.id, title: event.title, date: event.date!, type: 'event', link: `/events/${event.id}` }));
+
+    const mappedNotices: CalendarEntry[] = [
+      ...fellowshipRosters
+        .filter((item) => !!item.assignedDate)
+        .map((item) => ({
+          id: `roster-${item.id}`,
+          title: item.groupNameOrEventTitle,
+          date: item.assignedDate,
+          type: 'notice' as const,
+          link: '/notices',
+        })),
+      ...generatedSchedules
+        .filter((item) => !!item.scheduledDate)
+        .map((item) => ({
+          id: `schedule-${item.id}`,
+          title: item.groupNameOrEventTitle,
+          date: item.scheduledDate,
+          type: 'notice' as const,
+          link: '/notices',
+        })),
+    ];
+
+    return [...mappedEvents, ...mappedNotices];
+  }, [events, fellowshipRosters, generatedSchedules]);
+
+  const currentDisplayedBsMonthName = BS_MONTH_NAMES_NP[currentCalendarBsMonth - 1];
 
   useEffect(() => {
     const handleEmbedMessage = (event: MessageEvent) => {
@@ -631,8 +724,98 @@ const HomePage: React.FC = () => {
           </Link>
         )}
 
+        <div className="mt-10">
+          <div className="max-w-4xl mx-auto">
+            <Card className="shadow-xl">
+              {loadingContent && !events.length && !fellowshipRosters.length && !generatedSchedules.length ? (
+                <div className="p-4 sm:p-6 h-full flex items-center justify-center min-h-[400px]">
+                  <p className="text-center text-slate-500 py-10">Loading calendar...</p>
+                </div>
+              ) : (
+                <>
+                  <InteractiveCalendar
+                    items={calendarItems}
+                    onMonthChange={handleCalendarMonthChange}
+                    initialBsMonth={currentCalendarBsMonth}
+                    initialBsYear={currentCalendarBsYear}
+                  />
+                  <div className="mt-4 border-t border-blue-200">
+                    <CardHeader className="bg-blue-100">
+                      <h2 className="text-xl font-semibold text-blue-800">
+                        Events & Notices in {currentDisplayedBsMonthName} {currentCalendarBsYear} BS
+                      </h2>
+                    </CardHeader>
+                    <CardContent className="max-h-96 overflow-y-auto custom-scrollbar p-3 sm:p-4">
+                      {loadingContent && !eventsForSelectedMonth.length && !noticesForSelectedMonth.length ? (
+                        <p className="text-slate-500 text-center py-6">Loading events...</p>
+                      ) : eventsForSelectedMonth.length === 0 && noticesForSelectedMonth.length === 0 ? (
+                        <p className="text-slate-500 text-center py-6">No events or notices scheduled for this month.</p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {eventsForSelectedMonth.map((event) => {
+                            const eventBsDate = adToBs(new Date(event.date!));
+                            const adDatePart = formatDateADBS(event.date!).split(' (')[1]?.replace(')', '');
+                            return (
+                              <li key={event.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                <Link to={`/events/${event.id}`} className="block">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                                      Event
+                                    </span>
+                                    <h4 className="font-semibold text-blue-700">{event.title}</h4>
+                                  </div>
+                                  <div className="flex items-center text-sm text-slate-500 mt-1">
+                                    <CalendarDaysIcon className="w-4 h-4 mr-2 text-slate-400" />
+                                    <span>{eventBsDate.day} {currentDisplayedBsMonthName} ({adDatePart})</span>
+                                    {event.time && <span className="ml-2">@ {event.time}</span>}
+                                  </div>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                          {noticesForSelectedMonth.map((notice) => {
+                            const noticeBsDate = adToBs(new Date(notice.date));
+                            const adDatePart = formatDateADBS(notice.date).split(' (')[1]?.replace(')', '');
+                            return (
+                              <li key={notice.id} className="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                <Link to="/notices" className="block">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                                      Notice
+                                    </span>
+                                    <h4 className="font-semibold text-rose-700">{notice.title}</h4>
+                                    {notice.rosterType && (
+                                      <span className="text-xs text-slate-500">({notice.rosterType})</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center text-sm text-slate-500 mt-1">
+                                    <CalendarDaysIcon className="w-4 h-4 mr-2 text-slate-400" />
+                                    <span>{noticeBsDate.day} {currentDisplayedBsMonthName} ({adDatePart})</span>
+                                    {notice.timeSlot && <span className="ml-2">@ {notice.timeSlot}</span>}
+                                  </div>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
+        </div>
+
         <AdSlot placementKey="homepage_banner_bottom" className="my-8" />
       </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+      `}</style>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       {isAuthenticated && isCreateModalOpen && (
