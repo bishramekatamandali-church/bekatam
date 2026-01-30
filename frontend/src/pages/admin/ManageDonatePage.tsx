@@ -204,6 +204,62 @@ const ManageDonatePage: React.FC = () => {
               <UploadStatus field="headerImageUrl" />
             </CardContent>
           </Card>
+     
+          <Card className="dark:bg-slate-800">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200">Homepage Donation Card</h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label htmlFor="homepageCardTitle" className="block text-sm font-medium dark:text-slate-300">Card Title</label>
+                <input
+                  type="text"
+                  name="homepageCardTitle"
+                  value={formData.homepageCardTitle || ''}
+                  onChange={handleChange}
+                  className="mt-1 w-full p-2 border dark:border-slate-600 rounded dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="homepageCardSubtitle" className="block text-sm font-medium dark:text-slate-300">Card Subtitle</label>
+                <textarea
+                  name="homepageCardSubtitle"
+                  value={formData.homepageCardSubtitle || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  className="mt-1 w-full p-2 border dark:border-slate-600 rounded dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="homepageCardHighlight" className="block text-sm font-medium dark:text-slate-300">Highlight Line</label>
+                <input
+                  type="text"
+                  name="homepageCardHighlight"
+                  value={formData.homepageCardHighlight || ''}
+                  onChange={handleChange}
+                  className="mt-1 w-full p-2 border dark:border-slate-600 rounded dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="homepageCardCtaText" className="block text-sm font-medium dark:text-slate-300">CTA Button Text</label>
+                <input
+                  type="text"
+                  name="homepageCardCtaText"
+                  value={formData.homepageCardCtaText || ''}
+                  onChange={handleChange}
+                  className="mt-1 w-full p-2 border dark:border-slate-600 rounded dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+              <AdvancedMediaUploader
+                label="Card Background Image"
+                mediaType="image"
+                currentUrl={formData.homepageCardImageUrl}
+                onUrlChange={(url) => handleUrlChange('homepageCardImageUrl', url)}
+                onFileUpload={(file) => handleFileUpload(file, 'homepageCardImageUrl')}
+              />
+              <UploadStatus field="homepageCardImageUrl" />
+            </CardContent>
+          </Card>
 
           <Card className="dark:bg-slate-800">
             <CardHeader>

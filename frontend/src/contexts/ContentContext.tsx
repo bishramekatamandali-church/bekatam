@@ -182,6 +182,11 @@ const initialSampleDonatePageContent: DonatePageContent = {
   headerTitle: 'Support Our Mission',
   headerSubtitle: `"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver." - 2 Corinthians 9:7`,
   headerImageUrl: 'https://picsum.photos/seed/donateheader/1600/500',
+  homepageCardTitle: 'Give Hope, Change Lives',
+  homepageCardSubtitle: 'Every gift fuels meals, discipleship, and community care for families in need.',
+  homepageCardHighlight: 'Join monthly partners to multiply impact all year.',
+  homepageCardCtaText: 'Donate Now',
+  homepageCardImageUrl: 'https://picsum.photos/seed/donatecard/1200/800',
   localDonationsTitle: 'Giving Locally (Within Nepal)',
   bankName: 'Nabil Bank Ltd.',
   accountName: 'Bishram Ekata Mandali',
@@ -401,7 +406,10 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => getStoredData('bem_testimonials', []));
   
   const [directMediaItems, setDirectMediaItems] = useState<DirectMediaItem[]>(() => getStoredData('bem_directMediaItems', []));
-  const [donatePageContent, setDonatePageContent] = useState<DonatePageContent>(() => getStoredData('bem_donatePageContent', initialSampleDonatePageContent));
+  const [donatePageContent, setDonatePageContent] = useState<DonatePageContent>(() => ({
+    ...initialSampleDonatePageContent,
+    ...getStoredData('bem_donatePageContent', initialSampleDonatePageContent),
+  }));
 
   const [donationRecords, setDonationRecords] = useState<DonationRecord[]>(() => getStoredData('bem_donationRecords', []));
   const [collectionRecords, setCollectionRecords] = useState<CollectionRecord[]>(() => getStoredData('bem_collectionRecords', []));

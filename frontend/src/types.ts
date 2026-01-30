@@ -326,6 +326,11 @@ export interface DonatePageContent {
   headerTitle: string;
   headerSubtitle: string;
   headerImageUrl: string;
+  homepageCardTitle: string;
+  homepageCardSubtitle: string;
+  homepageCardHighlight: string;
+  homepageCardCtaText: string;
+  homepageCardImageUrl?: string;
   localDonationsTitle: string;
   bankName: string;
   accountName: string;
@@ -1107,6 +1112,11 @@ export interface DonatePageContentFormData {
   headerTitle: string;
   headerSubtitle: string; 
   headerImageUrl: string;
+  homepageCardTitle: string;
+  homepageCardSubtitle: string;
+  homepageCardHighlight: string;
+  homepageCardCtaText: string;
+  homepageCardImageUrl?: string;
   localDonationsTitle: string;
   bankName: string;
   accountName: string;
