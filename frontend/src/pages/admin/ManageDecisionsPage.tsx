@@ -54,6 +54,18 @@ const ManageDecisionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDecision, setEditingDecision] = useState<DecisionLog | null>(null);
 
+  const triggerPdfDownload = (doc: jsPDF, filename: string) => {
+    const pdfBlob = doc.output('blob') as Blob;
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const filteredDecisions = useMemo(() => {
     const query = searchTerm.toLowerCase();
     return decisionLogs
@@ -131,7 +143,10 @@ const ManageDecisionsPage = () => {
     addDetail('Recorded By', decision.postedByAdminName);
     if (decision.createdAt) addDetail('Created At', formatTimestampADBS(decision.createdAt));
 
-    doc.save(`Decision_${(decision.title || 'Log').replace(/\s+/g, '_')}.pdf`);
+    triggerPdfDownload(
+      doc,
+      `Decision_${(decision.title || 'Log').replace(/\s+/g, '_')}.pdf`
+    );
   };
 
   const downloadAllDecisionsExcel = () => {

@@ -6,7 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { MeetingLog, MeetingLogFormData, GenericContentFormData, MeetingLogStatus, DecisionLogStatus, MeetingDecisionPoint, ActionItemStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc, pdfTextMixed, wrapMixedText } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText, setPdfFont } from '../../utils/pdfFonts';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 
@@ -63,6 +63,18 @@ const ManageMeetingsPage: React.FC = () => {
   const [editingMeeting, setEditingMeeting] = useState<MeetingLog | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+
+  const triggerPdfDownload = (doc: jsPDF, filename: string) => {
+    const pdfBlob = doc.output('blob') as Blob;
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
 
   const filteredMeetings = useMemo(() => 
@@ -227,7 +239,10 @@ const ManageMeetingsPage: React.FC = () => {
         doc.text(pageNumText, pageWidth - margin - pageNumTextWidth, pageHeight - footerMargin);
     }
     
-    doc.save(`MeetingLog_${(meeting.title || 'Log').replace(/\s+/g, '_')}.pdf`);
+    triggerPdfDownload(
+      doc,
+      `MeetingLog_${(meeting.title || 'Log').replace(/\s+/g, '_')}.pdf`
+    );
   };
   
 

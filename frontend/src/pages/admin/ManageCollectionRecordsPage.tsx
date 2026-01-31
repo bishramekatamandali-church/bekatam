@@ -6,7 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { CollectionRecord, CollectionRecordFormData, GenericContentFormData, collectionPurposeList, CollectionPurpose, DonorDetail } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc, pdfTextMixed, wrapMixedText } from '../../utils/pdfFonts';
+import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, DocumentTextIcon as DocumentPdfIcon, TableCellsIcon as DocumentCsvIcon, Squares2X2Icon, Bars3Icon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
@@ -18,6 +18,18 @@ export const ManageCollectionRecordsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CollectionRecord | null>(null);
   const [modalFormLoading, setModalFormLoading] = useState(false); 
+
+  const triggerPdfDownload = (doc: jsPDF, filename: string) => {
+    const pdfBlob = doc.output('blob') as Blob;
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPurpose, setFilterPurpose] = useState<CollectionPurpose | 'all'>('all');
@@ -203,7 +215,10 @@ export const ManageCollectionRecordsPage: React.FC = () => {
       doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - doc.getTextWidth(`Page ${i} of ${totalPages}`), pageHeight - footerMargin);
     }
 
-    doc.save(`Collection_Record_${record.purpose.replace(/\s+/g, '_')}_${record.id.slice(0, 6)}.pdf`);
+    triggerPdfDownload(
+      doc,
+      `Collection_Record_${record.purpose.replace(/\s+/g, '_')}_${record.id.slice(0, 6)}.pdf`
+    );
   };
 
 
