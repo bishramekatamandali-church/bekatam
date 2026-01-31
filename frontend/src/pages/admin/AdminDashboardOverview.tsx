@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useCallback } from 'react'; 
+import React, { useMemo, useState, useCallback, useEffect } from 'react'; 
 import Card, { CardContent, CardHeader } from '../../components/ui/Card';
 import { useContent } from '../../contexts/ContentContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -102,12 +102,27 @@ const AdminDashboardOverview: React.FC = () => {
   const [featureUpdateMessage, setFeatureUpdateMessage] = useState('');
   const [broadcastFeedback, setBroadcastFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [isGeneratingJumboReport, setIsGeneratingJumboReport] = useState(false);
+  const [registeredUsersCount, setRegisteredUsersCount] = useState<number | null>(null);
 
 
   const combinedActivityLogs = useMemo(() => {
     const allLogs: FrontendActivityLog[] = [...content.contentActivityLogs, ...userActivityLogs];
     return allLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0,5); 
   }, [content.contentActivityLogs, userActivityLogs]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRegisteredUsers = async () => {
+      const users = await getAllUsers();
+      if (isMounted) {
+        setRegisteredUsersCount(users.length);
+      }
+    };
+    fetchRegisteredUsers();
+    return () => {
+      isMounted = false;
+    };
+  }, [getAllUsers]);
 
 
   const quickLinks = [
@@ -192,7 +207,9 @@ const AdminDashboardOverview: React.FC = () => {
         <Card>
           <CardHeader><h3 className="font-semibold text-gray-700">Registered Users</h3></CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-purple-600">{isLoading ? '...' : getAllUsers().length}</p>
+            <p className="text-3xl font-bold text-purple-600">
+              {isLoading || registeredUsersCount === null ? '...' : registeredUsersCount}
+            </p>
           </CardContent>
         </Card>
          <Card>
