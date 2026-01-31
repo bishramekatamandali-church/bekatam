@@ -46,7 +46,7 @@ const parseJsonArrayField = <T,>(value: unknown, fallback: T[] = []): T[] => {
 };
 
 const normalizeMeetingTypeLabel = (value?: string): MeetingType | undefined => {
-  if (!value) return undefined;
+  if (!value || typeof value !== 'string') return undefined;
   const normalized = value.trim();
   const normalizedValue = normalized.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   const normalizedNoApostrophe = normalizedValue
@@ -61,7 +61,7 @@ const normalizeMeetingTypeLabel = (value?: string): MeetingType | undefined => {
 };
 
 const normalizeDecisionStatusLabel = (value?: string): DecisionLogStatus | undefined => {
-  if (!value) return undefined;
+  if (!value || typeof value !== 'string') return undefined;
   const normalizedValue = value.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   return decisionLogStatusList.find(
     (option) => option.toLowerCase() === normalizedValue.toLowerCase(),
@@ -69,7 +69,7 @@ const normalizeDecisionStatusLabel = (value?: string): DecisionLogStatus | undef
 };
 
 const normalizeMeetingStatusLabel = (value?: string): MeetingLogStatus | undefined => {
-  if (!value) return undefined;
+  if (!value || typeof value !== 'string') return undefined;
   const normalizedValue = value.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   return meetingLogStatusList.find(
     (option) => option.toLowerCase() === normalizedValue.toLowerCase(),
@@ -127,7 +127,7 @@ const normalizeMeetingTypeForApi = (value?: string) => {
 };
 
 const normalizeSermonCategory = (category?: string): SermonCategory | undefined => {
-  if (!category) return undefined;
+  if (!category || typeof category !== 'string') return undefined;
   const cleaned = category.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   return sermonCategoriesList.find((item) => item.toLowerCase() === cleaned.toLowerCase());
 };
