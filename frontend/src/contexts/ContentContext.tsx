@@ -1141,7 +1141,8 @@ const nowTimestamp = new Date().toISOString();
  keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches',
  directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials',
  donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
- ministryJoinRequest: 'ministry-join-requests', advertisement: 'advertisements', fellowshipRoster: 'fellowship-schedules/rosters', generatedSchedule: 'fellowship-schedules/generated' };
+ ministryJoinRequest: 'ministry-join-requests', meetingLog: 'meeting-logs', decisionLog: 'decision-logs',
+ advertisement: 'advertisements', fellowshipRoster: 'fellowship-schedules/rosters', generatedSchedule: 'fellowship-schedules/generated' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
