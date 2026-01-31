@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react'; 
 import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -6,7 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { CollectionRecord, CollectionRecordFormData, GenericContentFormData, collectionPurposeList, CollectionPurpose, DonorDetail } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText } from '../../utils/pdfFonts';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, DocumentTextIcon as DocumentPdfIcon, TableCellsIcon as DocumentCsvIcon, Squares2X2Icon, Bars3Icon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
@@ -487,3 +487,5 @@ export const ManageCollectionRecordsPage: React.FC = () => {
     </div>
   );
 };
+
+

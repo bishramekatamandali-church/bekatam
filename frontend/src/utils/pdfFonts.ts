@@ -1,19 +1,31 @@
 import { jsPDF } from 'jspdf';
 
-type PdfFontState = {
-  fontName: string;
-  supportsBold: boolean;
-  supportsItalic: boolean;
+export type PdfFontState = {
+  latinFontName: string;
+  devanagariFontName: string;
+  supportsBoldLatin: boolean;
+  supportsBoldDevanagari: boolean;
 };
 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
-const BASE_FONT_NAME = 'Helvetica';
-const DEFAULT_FONT_REGULAR_FILENAME = 'NotoSansDevanagari-Regular.ttf';
-const DEFAULT_FONT_BOLD_FILENAME = 'NotoSansDevanagari-Bold.ttf';
+const LATIN_FONT_NAME = 'NotoSans';
+const BASE_FALLBACK_FONT = 'Helvetica';
 
-let cachedRegularFont: string | null = null;
-let cachedBoldFont: string | null = null;
+const DEV_REGULAR_FILENAME = 'NotoSansDevanagari-Regular.ttf';
+const DEV_BOLD_FILENAME = 'NotoSansDevanagari-Bold.ttf';
+const LATIN_REGULAR_FILENAME = 'NotoSans-Regular.ttf';
+const LATIN_BOLD_FILENAME = 'NotoSans-Bold.ttf'; // optional (we will fall back to regular if not present)
+
 let cachedLoadAttempt = false;
+let cachedFonts: Record<string, string | null> = {
+  devRegular: null,
+  devBold: null,
+  latinRegular: null,
+  latinBold: null,
+};
+
+const DEVANAGARI_RE = /[\u0900-\u097F]/;
+export const isDevanagariText = (text?: string) => Boolean(text && DEVANAGARI_RE.test(text));
 
 const normalizeBase64 = (value?: string): string => (value || '').replace(/\s+/g, '');
 
@@ -29,7 +41,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 
 const ensureTrailingSlash = (value: string) => (value.endsWith('/') ? value : `${value}/`);
 
-const getDefaultFontUrl = (filename: string) => {
+const getFontUrl = (filename: string) => {
   const baseUrl = ensureTrailingSlash(import.meta.env.BASE_URL || '/');
   return `${baseUrl}fonts/${filename}`;
 };
@@ -47,59 +59,198 @@ const loadFontFromUrl = async (url?: string): Promise<string | null> => {
   }
 };
 
-const loadDevanagariFonts = async (): Promise<{ regular?: string; bold?: string }> => {
-  if (cachedLoadAttempt) {
-    return { regular: cachedRegularFont ?? undefined, bold: cachedBoldFont ?? undefined };
-  }
-
+const loadAllFonts = async (): Promise<typeof cachedFonts> => {
+  if (cachedLoadAttempt) return cachedFonts;
   cachedLoadAttempt = true;
-  const envRegular = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BASE64 as string | undefined);
-  const envBold = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BOLD_BASE64 as string | undefined);
-  const urlRegular = (import.meta.env.VITE_DEVANAGARI_FONT_URL as string | undefined) || getDefaultFontUrl(DEFAULT_FONT_REGULAR_FILENAME);
-  const urlBold = (import.meta.env.VITE_DEVANAGARI_FONT_BOLD_URL as string | undefined) || getDefaultFontUrl(DEFAULT_FONT_BOLD_FILENAME);
 
-  cachedRegularFont = envRegular || (await loadFontFromUrl(urlRegular));
-  cachedBoldFont = envBold || (await loadFontFromUrl(urlBold));
+  // Optional env overrides (base64 / custom urls)
+  const envDevRegular = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BASE64 as string | undefined);
+  const envDevBold = normalizeBase64(import.meta.env.VITE_DEVANAGARI_FONT_BOLD_BASE64 as string | undefined);
 
-  return { regular: cachedRegularFont ?? undefined, bold: cachedBoldFont ?? undefined };
+  const envLatinRegular = normalizeBase64(import.meta.env.VITE_LATIN_FONT_BASE64 as string | undefined);
+  const envLatinBold = normalizeBase64(import.meta.env.VITE_LATIN_FONT_BOLD_BASE64 as string | undefined);
+
+  const devRegularUrl = (import.meta.env.VITE_DEVANAGARI_FONT_URL as string | undefined) || getFontUrl(DEV_REGULAR_FILENAME);
+  const devBoldUrl = (import.meta.env.VITE_DEVANAGARI_FONT_BOLD_URL as string | undefined) || getFontUrl(DEV_BOLD_FILENAME);
+
+  const latinRegularUrl = (import.meta.env.VITE_LATIN_FONT_URL as string | undefined) || getFontUrl(LATIN_REGULAR_FILENAME);
+  const latinBoldUrl = (import.meta.env.VITE_LATIN_FONT_BOLD_URL as string | undefined) || getFontUrl(LATIN_BOLD_FILENAME);
+
+  cachedFonts.devRegular = envDevRegular || (await loadFontFromUrl(devRegularUrl));
+  cachedFonts.devBold = envDevBold || (await loadFontFromUrl(devBoldUrl));
+  cachedFonts.latinRegular = envLatinRegular || (await loadFontFromUrl(latinRegularUrl));
+  cachedFonts.latinBold = envLatinBold || (await loadFontFromUrl(latinBoldUrl));
+
+  return cachedFonts;
 };
 
+/**
+ * Register both Latin + Devanagari fonts.
+ *
+ * App-wide font rule (same as backend):
+ * - Default to Latin when unsure/empty (so English never becomes blank)
+ * - Switch to Devanagari only for runs that contain Devanagari characters
+ * - For mixed strings, render by runs (see `pdfTextMixed` / `wrapMixedText`)
+ */
 export const preparePdfDoc = async (doc: jsPDF): Promise<PdfFontState> => {
+  const fonts = await loadAllFonts();
+
+  let latinName = BASE_FALLBACK_FONT;
+  let devName = BASE_FALLBACK_FONT;
+
   try {
-    const { regular, bold } = await loadDevanagariFonts();
-    if (regular) {
-      doc.addFileToVFS('NotoSansDevanagari-Regular.ttf', regular);
-      doc.addFont('NotoSansDevanagari-Regular.ttf', DEVANAGARI_FONT_NAME, 'normal');
-      if (bold) {
-        doc.addFileToVFS('NotoSansDevanagari-Bold.ttf', bold);
-        doc.addFont('NotoSansDevanagari-Bold.ttf', DEVANAGARI_FONT_NAME, 'bold');
+    if (fonts.latinRegular) {
+      doc.addFileToVFS(LATIN_REGULAR_FILENAME, fonts.latinRegular);
+      doc.addFont(LATIN_REGULAR_FILENAME, LATIN_FONT_NAME, 'normal');
+      latinName = LATIN_FONT_NAME;
+
+      if (fonts.latinBold) {
+        doc.addFileToVFS(LATIN_BOLD_FILENAME, fonts.latinBold);
+        doc.addFont(LATIN_BOLD_FILENAME, LATIN_FONT_NAME, 'bold');
       }
-      doc.setFont(DEVANAGARI_FONT_NAME, 'normal');
-      return {
-        fontName: DEVANAGARI_FONT_NAME,
-        supportsBold: Boolean(bold),
-        supportsItalic: false,
-      };
+    }
+
+    if (fonts.devRegular) {
+      doc.addFileToVFS(DEV_REGULAR_FILENAME, fonts.devRegular);
+      doc.addFont(DEV_REGULAR_FILENAME, DEVANAGARI_FONT_NAME, 'normal');
+      devName = DEVANAGARI_FONT_NAME;
+
+      if (fonts.devBold) {
+        doc.addFileToVFS(DEV_BOLD_FILENAME, fonts.devBold);
+        doc.addFont(DEV_BOLD_FILENAME, DEVANAGARI_FONT_NAME, 'bold');
+      }
     }
   } catch (error) {
-    console.warn('Failed to register Devanagari PDF fonts:', error);
+    console.warn('Failed to register PDF fonts:', error);
   }
 
-  doc.setFont(BASE_FONT_NAME, 'normal');
+  // Default = latin (important!)
+  doc.setFont(latinName, 'normal');
+
   return {
-    fontName: BASE_FONT_NAME,
-    supportsBold: true,
-    supportsItalic: true,
+    latinFontName: latinName,
+    devanagariFontName: devName,
+    supportsBoldLatin: Boolean(fonts.latinBold),
+    supportsBoldDevanagari: Boolean(fonts.devBold),
   };
 };
 
-export const setPdfFont = (doc: jsPDF, state: PdfFontState, style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal') => {
-  let resolvedStyle = style;
-  if ((style === 'bold' || style === 'bolditalic') && !state.supportsBold) {
-    resolvedStyle = 'normal';
-  }
-  if ((style === 'italic' || style === 'bolditalic') && !state.supportsItalic) {
-    resolvedStyle = state.supportsBold && style === 'bolditalic' ? 'bold' : 'normal';
-  }
-  doc.setFont(state.fontName, resolvedStyle);
+
+/**
+ * Legacy helper kept for older pages:
+ * - Defaults to Latin
+ * - If `textSample` contains Devanagari, switches to Devanagari
+ */
+export const setPdfFont = (
+  doc: jsPDF,
+  state: PdfFontState,
+  style: 'normal' | 'bold' = 'normal',
+  textSample: string = '',
+) => {
+  setPdfFontForText(doc, state, textSample, style);
 };
+
+export const setPdfFontForText = (
+  doc: jsPDF,
+  state: PdfFontState,
+  textSample: string,
+  style: 'normal' | 'bold' = 'normal',
+) => {
+  const wantsDev = isDevanagariText(textSample);
+  const fontName = wantsDev ? state.devanagariFontName : state.latinFontName;
+
+  // If bold isn't available for the chosen family, fall back to normal.
+  const canBold = wantsDev ? state.supportsBoldDevanagari : state.supportsBoldLatin;
+  const resolvedStyle = style === 'bold' && !canBold ? 'normal' : style;
+
+  doc.setFont(fontName, resolvedStyle);
+};
+
+type TextRun = { text: string; script: 'devanagari' | 'latin' };
+
+export const splitTextRuns = (value: string): TextRun[] => {
+  const text = String(value ?? '');
+  if (!text) return [];
+  const runs: TextRun[] = [];
+
+  let current = '';
+  let currentScript: TextRun['script'] = isDevanagariText(text[0]) ? 'devanagari' : 'latin';
+
+  for (const ch of text) {
+    const script: TextRun['script'] = isDevanagariText(ch) ? 'devanagari' : 'latin';
+    if (script === currentScript) {
+      current += ch;
+    } else {
+      runs.push({ text: current, script: currentScript });
+      current = ch;
+      currentScript = script;
+    }
+  }
+  if (current) runs.push({ text: current, script: currentScript });
+  return runs;
+};
+
+export const getMixedTextWidth = (doc: jsPDF, state: PdfFontState, text: string, style: 'normal' | 'bold' = 'normal') => {
+  const runs = splitTextRuns(text);
+  let total = 0;
+  for (const run of runs) {
+    setPdfFontForText(doc, state, run.script === 'devanagari' ? 'अ' : 'A', style);
+    total += doc.getTextWidth(run.text);
+  }
+  return total;
+};
+
+export const pdfTextMixed = (
+  doc: jsPDF,
+  state: PdfFontState,
+  text: string,
+  x: number,
+  y: number,
+  options?: { align?: 'left' | 'center' | 'right' },
+  style: 'normal' | 'bold' = 'normal',
+) => {
+  const runs = splitTextRuns(text);
+  const align = options?.align ?? 'left';
+
+  let startX = x;
+  if (align !== 'left') {
+    const width = getMixedTextWidth(doc, state, text, style);
+    if (align === 'center') startX = x - width / 2;
+    if (align === 'right') startX = x - width;
+  }
+
+  let cursorX = startX;
+  for (const run of runs) {
+    setPdfFontForText(doc, state, run.script === 'devanagari' ? 'अ' : 'A', style);
+    doc.text(run.text, cursorX, y);
+    cursorX += doc.getTextWidth(run.text);
+  }
+};
+
+/**
+ * Basic word-wrapping for mixed-script strings.
+ * Returns plain string lines; each line will be rendered via `pdfTextMixed`.
+ */
+export const wrapMixedText = (doc: jsPDF, state: PdfFontState, text: string, maxWidth: number, style: 'normal' | 'bold' = 'normal') => {
+  const raw = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (!raw) return [];
+
+  const words = raw.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    const w = getMixedTextWidth(doc, state, next, style);
+    if (w <= maxWidth || !current) {
+      current = next;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+  
+ 

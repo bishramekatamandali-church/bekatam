@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from "fs";
 import path from 'path';
 import PDFDocument from 'pdfkit';
 
@@ -65,9 +65,12 @@ export type PdfFontRegistry = {
 };
 
 /**
- * Register fonts so Nepali / Devanagari text renders correctly *inside the downloaded PDF*.
- * If you bundle fonts in the repo: backend/assets/fonts/*.ttf
- * Or install system fonts (recommended on VPS): `apt-get install -y fonts-noto fonts-noto-core`
+ * Register fonts so Nepali / Devanagari + English text renders correctly *inside the downloaded PDF*.
+ *
+ * Font rule used across the app:
+ * - Default to LATIN for unknown/empty text (so English never becomes blank)
+ * - Switch to DEVANAGARI only for runs that contain Devanagari characters
+ * - For mixed-script strings, render as multiple continued text chunks (PDFKit supports this)
  */
 export const registerPdfFonts = (doc: PDFDocument): PdfFontRegistry => {
   const pdfDoc = doc as PdfFontDocument;
@@ -100,18 +103,18 @@ export const registerPdfFonts = (doc: PDFDocument): PdfFontRegistry => {
 
 const DEVANAGARI_RE = /[\u0900-\u097F]/;
 
+export const isDevanagariText = (text?: string): boolean => Boolean(text && DEVANAGARI_RE.test(text));
+
 /**
- * Use a simple script detection to switch fonts.
- * (PDFKit does not automatically fallback across fonts.)
+ * Set a single font based on a sample.
+ * IMPORTANT: defaults to LATIN when sample is empty/unknown.
  */
 export const applyPdfFont = (doc: PDFDocument, registry?: PdfFontRegistry, textSample?: string): string => {
   const pdfDoc = doc as PdfFontDocument;
   const fonts = registry ?? registerPdfFonts(doc);
 
-  const target =
-    textSample && !DEVANAGARI_RE.test(textSample)
-      ? (fonts.latin || fonts.defaultFont)
-      : (fonts.devanagari || fonts.defaultFont);
+  const wantsDevanagari = isDevanagariText(textSample);
+  const target = wantsDevanagari ? (fonts.devanagari || fonts.defaultFont) : (fonts.latin || fonts.defaultFont);
 
   try {
     pdfDoc.font(target);
@@ -120,4 +123,56 @@ export const applyPdfFont = (doc: PDFDocument, registry?: PdfFontRegistry, textS
     pdfDoc.font(DEFAULT_FONT_NAME);
     return DEFAULT_FONT_NAME;
   }
-}; 
+};
+
+type TextRun = { text: string; script: 'devanagari' | 'latin' };
+
+export const splitTextRuns = (value: string): TextRun[] => {
+  const text = String(value ?? '');
+  if (!text) return [];
+  const runs: TextRun[] = [];
+
+  let current = '';
+  let currentScript: TextRun['script'] = isDevanagariText(text[0]) ? 'devanagari' : 'latin';
+
+  for (const ch of text) {
+    const script: TextRun['script'] = isDevanagariText(ch) ? 'devanagari' : 'latin';
+    if (script === currentScript) {
+      current += ch;
+    } else {
+      runs.push({ text: current, script: currentScript });
+      current = ch;
+      currentScript = script;
+    }
+  }
+  if (current) runs.push({ text: current, script: currentScript });
+  return runs;
+};
+
+/**
+ * Write mixed-script text in a stable way:
+ * - splits the string into Devanagari vs Latin runs
+ * - switches font per run
+ * - uses PDFKit `continued` to keep it on the same line / paragraph
+ *
+ * NOTE: Keep `options` like width/align as you normally pass to doc.text().
+ * PDFKit will still wrap as needed.
+ */
+export const pdfTextMixed = (
+  doc: PDFDocument,
+  registry: PdfFontRegistry,
+  text: string,
+  options?: any
+): void => {
+  const runs = splitTextRuns(text);
+  if (runs.length === 0) {
+    applyPdfFont(doc, registry, '');
+    doc.text('', options as any);
+    return;
+  }
+
+  runs.forEach((run, idx) => {
+    const isLast = idx === runs.length - 1;
+    applyPdfFont(doc, registry, run.script === 'devanagari' ? 'अ' : 'A');
+    doc.text(run.text, { ...(options as any), continued: !isLast });
+  });}; 

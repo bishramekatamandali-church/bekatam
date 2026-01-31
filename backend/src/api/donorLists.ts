@@ -1,6 +1,6 @@
+import { applyPdfFont, pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts"; 
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
-import { applyPdfFont, registerPdfFonts } from '../utils/pdfFonts';
 import { prisma } from '../db';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -194,8 +194,7 @@ const buildDonorListPdfBuffer = (
       doc.on('error', reject);
 
       const line = (text: string, options?: Record<string, unknown>) => {
-        applyPdfFont(doc, fontRegistry, text);
-        doc.text(text, options as any);
+        pdfTextMixed(doc, fontRegistry, text, options as any);
       };
 
       // Title
@@ -438,4 +437,5 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
   }
 });
 
-export default router; 
+export default router;  
+ 

@@ -6,7 +6,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { MeetingLog, MeetingLogFormData, GenericContentFormData, MeetingLogStatus, DecisionLogStatus, MeetingDecisionPoint, ActionItemStatus } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText } from '../../utils/pdfFonts';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 
@@ -99,12 +99,6 @@ const ManageMeetingsPage: React.FC = () => {
   const generateMeetingPdf = async (meeting: MeetingLog) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const fontState = await preparePdfDoc(doc);
-
-    const setFontForText = (text: string, style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal') => {
-      void text;
-      setPdfFont(doc, fontState, style);
-    };
-
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
@@ -118,19 +112,16 @@ const ManageMeetingsPage: React.FC = () => {
     const documentTitle = "Meeting Minutes/Log"; 
     
     doc.setFontSize(16);
-    setFontForText(churchNameForPdf, 'bold'); 
-    doc.text(churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' });
+    pdfTextMixed(doc, fontState, churchNameForPdf, pageWidth / 2, yPosRef.current, { align: 'center' }, 'bold');
     yPosRef.current += 7;
 
     doc.setFontSize(14);
-    setFontForText(documentTitle, 'normal');
-    doc.text(documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
+    pdfTextMixed(doc, fontState, documentTitle, pageWidth / 2, yPosRef.current, { align: 'center' }, 'normal');
     yPosRef.current += 10;
     
     const meetingTitle = meeting.title || 'N/A';
     doc.setFontSize(12);
-    setFontForText(meetingTitle, 'bold');
-    doc.text(meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' });
+    pdfTextMixed(doc, fontState, meetingTitle, pageWidth / 2, yPosRef.current, { align: 'center' }, 'bold');
     yPosRef.current += sectionSpacing + 2;
 
     doc.setFontSize(baseFontSize);
@@ -145,26 +136,13 @@ const ManageMeetingsPage: React.FC = () => {
             yPosRef.current = margin;
         }
         
-        setPdfFont(doc, fontState, 'bold'); 
-        doc.text(`${label}:`, margin, yPosRef.current);
-        
-        setFontForText(valueString, 'normal'); 
-        
-        const labelWidth = doc.getTextWidth(`${label}:`) + 2;
-        const valueXPos = margin + labelWidth;
-        const calculatedTextBlockWidth = pageWidth - margin - valueXPos - 5;
-
-        if (calculatedTextBlockWidth <= 0) {
-            console.warn(`PDF: Not enough width for value of "${label}". Skipping.`);
-            yPosRef.current += lineSpacing;
-            return;
-        }
-        
-        const linesOutput = doc.splitTextToSize(valueString, calculatedTextBlockWidth);
-        const textToRender = Array.isArray(linesOutput) ? linesOutput : [linesOutput];
-        doc.text(textToRender, valueXPos, yPosRef.current);
-        
-        const numLines = textToRender.length;
+        pdfTextMixed(doc, fontState, `${label}:`, margin, yPosRef.current, { align: 'left' }, 'bold');
+        const wrapped = wrapMixedText(doc, fontState, valueString, calculatedTextBlockWidth, 'normal');
+        const lines = wrapped.length ? wrapped : [valueString];
+        lines.forEach((ln, idx) => {
+          pdfTextMixed(doc, fontState, ln, valueXPos, yPosRef.current + idx * (lineSpacing * 0.85), { align: 'left' }, 'normal');
+        });
+        const numLines = lines.length;
         let increment = numLines * (lineSpacing * 0.85);
         yPosRef.current += Math.max(lineSpacing, increment);
     };
@@ -438,3 +416,4 @@ const ManageMeetingsPage: React.FC = () => {
 };
 
 export default ManageMeetingsPage;
+
