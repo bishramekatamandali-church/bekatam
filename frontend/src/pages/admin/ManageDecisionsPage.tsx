@@ -1,11 +1,11 @@
 // frontend/src/pages/admin/ManageDecisionsPage.tsx
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
-import { DecisionLog, DecisionLogStatus, ActionItemStatus } from '../../types';
+import { ActionItemStatus, DecisionLog, DecisionLogFormData, DecisionLogStatus, GenericContentFormData } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
 import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
@@ -48,25 +48,46 @@ const getActionItemStatusColor = (status) => {
 };
 
 const ManageDecisionsPage = () => {
-  const { content: decisions = [], loading: loadingContent } = useContent();
+  const { decisionLogs, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('card');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingContent, setEditingContent] = useState(null);
+  const [editingDecision, setEditingDecision] = useState<DecisionLog | null>(null);
 
-  const filteredDecisions = decisions.filter(d =>
-    d.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDecisions = useMemo(() => {
+    const query = searchTerm.toLowerCase();
+    return decisionLogs
+      .filter((decision) => (
+        decision.title?.toLowerCase().includes(query)
+        || decision.description?.toLowerCase().includes(query)
+        || decision.madeBy?.toLowerCase().includes(query)
+      ))
+      .sort((a, b) => new Date(b.decisionDate).getTime() - new Date(a.decisionDate).getTime());
+  }, [decisionLogs, searchTerm]);
 
-  const handleOpenModal = (decision = null) => {
-    setEditingContent(decision);
+  const handleOpenModal = (decision?: DecisionLog) => {
+    setEditingDecision(decision || null);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
-    console.log('Delete decision:', id);
-    // Add actual delete logic here
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingDecision(null);
+  };
+
+  const handleSubmit = async (data: GenericContentFormData) => {
+    if (editingDecision) {
+      await updateContent('decisionLog', editingDecision.id, data as DecisionLogFormData);
+    } else {
+      await addContent('decisionLog', data as DecisionLogFormData);
+    }
+    handleCloseModal();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this decision log? This action cannot be undone.')) {
+      await deleteContent('decisionLog', id);
+    }
   };
 
   const generateDecisionPdf = async (decision) => {
@@ -92,13 +113,14 @@ const ManageDecisionsPage = () => {
     yPos += 8;
 
     doc.setFontSize(10);
-    const addDetail = (label, value) => {
-      if (!value) return;
+    const addDetail = (label: string, value?: string) => {
+      const valueString = String(value ?? '').trim();
+      if (!valueString) return;
       setPdfFont(doc, fontState, 'bold');
       doc.text(`${label}: `, margin, yPos);
       setPdfFont(doc, fontState, 'normal');
       const labelWidth = doc.getTextWidth(`${label}: `);
-      doc.text(value, margin + labelWidth, yPos);
+      doc.text(valueString, margin + labelWidth, yPos);
       yPos += 6;
     };
 
@@ -114,31 +136,61 @@ const ManageDecisionsPage = () => {
 
   const downloadAllDecisionsExcel = () => {
     const data = [
-      ["ID", "Title", "Date", "Made By", "Status", "Description"],
-      ...filteredDecisions.map(d => [
-        d.id,
-        d.title,
-        formatDateADBS(d.decisionDate),
-        d.madeBy,
-        d.status || 'N/A',
-        d.description
+      ["ID", "Decision Date", "Title", "Description", "Made By", "Status", "Follow-up Actions", "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"],
+      ...filteredDecisions.map((log) => [
+        log.id,
+        log.decisionDate ? new Date(log.decisionDate).toLocaleDateString('en-CA') : '',
+        log.title,
+        log.description,
+        log.madeBy,
+        log.status || 'N/A',
+        (log.followUpActions || []).map((item) => `${item.description} (Assigned: ${item.assignedTo || 'N/A'}, Due: ${item.dueDate || 'N/A'}, Status: ${item.status})`).join('; '),
+        log.postedByAdminId || '',
+        log.postedByAdminName || '',
+        log.createdAt ? new Date(log.createdAt).toISOString() : '',
+        log.updatedAt ? new Date(log.updatedAt).toISOString() : ''
       ])
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Decisions");
-    XLSX.writeFile(wb, "decision_logs.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Decision Logs");
+    XLSX.writeFile(wb, "bem_decision_logs.xlsx");
   };
 
-  const renderDecisionCard = (decision) => (
-    <Card key={decision.id} className="mb-4">
-      <CardHeader>{decision.title}</CardHeader>
-      <CardContent>
-        <span className={`px-2 py-1 rounded ${getDecisionStatusColorClassName(decision.status)}`}>
-          {decision.status || 'N/A'}
-        </span>
-        <p className="mt-2">Date: {formatDateADBS(decision.decisionDate)} | By: {decision.madeBy}</p>
-        <p className="mt-2">{decision.description}</p>
+  const renderDecisionCard = (decision: DecisionLog) => (
+    <Card key={decision.id} className="flex flex-col dark:bg-slate-800">
+      <CardHeader className="dark:border-slate-700 pb-3">
+        <div className="flex justify-between items-start">
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-100 flex-grow mr-2" title={decision.title}>{decision.title}</h2>
+          {decision.status && (
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${getDecisionStatusColorClassName(decision.status)}`}>
+              {decision.status}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-slate-400">Date: {formatDateADBS(decision.decisionDate)} | By: {decision.madeBy}</p>
+      </CardHeader>
+      <CardContent className="text-sm text-gray-600 dark:text-slate-300 space-y-1 flex-grow pt-2 pb-3">
+        <p className="line-clamp-3" title={decision.description}>{decision.description}</p>
+        {((decision.followUpActions || []).length > 0) && (
+          <details className="text-xs mt-2">
+            <summary className="cursor-pointer font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Follow-up Actions ({decision.followUpActions?.length})</summary>
+            <ul className="mt-1 space-y-1 bg-gray-50 dark:bg-slate-700 p-2 rounded max-h-28 overflow-y-auto">
+              {(decision.followUpActions || []).map((item) => (
+                <li key={item.id} className="border-b border-gray-200 dark:border-slate-600 last:border-b-0 pb-1 mb-1">
+                  <p className="truncate font-medium text-slate-700 dark:text-slate-200" title={item.description}>{item.description}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                    <span className="font-semibold">{item.assignedTo || 'Unassigned'}</span>
+                    {item.dueDate && ` - Due: ${formatDateADBS(item.dueDate)}`}
+                  </p>
+                  <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full inline-block mt-0.5 ${getActionItemStatusColor(item.status)}`}>
+                    {item.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </CardContent>
       <CardFooter className="flex gap-2">
         <Button size="sm" onClick={() => generateDecisionPdf(decision)}>PDF</Button>
@@ -206,36 +258,38 @@ const ManageDecisionsPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-              {filteredDecisions.map((decision) => (
-                <tr key={decision.id}>
-                  <td className="px-6 py-4">{decision.title}</td>
-                  <td className="px-6 py-4">{formatDateADBS(decision.decisionDate)}</td>
-                  <td className="px-6 py-4">{decision.madeBy}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded ${getDecisionStatusColorClassName(decision.status)}`}>
-                      {decision.status || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <Button size="sm" onClick={() => generateDecisionPdf(decision)}>PDF</Button>
-                    <Button size="sm" onClick={() => handleOpenModal(decision)}>Edit</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(decision.id)}>Delete</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+          {filteredDecisions.map((decision) => (
+            <tr key={decision.id}>
+              <td className="px-6 py-4">{decision.title}</td>
+              <td className="px-6 py-4">{formatDateADBS(decision.decisionDate)}</td>
+              <td className="px-6 py-4">{decision.madeBy}</td>
+              <td className="px-6 py-4">
+                <span className={`px-2 py-1 rounded ${getDecisionStatusColorClassName(decision.status)}`}>
+                  {decision.status || 'N/A'}
+                </span>
+              </td>
+              <td className="px-6 py-4 text-right space-x-2">
+                <Button size="sm" onClick={() => generateDecisionPdf(decision)}>PDF</Button>
+                <Button size="sm" onClick={() => handleOpenModal(decision)}>Edit</Button>
+                <Button size="sm" variant="destructive" onClick={() => handleDelete(decision.id)}>Delete</Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
 
-      {isModalOpen && (
-        <ContentFormModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          initialData={editingContent}
-          type="decision"
-        />
-      )}
+  {isModalOpen && (
+    <ContentFormModal
+      isOpen={isModalOpen}
+      onClose={handleCloseModal}
+      onSubmit={handleSubmit}
+      contentType="decisionLog"
+      initialData={editingDecision}
+      isLoading={loadingContent}
+    />
+  )}
     </div>
   );
 };
