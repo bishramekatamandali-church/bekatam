@@ -1536,17 +1536,6 @@ export interface NotificationContextType {
 }
 // --- End Notification System Types ---
 
-// --- Chatbot & Chat Types ---
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'bot' | string; // bot for AI chatbot, string for user IDs in P2P chat
-  text: string;
-  timestamp: string; 
-  isLoading?: boolean; 
-  error?: boolean; 
-}
-// --- End Chatbot & Chat Types ---
-
 // --- BS Date Types (Internal to dateConverter) ---
 export interface BSDate {
   year: number;

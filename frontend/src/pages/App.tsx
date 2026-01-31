@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react'; 
+import React, { useEffect } from 'react'; 
 import { HashRouter, Routes, Route, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider } from './../contexts/AuthContext';
 import { ContentProvider } from './../contexts/ContentContext';
@@ -74,13 +74,8 @@ import ManageExpensesPage from './../pages/admin/ManageExpensesPage';
 import ManageFellowshipSchedulesPage from './../pages/admin/ManageFellowshipSchedulesPage';
 
 
-// Chatbot components
-import ChatbotFab from './../components/chatbot/ChatbotFab';
-import ChatbotPanel from './../components/chatbot/ChatbotPanel';
-
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   
   useEffect(() => {
     // document.documentElement.lang and dir are now set in index.html
@@ -182,8 +177,6 @@ const AppContent: React.FC = () => {
       <div className="w-full">
         <Footer />
       </div>
-      <ChatbotFab onToggle={() => setIsChatbotOpen(prev => !prev)} isOpen={isChatbotOpen} />
-      {isChatbotOpen && <ChatbotPanel onClose={() => setIsChatbotOpen(false)} />}
     </div>
   );
 };

@@ -68,10 +68,6 @@ import ManageDecisionsPage from "./pages/admin/ManageDecisionsPage";
 import ManageExpensesPage from "./pages/admin/ManageExpensesPage";
 import ManageFellowshipSchedulesPage from "./pages/admin/ManageFellowshipSchedulesPage";
 
-// Chatbot components
-import ChatbotFab from "./components/chatbot/ChatbotFab";
-import ChatbotPanel from "./components/chatbot/ChatbotPanel";
-
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -79,7 +75,6 @@ interface BeforeInstallPromptEvent extends Event {
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -245,13 +240,6 @@ const AppContent: React.FC = () => {
         <Footer />
       </div>
 
-      <ChatbotFab
-        onToggle={() => setIsChatbotOpen((prev) => !prev)}
-        isOpen={isChatbotOpen}
-      />
-      {isChatbotOpen && (
-        <ChatbotPanel onClose={() => setIsChatbotOpen(false)} />
-      )}
     </div>
   );
 };

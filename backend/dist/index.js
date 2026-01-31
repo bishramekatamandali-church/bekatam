@@ -23,7 +23,7 @@ if (!process.env.FRONTEND_URL) {
     console.warn("⚠️ FRONTEND_URL is missing. Falling back to http://localhost:3000 for development.");
 }
 if (!process.env.API_KEY) {
-    console.warn("⚠️ API_KEY is missing. Chatbot responses will be unavailable.");
+    console.warn("⚠️ API_KEY is missing. AI tools will be unavailable.");
 }
 // --- End Environment Validation ---
 const express_1 = __importDefault(require("express"));
@@ -34,7 +34,6 @@ const morgan_1 = __importDefault(require("morgan"));
 // Import Routes
 const sermons_1 = __importDefault(require("./api/sermons"));
 const events_1 = __importDefault(require("./api/events"));
-const chatbot_1 = __importDefault(require("./api/chatbot"));
 const ministries_1 = __importDefault(require("./api/ministries"));
 const blogPosts_1 = __importDefault(require("./api/blogPosts"));
 const newsItems_1 = __importDefault(require("./api/newsItems"));
@@ -141,7 +140,6 @@ app.get("/", (req, res) => {
 // --- API ROUTES ---
 app.use("/api/sermons", sermons_1.default);
 app.use("/api/events", events_1.default);
-app.use("/api/chatbot", chatbot_1.default);
 app.use("/api/ministries", ministries_1.default);
 app.use("/api/blogposts", blogPosts_1.default);
 app.use("/api/newsitems", newsItems_1.default);

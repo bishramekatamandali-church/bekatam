@@ -24,7 +24,7 @@ if (!process.env.FRONTEND_URL) {
 }
 
 if (!process.env.API_KEY) {
-  console.warn("⚠️ API_KEY is missing. Chatbot responses will be unavailable.");
+  console.warn("⚠️ API_KEY is missing. AI tools will be unavailable.");
 }
 // --- End Environment Validation ---
 
@@ -37,7 +37,6 @@ import morgan from "morgan";
 // Import Routes
 import sermonRoutes from "./api/sermons";
 import eventRoutes from "./api/events";
-import chatbotRoutes from "./api/chatbot";
 import ministryRoutes from "./api/ministries";
 import blogPostRoutes from "./api/blogPosts";
 import newsItemRoutes from "./api/newsItems";
@@ -155,7 +154,6 @@ app.get("/", (req, res) => {
 // --- API ROUTES ---
 app.use("/api/sermons", sermonRoutes);
 app.use("/api/events", eventRoutes);
-app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/ministries", ministryRoutes);
 app.use("/api/blogposts", blogPostRoutes);
 app.use("/api/newsitems", newsItemRoutes);
