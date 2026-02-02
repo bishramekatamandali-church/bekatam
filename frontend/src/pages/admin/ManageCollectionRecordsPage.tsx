@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react'; 
 import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
@@ -6,7 +7,7 @@ import ContentFormModal from '../../components/admin/ContentFormModal';
 import { CollectionRecord, CollectionRecordFormData, GenericContentFormData, collectionPurposeList, CollectionPurpose, DonorDetail } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText, setPdfFontForText, setPdfFont } from '../../utils/pdfFonts';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, DocumentTextIcon as DocumentPdfIcon, TableCellsIcon as DocumentCsvIcon, Squares2X2Icon, Bars3Icon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
@@ -165,9 +166,11 @@ export const ManageCollectionRecordsPage: React.FC = () => {
       const labelWidth = doc.getTextWidth(`${label}:`) + 2;
       const valueX = margin + labelWidth;
       const valueWidth = pageWidth - margin - valueX;
-      const lines = doc.splitTextToSize(valueString, valueWidth);
-      doc.text(lines, valueX, yPos);
-      yPos += lineSpacing * (Array.isArray(lines) ? lines.length : 1);
+      const lines = wrapMixedText(doc, fontState, valueString, valueWidth, 'normal');
+      for (const line of lines) {
+        pdfTextMixed(doc, fontState, line, valueX, yPos, { align: 'left' }, 'normal');
+        yPos += lineSpacing;
+      }
     };
 
     addDetail('Purpose', record.purpose);
@@ -502,5 +505,7 @@ export const ManageCollectionRecordsPage: React.FC = () => {
     </div>
   );
 };
+
+
 
 

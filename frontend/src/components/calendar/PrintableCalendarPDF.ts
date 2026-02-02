@@ -1,7 +1,7 @@
 
 // components/calendar/PrintableCalendarPDF.ts
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText, setPdfFontForText } from '../../utils/pdfFonts';
 import { EventItem } from '../../types';
 import {
   adToBs,
@@ -34,42 +34,6 @@ interface PaperSettings {
   qrCodeSize: number;
   footerHeight: number;
 }
-
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari'; 
-const BASE_FONT_NAME = 'Helvetica'; 
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-
-const getPaperSettings = (doc: jsPDF, paperSize: PaperSizeType): PaperSettings => {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  let settingsPart: Omit<PaperSettings, 'pageWidth' | 'pageHeight'>;
-
-  switch (paperSize) {
-    case 'a1':
-      settingsPart = { margin: 25, baseFontSize: 16, headerFontSize: 32, subHeaderFontSize: 22, gridCellBaseSize: 30, themeImageHeight: 100, qrCodeSize: 35, footerHeight: 40 };
-      break;
-    case 'a2':
-      settingsPart = { margin: 20, baseFontSize: 12, headerFontSize: 26, subHeaderFontSize: 16, gridCellBaseSize: 25, themeImageHeight: 80, qrCodeSize: 30, footerHeight: 35 };
-      break;
-    case 'a3':
-      settingsPart = { margin: 15, baseFontSize: 10, headerFontSize: 20, subHeaderFontSize: 13, gridCellBaseSize: 20, themeImageHeight: 60, qrCodeSize: 25, footerHeight: 30 };
-      break;
-    case 'a4':
-    default:
-      settingsPart = { margin: 10, baseFontSize: 8, headerFontSize: 16, subHeaderFontSize: 11, gridCellBaseSize: 15, themeImageHeight: 45, qrCodeSize: 20, footerHeight: 25 };
-      break;
-  }
-  return { pageWidth: Number(pageWidth), pageHeight: Number(pageHeight), ...settingsPart };
-};
-
-
-const getCurrentFontForPdf = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) { 
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
 
 
 const getAdMonthNameForPdf = (monthIndex: number, year: number): string => {
@@ -145,8 +109,6 @@ export const generateYearlyCalendarPDF = async (
   });
 
   const fontState = await preparePdfDoc(doc);
-  isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
-
   const settings = getPaperSettings(doc, paperSize);
   const { 
     pageWidth, pageHeight, margin, baseFontSize, 
@@ -193,17 +155,17 @@ export const generateYearlyCalendarPDF = async (
     }
 
     const fullBsMonthTitle = `${bsMonthNameForDisplay} - ${bsYearToGenerate} BS`;
-    doc.setFont(getCurrentFontForPdf(fullBsMonthTitle), 'bold');
+    setPdfFontForText(doc, fontState, fullBsMonthTitle, 'bold');
     doc.setFontSize(headerFontSize);
     doc.setTextColor(indigo700);
-    doc.text(fullBsMonthTitle, pageWidth / 2, yPos, { align: 'center' });
+    pdfTextMixed(doc, fontState, fullBsMonthTitle, pageWidth / 2, yPos, { align: 'center' }, 'bold');
     yPos += headerFontSize * 0.5;
     
     const adDateSubtitle = `(${adMonthHeaderDisplay} ${adYearHeaderDisplay} AD)`;
-    doc.setFont(getCurrentFontForPdf(adDateSubtitle), 'normal'); 
+    setPdfFontForText(doc, fontState, adDateSubtitle, 'normal'); 
     doc.setFontSize(subHeaderFontSize);
     doc.setTextColor(100, 100, 100);
-    doc.text(adDateSubtitle, pageWidth / 2, yPos, { align: 'center' });
+    pdfTextMixed(doc, fontState, adDateSubtitle, pageWidth / 2, yPos, { align: 'center' }, 'normal');
     yPos += subHeaderFontSize * 0.8;
     doc.setTextColor(0,0,0);
 
@@ -226,7 +188,7 @@ export const generateYearlyCalendarPDF = async (
       doc.setFillColor(indigo600); 
       doc.rect(margin + index * cellWidth, yPos, cellWidth, dayHeaderCellHeight, 'FD');
       doc.setTextColor(lightIndigoText);
-      doc.setFont(getCurrentFontForPdf(day));
+      setPdfFontForText(doc, fontState, day, 'bold');
       doc.text(day, margin + index * cellWidth + cellWidth / 2, yPos + dayHeaderCellHeight / 2 + (baseFontSize*0.25), { align: 'center' });
     });
     doc.setTextColor(0,0,0); 
@@ -256,7 +218,7 @@ export const generateYearlyCalendarPDF = async (
           const adDateForBsDay = bsToAd(currentBsDay, bsMonth, bsYearToGenerate);
           const adDateParts = getNepalDateParts(adDateForBsDay);
           const bsDayString = String(currentBsDay);
-          doc.setFont(getCurrentFontForPdf(bsDayString), 'bold');
+          setPdfFontForText(doc, fontState, bsDayString, 'bold');
           doc.setFontSize(baseFontSize * 1.1); 
           doc.setTextColor(isSaturdayCell ? saturdayTextColor : '#333333'); 
           doc.text(bsDayString, cellX + cellWidth / 2, cellY + (baseFontSize * 0.6), { align: 'center' });
@@ -274,13 +236,13 @@ export const generateYearlyCalendarPDF = async (
 
             eventsOnThisDay.slice(0, maxEventsToDisplay > 0 ? maxEventsToDisplay : 1).forEach((event) => { 
               if (eventYOffsetInCell < dayCellHeight - eventLineHeight) {
-                doc.setFont(getCurrentFontForPdf(event.title), 'normal');
+                setPdfFontForText(doc, fontState, event.title, 'normal');
                 doc.setFontSize(baseFontSize * 0.6);
                 const eventTextLines = doc.splitTextToSize(event.title, cellWidth - 2);
                 doc.setFillColor(eventFillColor);
                 doc.rect(cellX + 1, cellY + eventYOffsetInCell - (eventLineHeight * 0.6), cellWidth - 2, eventLineHeight, 'F');
                 doc.setTextColor(eventTextColor); 
-                doc.text(eventTextLines[0], cellX + 1.5, cellY + eventYOffsetInCell);
+                pdfTextMixed(doc, fontState, eventTextLines[0], cellX + 1.5, cellY + eventYOffsetInCell, { align: 'left' }, 'normal');
                 eventYOffsetInCell += eventLineHeight * 1.1; 
               }
             });
@@ -381,14 +343,17 @@ export const generateYearlyCalendarPDF = async (
             const eventDateAdFormatted = (formatDateADBS(event.date!).split(' (')[1] || event.date!).replace(')',''); 
             const eventText = `${eventDateBs.day} ${bsMonthNameForDisplay} - ${event.title} (${eventDateAdFormatted})`;
             
-            doc.setFont(getCurrentFontForPdf(eventText)); 
-            const splitEventText = doc.splitTextToSize(eventText, usableWidth);
-            const textBlockHeight = splitEventText.length * (baseFontSize * 0.45);
-            
+            const splitEventText = wrapMixedText(doc, fontState, eventText, usableWidth, 'normal');
+            const lineHeight = (baseFontSize * 0.45);
+            const textBlockHeight = splitEventText.length * lineHeight;
+
             if (currentEventY + textBlockHeight > pageHeight - margin - footerHeight) break;
 
-            doc.text(splitEventText, margin, currentEventY);
-            currentEventY += textBlockHeight + 1;
+            for (const line of splitEventText) {
+              pdfTextMixed(doc, fontState, line, margin, currentEventY, { align: 'left' }, 'normal');
+              currentEventY += lineHeight;
+            }
+            currentEventY += 1;
             eventsDrawnCount++;
         }
         if (eventsDrawnCount < eventsThisMonth.length) {
@@ -418,7 +383,7 @@ export const generateYearlyCalendarPDF = async (
     
     // Left side info
     let currentFooterYPos = footerYBase;
-    doc.setFont(getCurrentFontForPdf(churchNameFromUI), 'bold');
+    setPdfFontForText(doc, fontState, churchNameFromUI, 'bold');
     doc.text(churchNameFromUI, margin, currentFooterYPos);
     currentFooterYPos += footerLineHeight;
     doc.setFont(BASE_FONT_NAME, 'normal');

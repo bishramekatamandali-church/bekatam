@@ -1,0 +1,155 @@
+// components/admin/PrintableSchedulePDF.ts
+import { jsPDF } from 'jspdf';
+import { GeneratedScheduleItem, FellowshipRosterItem } from '../../types';
+import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText, setPdfFontForText } from '../../utils/pdfFonts';
+
+type PdfSettings = {
+  pageWidth: number;
+  pageHeight: number;
+  margin: number;
+  footerMargin: number;
+  baseFontSize: number;
+  titleFontSize: number;
+  headerFontSize: number;
+  lineSpacing: number;
+  contentWidth: number;
+};
+
+const setupPdfDoc = async (
+  doc: jsPDF,
+  churchName: string,
+  documentTitle: string
+): Promise<{ yPos: number; settings: PdfSettings; fontState: Awaited<ReturnType<typeof preparePdfDoc>> }> => {
+  const fontState = await preparePdfDoc(doc);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const footerMargin = 12;
+  const baseFontSize = 11;
+  const titleFontSize = 15;
+  const headerFontSize = 12;
+  const lineSpacing = 6;
+
+  const settings: PdfSettings = {
+    pageWidth,
+    pageHeight,
+    margin,
+    footerMargin,
+    baseFontSize,
+    titleFontSize,
+    headerFontSize,
+    lineSpacing,
+    contentWidth: pageWidth - margin * 2,
+  };
+
+  let yPos = margin;
+
+  // Header
+  doc.setFontSize(titleFontSize);
+  pdfTextMixed(doc, fontState, churchName, pageWidth / 2, yPos, { align: 'center' }, 'bold');
+  yPos += 8;
+
+  doc.setFontSize(headerFontSize);
+  pdfTextMixed(doc, fontState, documentTitle, pageWidth / 2, yPos, { align: 'center' }, 'normal');
+  yPos += 8;
+
+  doc.setLineWidth(0.2);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 8;
+
+  doc.setFontSize(baseFontSize);
+
+  return { yPos, settings, fontState };
+};
+
+const addWrappedLine = (
+  doc: jsPDF,
+  fontState: Awaited<ReturnType<typeof preparePdfDoc>>,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineSpacing: number,
+  style: 'normal' | 'bold' = 'normal'
+) => {
+  const lines = wrapMixedText(doc, fontState, text, maxWidth, style);
+  let yy = y;
+  for (const line of lines) {
+    pdfTextMixed(doc, fontState, line, x, yy, { align: 'left' }, style);
+    yy += lineSpacing;
+  }
+  return { yEnd: yy, linesCount: Math.max(1, lines.length) };
+};
+
+
+export const generatePrintableSchedulePDF = async (
+  scheduleItems: GeneratedScheduleItem[],
+  churchName: string = 'Bishram Ekata Mandali'
+) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const { yPos: startY, settings, fontState } = await setupPdfDoc(doc, churchName, 'Fellowship Schedule');
+  let yPos = startY;
+
+  const pageBreakIfNeeded = (neededHeight: number) => {
+    if (yPos + neededHeight > settings.pageHeight - settings.footerMargin - 20) {
+      doc.addPage();
+      doc.setFontSize(settings.baseFontSize);
+      yPos = settings.margin;
+    }
+  };
+
+  // Schedule items only (roster-items removed)
+  doc.setFontSize(settings.headerFontSize);
+  pdfTextMixed(doc, fontState, 'Schedule', settings.margin, yPos, { align: 'left' }, 'bold');
+  yPos += settings.lineSpacing;
+
+  doc.setFontSize(settings.baseFontSize);
+  scheduleItems.forEach((item, idx) => {
+    const timeLabel = item.timeLabel ? String(item.timeLabel) : '';
+    const title = item.title ? String(item.title) : `Item ${idx + 1}`;
+    const speaker = item.speakerName ? String(item.speakerName) : '';
+    const details = item.details ? String(item.details) : '';
+
+    pageBreakIfNeeded(settings.lineSpacing * 4);
+
+    // Time + Title
+    const left = timeLabel ? `${timeLabel} - ${title}` : title;
+    const res1 = addWrappedLine(doc, fontState, left, settings.margin, yPos, settings.contentWidth, settings.lineSpacing, 'bold');
+    yPos = res1.yEnd;
+
+    if (speaker) {
+      const res2 = addWrappedLine(doc, fontState, `Speaker: ${speaker}`, settings.margin + 4, yPos, settings.contentWidth - 4, settings.lineSpacing, 'normal');
+      yPos = res2.yEnd;
+    }
+    if (details) {
+      const res3 = addWrappedLine(doc, fontState, details, settings.margin + 4, yPos, settings.contentWidth - 4, settings.lineSpacing, 'normal');
+      yPos = res3.yEnd;
+    }
+
+    yPos += 2;
+  });
+
+  // Footer
+  const footerYBase = settings.pageHeight - settings.footerMargin;
+  doc.setFontSize(settings.baseFontSize * 0.8);
+  pdfTextMixed(doc, fontState, churchName, settings.pageWidth / 2, footerYBase, { align: 'center' }, 'bold');
+
+  doc.save(`Schedule_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
+
+// --- Backwards compatible export (used by ManageFellowshipSchedulesPage) ---
+
+// ------------------------------------------------------------------
+// TEMPORARY FRONTEND STUB
+// Purpose: keep build working while PDFs are migrated to backend
+// Roster-item PDFs are intentionally NOT supported anymore
+// ------------------------------------------------------------------
+export const generateSchedulePDF = async (..._args: any[]): Promise<void> => {
+  console.warn(
+    "[DEPRECATED] Frontend PDF generation is disabled. " +
+    "Schedule PDFs will be served from backend."
+  );
+};
+

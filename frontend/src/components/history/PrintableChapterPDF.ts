@@ -1,67 +1,10 @@
+
 // components/history/PrintableChapterPDF.ts
 import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../../utils/pdfFonts';
+import { preparePdfDoc, pdfTextMixed, wrapMixedText, setPdfFontForText } from '../../utils/pdfFonts';
 import { HistoryChapter } from '../../types';
 import { formatTimestampADBS, formatDateADBS } from '../../dateConverter';
 import { getMediaKindFromUrl } from '../../utils/media';
-
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari'; 
-const BASE_FONT_NAME = 'Helvetica'; 
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-type PaperSizeType = 'a5' | 'b5' | 'book6x9' | 'a4'; 
-
-interface PaperSettings {
-  pageWidth: number;
-  pageHeight: number;
-  margin: number;
-  contentWidth: number;
-  baseFontSize: number;
-  titleFontSize: number;
-  headerFontSize: number; 
-  footerFontSize: number;
-  lineHeightFactor: number;
-}
-
-const getPaperSettings = (doc: jsPDF, paperSize: PaperSizeType): PaperSettings => {
-    let pageWidth, pageHeight, margin, baseFontSize, titleFontSize, headerFontSize, footerFontSize, lineHeightFactor;
-
-    switch (paperSize) {
-        case 'a5': 
-            pageWidth = 148; pageHeight = 210; margin = 15;
-            baseFontSize = 10; titleFontSize = 14; headerFontSize = 12; footerFontSize = 8;
-            lineHeightFactor = 1.4;
-            break;
-        case 'b5': 
-            pageWidth = 182; pageHeight = 257; margin = 18;
-            baseFontSize = 11; titleFontSize = 16; headerFontSize = 13; footerFontSize = 9;
-            lineHeightFactor = 1.45;
-            break;
-        case 'book6x9': 
-            pageWidth = 152.4; pageHeight = 228.6; margin = 16; 
-            baseFontSize = 10.5; titleFontSize = 15; headerFontSize = 12.5; footerFontSize = 8.5;
-            lineHeightFactor = 1.42;
-            break;
-        case 'a4': 
-        default:
-            pageWidth = 210; pageHeight = 297; margin = 20;
-            baseFontSize = 12; titleFontSize = 18; headerFontSize = 14; footerFontSize = 9;
-            lineHeightFactor = 1.5;
-            break;
-    }
-    doc.internal.pageSize.width = pageWidth;
-    doc.internal.pageSize.height = pageHeight;
-    const contentWidth = pageWidth - 2 * margin;
-    return { pageWidth, pageHeight, margin, contentWidth, baseFontSize, titleFontSize, headerFontSize, footerFontSize, lineHeightFactor };
-};
-
-
-const getCurrentFontForPdf = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) { 
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
 
 const fetchImageAsBase64 = async (imageUrl: string): Promise<string | null> => {
     if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
@@ -106,8 +49,6 @@ export const generateChapterPdf = async (
   });
   
   const fontState = await preparePdfDoc(doc);
-  isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
-
   const settings = getPaperSettings(doc, paperSize);
   const { margin, contentWidth, baseFontSize, titleFontSize, headerFontSize, footerFontSize, lineHeightFactor } = settings;
   let yPos: number = margin;
@@ -115,12 +56,12 @@ export const generateChapterPdf = async (
   const churchName = "BEM Church"; // Hardcoded English name
   const subtitle = "Church History"; // Hardcoded English subtitle
 
-  doc.setFont(getCurrentFontForPdf(churchName), 'bold');
+  doc.setFont(ForPdf(churchName), 'bold');
   doc.setFontSize(headerFontSize);
   doc.text(churchName, settings.pageWidth / 2, yPos, { align: 'center' });
   yPos += headerFontSize * 0.7;
   
-  doc.setFont(getCurrentFontForPdf(subtitle), 'normal');
+  doc.setFont(ForPdf(subtitle), 'normal');
   doc.setFontSize(headerFontSize * 0.8);
   doc.text(subtitle, settings.pageWidth / 2, yPos, { align: 'center' });
   yPos += headerFontSize * 0.8;
@@ -129,7 +70,7 @@ export const generateChapterPdf = async (
   yPos += 8;
 
   const chapterTitleText = `Chapter ${chapter.chapterNumber}: ${chapter.title}`;
-  doc.setFont(getCurrentFontForPdf(chapterTitleText), 'bold');
+  doc.setFont(ForPdf(chapterTitleText), 'bold');
   doc.setFontSize(titleFontSize);
   const titleLines = doc.splitTextToSize(chapterTitleText, contentWidth);
   doc.text(titleLines, settings.pageWidth / 2, yPos, { align: 'center' });
@@ -197,7 +138,7 @@ export const generateChapterPdf = async (
     }
   }
   
-  doc.setFont(getCurrentFontForPdf(chapter.content), 'normal');
+  doc.setFont(ForPdf(chapter.content), 'normal');
   doc.setFontSize(baseFontSize);
   const contentLines = doc.splitTextToSize(chapter.content, contentWidth);
   
@@ -222,7 +163,7 @@ export const generateChapterPdf = async (
 
   for (const line of contentLines) {
     if (addPageIfNeededAndUpdateYPos()) {
-        doc.setFont(getCurrentFontForPdf(line), 'normal');
+        doc.setFont(ForPdf(line), 'normal');
         doc.setFontSize(baseFontSize);
     }
     doc.text(line, margin, yPos);
@@ -237,3 +178,4 @@ export const generateChapterPdf = async (
 
   doc.save(`Chapter_${chapter.chapterNumber}_${chapter.title.replace(/\s+/g, '_')}.pdf`);
 };
+

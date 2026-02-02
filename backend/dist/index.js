@@ -67,9 +67,11 @@ const fellowshipSchedules_1 = __importDefault(require("./api/fellowshipSchedules
 const activityLogs_1 = __importDefault(require("./api/activityLogs"));
 const contentUpdates_1 = __importDefault(require("./api/contentUpdates"));
 const notifications_1 = __importDefault(require("./api/notifications"));
+const pdfRoutes_1 = __importDefault(require("./routes/pdfRoutes"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
 // --- Middlewares ---
+app.use("/api/pdfs", pdfRoutes_1.default);
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, morgan_1.default)("dev"));

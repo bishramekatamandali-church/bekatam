@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from 'path';
-import PDFDocument from 'pdfkit';
+import PDFDocument from "pdfkit";
+type PdfDoc = InstanceType<typeof PDFDocument>;
 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const LATIN_FONT_NAME = 'NotoSans';
@@ -20,9 +21,9 @@ const systemFontCandidates = (filename: string) => [
   `/usr/share/fonts/truetype/${filename}`,
 ];
 
-type PdfFontDocument = PDFDocument & {
-  registerFont(name: string, src: string | Buffer): PDFDocument;
-  font(name: string): PDFDocument;
+type PdfFontDocument = PdfDoc & {
+  registerFont(name: string, src: string | Buffer): PdfDoc;
+  font(name: string): PdfDoc;
 };
 
 const firstExistingPath = (candidates: string[]) => candidates.find((p) => p && fs.existsSync(p)) ?? null;
@@ -72,7 +73,7 @@ export type PdfFontRegistry = {
  * - Switch to DEVANAGARI only for runs that contain Devanagari characters
  * - For mixed-script strings, render as multiple continued text chunks (PDFKit supports this)
  */
-export const registerPdfFonts = (doc: PDFDocument): PdfFontRegistry => {
+export const registerPdfFonts = (doc: PdfDoc): PdfFontRegistry => {
   const pdfDoc = doc as PdfFontDocument;
 
   let devanagari = DEFAULT_FONT_NAME;
@@ -109,7 +110,7 @@ export const isDevanagariText = (text?: string): boolean => Boolean(text && DEVA
  * Set a single font based on a sample.
  * IMPORTANT: defaults to LATIN when sample is empty/unknown.
  */
-export const applyPdfFont = (doc: PDFDocument, registry?: PdfFontRegistry, textSample?: string): string => {
+export const applyPdfFont = (doc: PdfDoc, registry?: PdfFontRegistry, textSample?: string): string => {
   const pdfDoc = doc as PdfFontDocument;
   const fonts = registry ?? registerPdfFonts(doc);
 
@@ -159,7 +160,7 @@ export const splitTextRuns = (value: string): TextRun[] => {
  * PDFKit will still wrap as needed.
  */
 export const pdfTextMixed = (
-  doc: PDFDocument,
+  doc: PdfDoc,
   registry: PdfFontRegistry,
   text: string,
   options?: any

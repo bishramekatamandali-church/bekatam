@@ -70,11 +70,13 @@ import fellowshipScheduleRoutes from "./api/fellowshipSchedules";
 import activityLogRoutes from "./api/activityLogs";
 import contentUpdateRoutes from "./api/contentUpdates";
 import notificationRoutes from "./api/notifications";
+import pdfRoutes from "./routes/pdfRoutes";
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 // --- Middlewares ---
+app.use("/api/pdfs", pdfRoutes);
 app.use(helmet());
 app.use(compression());
 app.use(morgan("dev"));
