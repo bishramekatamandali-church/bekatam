@@ -76,7 +76,13 @@ function setFontForRun(doc: any, runType: TextRunType, style: "normal" | "bold" 
 function writeTextWithFallback(
   doc: any,
   text: string,
-  options: { continued?: boolean; align?: "left" | "center" | "right" | "justify" } = {},
+  options: {
+    continued?: boolean;
+    align?: "left" | "center" | "right" | "justify";
+    width?: number;
+    x?: number;
+    y?: number;
+  } = {},
   style: "normal" | "bold" = "normal",
 ) {
   const value = String(text ?? "");
@@ -84,6 +90,8 @@ function writeTextWithFallback(
     doc.text("", { continued: options.continued });
     return;
   }
+
+  const { x, y, ...textOptions } = options;
 
   const segments: Array<{ text: string; type: TextRunType }> = [];
   let currentType = resolveRunType(value[0]);
@@ -103,7 +111,11 @@ function writeTextWithFallback(
   segments.forEach((segment, index) => {
     const isLast = index === segments.length - 1;
     setFontForRun(doc, segment.type, style);
-    doc.text(segment.text, { ...options, continued: isLast ? options.continued : true });
+    if (index === 0 && (x !== undefined || y !== undefined)) {
+      doc.text(segment.text, x, y, { ...textOptions, continued: isLast ? options.continued : true });
+      return;
+    }
+    doc.text(segment.text, { ...textOptions, continued: isLast ? options.continued : true });
   });
 }
 
@@ -509,21 +521,33 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
     const footerHeight = 46;
     const contentTop = doc.page.margins.top + headerHeight;
     const contentBottom = pageHeight - doc.page.margins.bottom - footerHeight;
-    const rangeLabel = `Date Range: ${startDate?.toISOString().slice(0, 10) || "Start"} to ${
-      endDate?.toISOString().slice(0, 10) || "End"
+    const rangeLabel = `Date Range: ${startDate ? formatDateADBSShort(startDate) : "Start"} to ${
+      endDate ? formatDateADBSShort(endDate) : "End"
     }`;
 
     const drawHeaderFooter = (pageNumber: number, totalPages: number) => {
       const headerY = doc.page.margins.top - 10;
+      const headerWidth = pageWidth - marginLeft - marginRight;
       doc.save();
       doc.fillColor("#0f172a");
-      doc.fontSize(16);
-      writeTextWithFallback(doc, "Financial Summary Report", { continued: false, align: "left" }, "bold");
+      doc.fontSize(13);
+      writeTextWithFallback(
+        doc,
+        "Bishram Ekata Mandali",
+        { x: marginLeft, y: headerY, width: headerWidth, align: "center" },
+        "bold",
+      );
+      doc.fontSize(12);
+      writeTextWithFallback(
+        doc,
+        "Financial Summary",
+        { x: marginLeft, y: headerY + 16, width: headerWidth, align: "center" },
+        "bold",
+      );
       doc.fontSize(9);
       doc.fillColor("#475569");
-      doc.text(rangeLabel, marginLeft, headerY + 22, { align: "left" });
-      doc.text(`Page ${pageNumber} of ${totalPages}`, 0, headerY + 10, { align: "right" });
-      doc.moveTo(marginLeft, headerY + 40).lineTo(pageWidth - marginRight, headerY + 40).strokeColor("#cbd5f5").stroke();
+      writeTextWithFallback(doc, rangeLabel, { x: marginLeft, y: headerY + 30, width: headerWidth, align: "center" });
+      doc.moveTo(marginLeft, headerY + 44).lineTo(pageWidth - marginRight, headerY + 44).strokeColor("#cbd5f5").stroke();
 
       const footerY = pageHeight - doc.page.margins.bottom + 12;
       doc.strokeColor("#e2e8f0");
