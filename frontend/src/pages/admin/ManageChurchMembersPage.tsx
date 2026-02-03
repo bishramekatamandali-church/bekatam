@@ -4,9 +4,8 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { ChurchMember, ChurchMemberFormData, GenericContentFormData } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
-import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../../utils/pdfFonts';
+import { formatDateADBS } from '../../dateConverter';
+import { downloadBackendPdf } from '../../utils/downloadBackendPdf';
 import * as XLSX from 'xlsx'; 
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
@@ -34,18 +33,6 @@ const ViewListIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
     </svg>
 );
-
-const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
-const BASE_FONT_NAME = 'Helvetica';
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-const getCurrentFont = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
 
 const ManageChurchMembersPage: React.FC = () => {
   const { churchMembers, addContent, updateContent, deleteContent, loadingContent } = useContent();
@@ -91,99 +78,9 @@ const ManageChurchMembersPage: React.FC = () => {
     }
   };
 
-  const generateMemberPdf = async (member: ChurchMember, appName: string) => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-
-    const fontState = await preparePdfDoc(doc);
-    isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
-
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPos = margin;
-    const lineSpacing = 7;
-    const baseFontSize = 10;
-    const footerFontSize = 8;
-
-    const memberName = `Member Profile: ${member.fullName}`;
-    doc.setFont(getCurrentFont(memberName), 'bold');
-    doc.setFontSize(16);
-    doc.text(memberName, pageWidth / 2, yPos, { align: 'center' });
-    yPos += lineSpacing * 2;
-
-    doc.setFontSize(baseFontSize);
-
-    const addDetail = (label: string, value: string | undefined | boolean) => {
-      if (value === undefined || String(value).trim() === '') return;
-      if (yPos > pageHeight - margin - 20) { doc.addPage(); yPos = margin; }
-      
-      const valueString = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value);
-
-      doc.setFont(getCurrentFont(label), 'bold');
-      doc.text(`${label}:`, margin, yPos);
-      
-      doc.setFont(getCurrentFont(valueString), 'normal');
-      const labelWidth = doc.getTextWidth(`${label}:`) + 2;
-      const valueXPos = margin + labelWidth;
-      const textBlockWidth = pageWidth - 2 * margin - labelWidth;
-      const lines = doc.splitTextToSize(valueString, textBlockWidth);
-      doc.text(lines, valueXPos, yPos);
-      yPos += lines.length * lineSpacing * 0.85;
-    };
-
-    if (member.profileImageUrl) {
-      try {
-        const response = await fetch(member.profileImageUrl);
-        if (!response.ok) throw new Error('Network response was not ok');
-        const blob = await response.blob();
-        const imgData = await new Promise<string | ArrayBuffer | null>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-        if (imgData && typeof imgData === 'string') {
-          const imgProps = doc.getImageProperties(imgData);
-          const imgWidth = 30;
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth, margin + 5, imgWidth, imgHeight);
-        }
-      } catch (e) { console.error("Error loading profile image for PDF:", e); }
-    }
-    
-    addDetail("Full Name", member.fullName);
-    addDetail("Email", member.contactEmail);
-    addDetail("Phone", member.contactPhone);
-    addDetail("Address", member.address);
-    addDetail("Member Since", member.memberSince ? formatDateADBS(member.memberSince) : undefined);
-    addDetail("Date of Birth", member.dateOfBirth ? formatDateADBS(member.dateOfBirth) : undefined);
-    addDetail("Baptism Date", member.baptismDate ? formatDateADBS(member.baptismDate) : undefined);
-    addDetail("Active Member", member.isActiveMember);
-    addDetail("Family Members", member.familyMembers);
-    if (member.notes) {
-        yPos += lineSpacing / 2;
-        doc.setFont(getCurrentFont("Notes:"), 'bold');
-        doc.text("Notes:", margin, yPos);
-        yPos += lineSpacing * 0.8;
-        doc.setFont(getCurrentFont(member.notes), 'normal');
-        const notesLines = doc.splitTextToSize(member.notes, pageWidth - (margin * 2));
-        doc.text(notesLines, margin, yPos);
-        yPos += notesLines.length * lineSpacing * 0.8;
-    }
-    
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFont(BASE_FONT_NAME, 'normal'); // Footer is always base font
-        doc.setFontSize(footerFontSize);
-        doc.setTextColor(100);
-        const footerText = `${appName} | Page ${i} of ${pageCount}`;
-        const textWidth = doc.getTextWidth(footerText);
-        doc.text(footerText, (pageWidth - textWidth) / 2, pageHeight - margin / 2);
-    }
-
-    doc.save(`${(member.fullName || 'Member').replace(/\s+/g, '_')}_profile.pdf`);
+  const generateMemberPdf = async (member: ChurchMember, _appName: string) => {
+    const filename = `${(member.fullName || 'Member').replace(/\s+/g, '_')}_profile.pdf`;
+    await downloadBackendPdf(`/api/pdfs/church-members/${member.id}`, filename);
   };
 
   const excelHeaders = [

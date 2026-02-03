@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useContent } from '../contexts/ContentContext';
 import InteractiveCalendar, { CalendarEntry } from '../components/calendar/InteractiveCalendar';
-import { generateYearlyCalendarPDF } from '../components/calendar/PrintableCalendarPDF';
+import { downloadBackendPdf } from '../utils/downloadBackendPdf';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
 import { adToBs, BS_MONTH_NAMES_NP, formatDateADBS, getLocalToday, getNepalDateParts } from '../dateConverter';
@@ -96,9 +96,10 @@ const EventCalendarPage: React.FC = () => {
     setIsGeneratingPdf(true);
     setPdfStatusMessage("Generating PDF, please wait...");
     try {
-      const churchName = "BEM Church";
-      const churchWebsite = window.location.origin;
-      await generateYearlyCalendarPDF(selectedPdfBsYear, events, churchName, churchWebsite, selectedPaperSize);
+      const params = new URLSearchParams();
+      params.set('bsYear', String(selectedPdfBsYear));
+      params.set('paperSize', selectedPaperSize);
+      await downloadBackendPdf(`/api/pdfs/calendar?${params.toString()}`, `BEM_Calendar_${selectedPdfBsYear}_BS_${selectedPaperSize}.pdf`);
       setPdfStatusMessage("PDF Generated!");
       setTimeout(() => setPdfStatusMessage(''), 3000);
     } catch (error) {
