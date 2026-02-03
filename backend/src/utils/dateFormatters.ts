@@ -34,8 +34,23 @@ const formatBSDate = (bs: any): string => {
 
 const padTwo = (value: number): string => String(value).padStart(2, "0");
 
+const AD_MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 const formatADShort = (adDate: Date): string => {
-  const monthName = new Intl.DateTimeFormat("en-US", { month: "short" }).format(adDate);
+  const monthName = AD_MONTH_SHORT[adDate.getMonth()] ?? "";
   const day = padTwo(adDate.getDate());
   return `${monthName} - ${day} - ${adDate.getFullYear()}`;
 };

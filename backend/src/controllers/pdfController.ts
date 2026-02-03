@@ -21,15 +21,17 @@ function fontPath(rel: string) {
 const FONT_LATIN_REGULAR = fontPath("NotoSans-Regular.ttf");
 const FONT_DEVANAGARI_REGULAR = fontPath("NotoSansDevanagari-Regular.ttf");
 const FONT_DEVANAGARI_BOLD = fontPath("NotoSansDevanagari-Bold.ttf");
+const FONT_EMOJI_REGULAR = fontPath("NotoEmoji-Regular.ttf");
 
 
 function ensureFontExists(p: string) {
   if (!fs.existsSync(p)) throw new Error(`Font file missing: ${p}`);
 }
 
-function hasDevanagari(text: string) {
-  return /[\u0900-\u097F]/.test(String(text || ""));
-}
+const DEVANAGARI_REGEX = /[\u0900-\u097F]/;
+const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
+
+type TextRunType = "latin" | "devanagari" | "emoji";
 
 
 function setPdfHeaders(res: Response, filename: string) {
@@ -42,6 +44,9 @@ function createDoc(res: Response) {
   ensureFontExists(FONT_LATIN_REGULAR);
   ensureFontExists(FONT_DEVANAGARI_REGULAR);
   ensureFontExists(FONT_DEVANAGARI_BOLD);
+  if (!fs.existsSync(FONT_EMOJI_REGULAR)) {
+    console.warn("Emoji font missing, emoji rendering may be limited:", FONT_EMOJI_REGULAR);
+  }
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   doc.pipe(res);
@@ -49,37 +54,88 @@ function createDoc(res: Response) {
   return doc;
 }
 
-function setFontForText(doc: any, text: string, style: "normal" | "bold" = "normal") {
-  const t = String(text || "");
-  if (hasDevanagari(t)) {
-    doc.font(style === "bold" ? FONT_DEVANAGARI_BOLD : FONT_DEVANAGARI_REGULAR);
-  } else {
-    doc.font(FONT_LATIN_REGULAR);
+function resolveRunType(char: string): TextRunType {
+  if (EMOJI_REGEX.test(char)) return "emoji";
+  if (DEVANAGARI_REGEX.test(char)) return "devanagari";
+  return "latin";
+}
+
+function setFontForRun(doc: any, runType: TextRunType, style: "normal" | "bold" = "normal") {
+  if (runType === "emoji" && fs.existsSync(FONT_EMOJI_REGULAR)) {
+    doc.font(FONT_EMOJI_REGULAR);
+    return;
   }
+  if (runType === "devanagari") {
+    doc.font(style === "bold" ? FONT_DEVANAGARI_BOLD : FONT_DEVANAGARI_REGULAR);
+    return;
+  }
+  doc.font(FONT_LATIN_REGULAR);
+}
+
+function writeTextWithFallback(
+  doc: any,
+  text: string,
+  options: { continued?: boolean; align?: "left" | "center" | "right" | "justify" } = {},
+  style: "normal" | "bold" = "normal",
+) {
+  const value = String(text ?? "");
+  if (!value) {
+    doc.text("", { continued: options.continued });
+    return;
+  }
+
+  const segments: Array<{ text: string; type: TextRunType }> = [];
+  let currentType = resolveRunType(value[0]);
+  let buffer = "";
+
+  for (const char of value) {
+    const type = resolveRunType(char);
+    if (type !== currentType) {
+      segments.push({ text: buffer, type: currentType });
+      buffer = "";
+      currentType = type;
+    }
+    buffer += char;
+  }
+  if (buffer) segments.push({ text: buffer, type: currentType });
+
+  segments.forEach((segment, index) => {
+    const isLast = index === segments.length - 1;
+    setFontForRun(doc, segment.type, style);
+    doc.text(segment.text, { ...options, continued: isLast ? options.continued : true });
+  });
 }
 
 function writeLine(doc: any, label: string, value: any) {
   const l = label === null || label === undefined ? "" : String(label);
   const v = value === null || value === undefined ? "" : String(value);
 
-  setFontForText(doc, l, "normal");
-  doc.fontSize(11).text(l, { continued: true });
-
-  setFontForText(doc, v, "normal");
-  doc.text(v || "");
+  doc.fontSize(11);
+  writeTextWithFallback(doc, l, { continued: true }, "normal");
+  writeTextWithFallback(doc, v || "", { continued: false }, "normal");
 }
 
 function writeBlock(doc: any, title: string, body: any) {
   const t = String(title || "");
   const b = body === null || body === undefined ? "" : String(body);
 
-  setFontForText(doc, t, "bold");
-  doc.fontSize(12).text(t);
+  doc.fontSize(12);
+  writeTextWithFallback(doc, t, { continued: false }, "bold");
 
-  setFontForText(doc, b, "normal");
-  doc.fontSize(10).text(b);
+  doc.fontSize(10);
+  writeTextWithFallback(doc, b, { continued: false }, "normal");
 
   doc.moveDown(0.5);
+}
+
+function formatLocalTimestamp(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
 export const getTestPdf = async (_req: Request, res: Response) => {
@@ -87,8 +143,8 @@ export const getTestPdf = async (_req: Request, res: Response) => {
     setPdfHeaders(res, "pdf-font-test.pdf");
     const doc = createDoc(res);
 
-    setFontForText(doc, "BEM PDF Test", "bold");
-    doc.fontSize(18).text("BEM PDF Test", { align: "center" });
+    doc.fontSize(18);
+    writeTextWithFallback(doc, "BEM PDF Test", { continued: false, align: "center" }, "bold");
     doc.moveDown(1);
 
     writeLine(doc, "English: ", "Hello World");
@@ -96,7 +152,8 @@ export const getTestPdf = async (_req: Request, res: Response) => {
     writeLine(doc, "Nepali: ", "नमस्ते संसार");
     doc.moveDown(0.3);
 
-    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.fontSize(9);
+    writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
     doc.end();
   } catch (err) {
     console.error("getTestPdf error:", err);
@@ -121,9 +178,10 @@ export const getMeetingPdf = async (req: Request, res: Response) => {
     setPdfHeaders(res, `Meeting_${id}.pdf`);
     const doc = createDoc(res);
 
-    setFontForText(doc, "Bishram Ekata Mandali", "bold");
-    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
-    doc.fontSize(14).text("Meeting Log", { align: "center" });
+    doc.fontSize(18);
+    writeTextWithFallback(doc, "Bishram Ekata Mandali", { continued: false, align: "center" }, "bold");
+    doc.fontSize(14);
+    writeTextWithFallback(doc, "Meeting Log", { continued: false, align: "center" }, "bold");
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", meeting.title || "");
@@ -136,7 +194,8 @@ export const getMeetingPdf = async (req: Request, res: Response) => {
     if (meeting.agenda) writeBlock(doc, "Agenda:", meeting.agenda);
     if (meeting.minutes) writeBlock(doc, "Minutes:", meeting.minutes);
 
-    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.fontSize(9);
+    writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
     doc.end();
   } catch (err) {
     console.error("getMeetingPdf error:", err);
@@ -161,9 +220,10 @@ export const getDecisionPdf = async (req: Request, res: Response) => {
     setPdfHeaders(res, `Decision_${id}.pdf`);
     const doc = createDoc(res);
 
-    setFontForText(doc, "Bishram Ekata Mandali", "bold");
-    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
-    doc.fontSize(14).text("Decision Record", { align: "center" });
+    doc.fontSize(18);
+    writeTextWithFallback(doc, "Bishram Ekata Mandali", { continued: false, align: "center" }, "bold");
+    doc.fontSize(14);
+    writeTextWithFallback(doc, "Decision Record", { continued: false, align: "center" }, "bold");
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", decision.title || "");
@@ -174,7 +234,8 @@ export const getDecisionPdf = async (req: Request, res: Response) => {
 
     if (decision.description) writeBlock(doc, "Description:", decision.description);
 
-    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.fontSize(9);
+    writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
     doc.end();
   } catch (err) {
     console.error("getDecisionPdf error:", err);
@@ -205,9 +266,10 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
     setPdfHeaders(res, `Collection_Record_${id}.pdf`);
     const doc = createDoc(res);
 
-    setFontForText(doc, "Bishram Ekata Mandali", "bold");
-    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
-    doc.fontSize(14).text("Collection Record", { align: "center" });
+    doc.fontSize(18);
+    writeTextWithFallback(doc, "Bishram Ekata Mandali", { continued: false, align: "center" }, "bold");
+    doc.fontSize(14);
+    writeTextWithFallback(doc, "Collection Record", { continued: false, align: "center" }, "bold");
     doc.moveDown(1);
 
     writeLine(doc, "Purpose: ", record.purpose || "");
@@ -219,8 +281,8 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
 
     const donors = Array.isArray(record.donordetail) ? record.donordetail : [];
     if (donors.length) {
-      setFontForText(doc, "Donors:", "bold");
-      doc.fontSize(12).text("Donors:");
+      doc.fontSize(12);
+      writeTextWithFallback(doc, "Donors:", { continued: false }, "bold");
       doc.moveDown(0.2);
 
       donors.forEach((d: any, idx: number) => {
@@ -228,14 +290,15 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
         const amount = Number(d.amount ?? 0).toFixed(2);
         const contact = d.contact ? ` (${d.contact})` : "";
         const line = `${idx + 1}. ${name} - NPR ${amount}${contact}`;
-        setFontForText(doc, line, "normal");
-        doc.fontSize(10).text(line);
+        doc.fontSize(10);
+        writeTextWithFallback(doc, line, { continued: false }, "normal");
       });
 
       doc.moveDown(0.4);
     }
 
-    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.fontSize(9);
+    writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
     doc.end();
   } catch (err) {
     console.error("getCollectionRecordPdf error:", err);
