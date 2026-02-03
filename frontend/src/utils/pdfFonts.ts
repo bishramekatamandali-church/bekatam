@@ -3,18 +3,21 @@ import { jsPDF } from 'jspdf';
 export type PdfFontState = {
   latinFontName: string;
   devanagariFontName: string;
+  emojiFontName: string;
   supportsBoldLatin: boolean;
   supportsBoldDevanagari: boolean;
 };
 
 const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
 const LATIN_FONT_NAME = 'NotoSans';
+const EMOJI_FONT_NAME = 'NotoEmoji';
 const BASE_FALLBACK_FONT = 'Helvetica';
 
 const DEV_REGULAR_FILENAME = 'NotoSansDevanagari-Regular.ttf';
 const DEV_BOLD_FILENAME = 'NotoSansDevanagari-Bold.ttf';
 const LATIN_REGULAR_FILENAME = 'NotoSans-Regular.ttf';
 const LATIN_BOLD_FILENAME = 'NotoSans-Bold.ttf'; // optional (we will fall back to regular if not present)
+const EMOJI_REGULAR_FILENAME = 'NotoEmoji-Regular.ttf';
 
 let cachedLoadAttempt = false;
 let cachedFonts: Record<string, string | null> = {
@@ -22,10 +25,13 @@ let cachedFonts: Record<string, string | null> = {
   devBold: null,
   latinRegular: null,
   latinBold: null,
+  emojiRegular: null,
 };
 
 const DEVANAGARI_RE = /[\u0900-\u097F]/;
 export const isDevanagariText = (text?: string) => Boolean(text && DEVANAGARI_RE.test(text));
+const EMOJI_RE = /\p{Extended_Pictographic}/u;
+export const isEmojiText = (text?: string) => Boolean(text && EMOJI_RE.test(text));
 
 const normalizeBase64 = (value?: string): string => (value || '').replace(/\s+/g, '');
 
@@ -70,16 +76,20 @@ const loadAllFonts = async (): Promise<typeof cachedFonts> => {
   const envLatinRegular = normalizeBase64(import.meta.env.VITE_LATIN_FONT_BASE64 as string | undefined);
   const envLatinBold = normalizeBase64(import.meta.env.VITE_LATIN_FONT_BOLD_BASE64 as string | undefined);
 
+  const envEmojiRegular = normalizeBase64(import.meta.env.VITE_EMOJI_FONT_BASE64 as string | undefined);
+
   const devRegularUrl = (import.meta.env.VITE_DEVANAGARI_FONT_URL as string | undefined) || getFontUrl(DEV_REGULAR_FILENAME);
   const devBoldUrl = (import.meta.env.VITE_DEVANAGARI_FONT_BOLD_URL as string | undefined) || getFontUrl(DEV_BOLD_FILENAME);
 
   const latinRegularUrl = (import.meta.env.VITE_LATIN_FONT_URL as string | undefined) || getFontUrl(LATIN_REGULAR_FILENAME);
   const latinBoldUrl = (import.meta.env.VITE_LATIN_FONT_BOLD_URL as string | undefined) || getFontUrl(LATIN_BOLD_FILENAME);
+  const emojiRegularUrl = (import.meta.env.VITE_EMOJI_FONT_URL as string | undefined) || getFontUrl(EMOJI_REGULAR_FILENAME);
 
   cachedFonts.devRegular = envDevRegular || (await loadFontFromUrl(devRegularUrl));
   cachedFonts.devBold = envDevBold || (await loadFontFromUrl(devBoldUrl));
   cachedFonts.latinRegular = envLatinRegular || (await loadFontFromUrl(latinRegularUrl));
   cachedFonts.latinBold = envLatinBold || (await loadFontFromUrl(latinBoldUrl));
+  cachedFonts.emojiRegular = envEmojiRegular || (await loadFontFromUrl(emojiRegularUrl));
 
   return cachedFonts;
 };
@@ -97,6 +107,7 @@ export const preparePdfDoc = async (doc: jsPDF): Promise<PdfFontState> => {
 
   let latinName = BASE_FALLBACK_FONT;
   let devName = BASE_FALLBACK_FONT;
+  let emojiName = BASE_FALLBACK_FONT;
 
   try {
     if (fonts.latinRegular) {
@@ -120,6 +131,12 @@ export const preparePdfDoc = async (doc: jsPDF): Promise<PdfFontState> => {
         doc.addFont(DEV_BOLD_FILENAME, DEVANAGARI_FONT_NAME, 'bold');
       }
     }
+
+    if (fonts.emojiRegular) {
+      doc.addFileToVFS(EMOJI_REGULAR_FILENAME, fonts.emojiRegular);
+      doc.addFont(EMOJI_REGULAR_FILENAME, EMOJI_FONT_NAME, 'normal');
+      emojiName = EMOJI_FONT_NAME;
+    }
   } catch (error) {
     console.warn('Failed to register PDF fonts:', error);
   }
@@ -130,6 +147,7 @@ export const preparePdfDoc = async (doc: jsPDF): Promise<PdfFontState> => {
   return {
     latinFontName: latinName,
     devanagariFontName: devName,
+    emojiFontName: emojiName,
     supportsBoldLatin: Boolean(fonts.latinBold),
     supportsBoldDevanagari: Boolean(fonts.devBold),
   };
@@ -156,6 +174,11 @@ export const setPdfFontForText = (
   textSample: string,
   style: 'normal' | 'bold' = 'normal',
 ) => {
+  if (isEmojiText(textSample)) {
+    doc.setFont(state.emojiFontName, 'normal');
+    return;
+  }
+
   const wantsDev = isDevanagariText(textSample);
   const fontName = wantsDev ? state.devanagariFontName : state.latinFontName;
 
@@ -166,7 +189,7 @@ export const setPdfFontForText = (
   doc.setFont(fontName, resolvedStyle);
 };
 
-type TextRun = { text: string; script: 'devanagari' | 'latin' };
+type TextRun = { text: string; script: 'devanagari' | 'latin' | 'emoji' };
 
 export const splitTextRuns = (value: string): TextRun[] => {
   const text = String(value ?? '');
@@ -174,10 +197,18 @@ export const splitTextRuns = (value: string): TextRun[] => {
   const runs: TextRun[] = [];
 
   let current = '';
-  let currentScript: TextRun['script'] = isDevanagariText(text[0]) ? 'devanagari' : 'latin';
+  let currentScript: TextRun['script'] = isEmojiText(text[0])
+    ? 'emoji'
+    : isDevanagariText(text[0])
+      ? 'devanagari'
+      : 'latin';
 
   for (const ch of text) {
-    const script: TextRun['script'] = isDevanagariText(ch) ? 'devanagari' : 'latin';
+    const script: TextRun['script'] = isEmojiText(ch)
+      ? 'emoji'
+      : isDevanagariText(ch)
+        ? 'devanagari'
+        : 'latin';
     if (script === currentScript) {
       current += ch;
     } else {
@@ -194,7 +225,8 @@ export const getMixedTextWidth = (doc: jsPDF, state: PdfFontState, text: string,
   const runs = splitTextRuns(text);
   let total = 0;
   for (const run of runs) {
-    setPdfFontForText(doc, state, run.script === 'devanagari' ? 'अ' : 'A', style);
+    const sample = run.script === 'emoji' ? '🙂' : run.script === 'devanagari' ? 'अ' : 'A';
+    setPdfFontForText(doc, state, sample, style);
     total += doc.getTextWidth(run.text);
   }
   return total;
@@ -221,7 +253,8 @@ export const pdfTextMixed = (
 
   let cursorX = startX;
   for (const run of runs) {
-    setPdfFontForText(doc, state, run.script === 'devanagari' ? 'अ' : 'A', style);
+    const sample = run.script === 'emoji' ? '🙂' : run.script === 'devanagari' ? 'अ' : 'A';
+    setPdfFontForText(doc, state, sample, style);
     doc.text(run.text, cursorX, y);
     cursorX += doc.getTextWidth(run.text);
   }
