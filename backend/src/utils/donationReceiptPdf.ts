@@ -1,6 +1,7 @@
  
 import PDFDocument from 'pdfkit';
 import { pdfTextMixed, registerPdfFonts } from './pdfFonts';
+import { formatDateADBS } from './dateFormatters';
 
 export type DonationReceiptPdfData = {
   id: string;
@@ -10,14 +11,6 @@ export type DonationReceiptPdfData = {
   purpose: string;
   donationDate: Date;
   transactionReference?: string | null;
-};
-
-const formatDate = (d: Date) => {
-  try {
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: '2-digit' });
-  } catch {
-    return d.toISOString().split('T')[0];
-  }
 };
 
 /**
@@ -61,7 +54,7 @@ export const buildDonationReceiptPdfBuffer = (data: DonationReceiptPdfData): Pro
       if (data.transactionReference) line(`Reference: ${data.transactionReference}`);
       line(`Purpose: ${data.purpose || '—'}`);
       line(`Amount: NPR ${Number(data.amount || 0).toFixed(2)}`);
-      line(`Date Logged: ${formatDate(data.donationDate)}`);
+      line(`Date Logged: ${formatDateADBS(data.donationDate)}`);
 
       doc.moveDown(1.2);
       doc.fontSize(9);

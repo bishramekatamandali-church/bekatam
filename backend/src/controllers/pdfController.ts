@@ -2,18 +2,11 @@ import type { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import { prisma } from "../db";
+import { formatDateADBS } from "../utils/dateFormatters";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require("pdfkit");
 
-const nepaliDateConverterPath = (() => {
-  const distPath = path.join(__dirname, "..", "assets", "vendor", "nepali-date-converter.umd.js");
-  if (fs.existsSync(distPath)) return distPath;
-  return path.join(__dirname, "..", "..", "assets", "vendor", "nepali-date-converter.umd.js");
-})();
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const NepaliDateConverter = require(nepaliDateConverterPath);
 
 /**
  * Fonts:
@@ -29,20 +22,6 @@ const FONT_LATIN_REGULAR = fontPath("NotoSans-Regular.ttf");
 const FONT_DEVANAGARI_REGULAR = fontPath("NotoSansDevanagari-Regular.ttf");
 const FONT_DEVANAGARI_BOLD = fontPath("NotoSansDevanagari-Bold.ttf");
 
-const BS_MONTH_NAMES_NP = [
-  "बैशाख",
-  "जेठ",
-  "असार",
-  "श्रावण",
-  "भदौ",
-  "आश्विन",
-  "कार्तिक",
-  "मंसिर",
-  "पौष",
-  "माघ",
-  "फाल्गुण",
-  "चैत्र",
-];
 
 function ensureFontExists(p: string) {
   if (!fs.existsSync(p)) throw new Error(`Font file missing: ${p}`);
@@ -52,33 +31,6 @@ function hasDevanagari(text: string) {
   return /[\u0900-\u097F]/.test(String(text || ""));
 }
 
-function resolveNepaliDate(): any {
-  return NepaliDateConverter?.default ?? NepaliDateConverter;
-}
-
-function formatBSDate(bs: any): string {
-  const monthName = BS_MONTH_NAMES_NP[bs.getMonth?.() ?? 0] ?? "";
-  return `${monthName} ${bs.getDate?.() ?? ""}, ${bs.getYear?.() ?? ""} BS`.trim();
-}
-
-function formatDateADBS(dateInput?: string | Date) {
-  if (!dateInput) return "";
-  const parsed = typeof dateInput === "string" ? new Date(dateInput) : new Date(dateInput);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  const adFormatted = parsed.toISOString().slice(0, 10);
-
-  try {
-    const NepaliDate = resolveNepaliDate();
-    if (!NepaliDate?.fromAD) throw new Error("NepaliDate.fromAD not available");
-    const bs = NepaliDate.fromAD(parsed);
-    const bsFormatted = formatBSDate(bs);
-    return bsFormatted ? `${bsFormatted} (${adFormatted})` : adFormatted;
-  } catch (error) {
-    console.warn("BS date conversion failed:", error);
-    return `${adFormatted} (AD)`;
-  }
-}
 
 function setPdfHeaders(res: Response, filename: string) {
   res.setHeader("Content-Type", "application/pdf");
@@ -175,7 +127,7 @@ export const getMeetingPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", meeting.title || "");
-    writeLine(doc, "Date: ", meeting.meetingDate ? new Date(meeting.meetingDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Date: ", formatDateADBS(meeting.meetingDate));
     writeLine(doc, "Type: ", meeting.meetingType || "");
     writeLine(doc, "Status: ", meeting.status || "");
     doc.moveDown(0.5);
@@ -259,7 +211,7 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Purpose: ", record.purpose || "");
-    writeLine(doc, "Date: ", record.collectionDate ? new Date(record.collectionDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Date: ", formatDateADBS(record.collectionDate));
     writeLine(doc, "Collector: ", record.collectorName || "");
     writeLine(doc, "Amount: NPR ", Number(record.amount ?? 0).toFixed(2));
     writeLine(doc, "Deposited: ", record.isDeposited ? "Yes" : "No");

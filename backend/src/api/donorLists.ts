@@ -1,4 +1,5 @@
-import { applyPdfFont, pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts"; 
+import { applyPdfFont, pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
+import { formatDateADBS } from "../utils/dateFormatters";
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
@@ -28,14 +29,6 @@ type RefinedDonorEntry = {
   totalAmount: number;
   purposes: string[];
   mergedCount: number;
-};
-
-const formatDate = (date: Date) => {
-  try {
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
-  } catch {
-    return date.toISOString().split('T')[0];
-  }
 };
 
 const parseDateParam = (value?: string) => {
@@ -223,7 +216,7 @@ const buildDonorListPdfBuffer = (
           doc.moveDown(0.3);
           donor.donations.forEach((donation) => {
             const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : '';
-            const bullet = `• ${formatDate(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
+            const bullet = `• ${formatDateADBS(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
             applyPdfFont(doc, fontRegistry, bullet);
             doc.fontSize(9).text(bullet);
           });
@@ -272,7 +265,7 @@ const buildDonorListXml = (title: string, donors: DonorListEntry[], refinedDonor
         .map(
           (donation) =>
             `      <donation>
-        <date>${donation.date.toISOString()}</date>
+        <date>${formatDateADBS(donation.date)}</date>
         <amount>${donation.amount.toFixed(2)}</amount>
         <collectionId>${safeXmlText(donation.collectionId)}</collectionId>
         <purpose>${safeXmlText(donation.purpose)}</purpose>
@@ -405,8 +398,8 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
       .flat()
       .sort((a, b) => b.totalAmount - a.totalAmount);
     const titleParts = [
-      start ? formatDate(start) : 'All time',
-      end ? formatDate(end) : 'Present',
+      start ? formatDateADBS(start) : 'All time',
+      end ? formatDateADBS(end) : 'Present',
     ];
     const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
     const refinedDonors = buildRefinedDonorList(donors);
