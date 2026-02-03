@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import { prisma } from "../db";
-import { formatDateADBS } from "../utils/dateFormatters";
+import { formatDateADBS, formatDateADBSShort } from "../utils/dateFormatters";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require("pdfkit");
@@ -127,7 +127,7 @@ export const getMeetingPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", meeting.title || "");
-    writeLine(doc, "Date: ", formatDateADBS(meeting.meetingDate));
+    writeLine(doc, "Date: ", formatDateADBSShort(meeting.meetingDate));
     writeLine(doc, "Type: ", meeting.meetingType || "");
     writeLine(doc, "Status: ", meeting.status || "");
     doc.moveDown(0.5);
@@ -167,7 +167,7 @@ export const getDecisionPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", decision.title || "");
-    writeLine(doc, "Date: ", formatDateADBS(decision.decisionDate));
+    writeLine(doc, "Date: ", formatDateADBSShort(decision.decisionDate));
     writeLine(doc, "Made By: ", decision.madeBy || "");
     writeLine(doc, "Status: ", decision.status || "");
     doc.moveDown(0.5);
@@ -211,7 +211,7 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Purpose: ", record.purpose || "");
-    writeLine(doc, "Date: ", formatDateADBS(record.collectionDate));
+    writeLine(doc, "Date: ", formatDateADBSShort(record.collectionDate));
     writeLine(doc, "Collector: ", record.collectorName || "");
     writeLine(doc, "Amount: NPR ", Number(record.amount ?? 0).toFixed(2));
     writeLine(doc, "Deposited: ", record.isDeposited ? "Yes" : "No");
