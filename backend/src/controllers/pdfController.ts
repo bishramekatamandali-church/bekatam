@@ -513,21 +513,24 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
     setPdfHeaders(res, filename);
     const doc = createDoc(res, { bufferPages: true });
 
+    const rangeLabel = `Date Range: ${startDate ? formatDateADBSShort(startDate) : "Start"} to ${
+      endDate ? formatDateADBSShort(endDate) : "End"
+    }`;
     const marginLeft = doc.page.margins.left;
     const marginRight = doc.page.margins.right;
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const headerHeight = 58;
+    const headerWidth = pageWidth - marginLeft - marginRight;
+    doc.fontSize(9);
+    const rangeLabelHeight = doc.heightOfString(rangeLabel, { width: headerWidth, align: "center" });
+    const headerHeight = 40 + rangeLabelHeight;
     const footerHeight = 46;
     const contentTop = doc.page.margins.top + headerHeight;
     const contentBottom = pageHeight - doc.page.margins.bottom - footerHeight;
-    const rangeLabel = `Date Range: ${startDate ? formatDateADBSShort(startDate) : "Start"} to ${
-      endDate ? formatDateADBSShort(endDate) : "End"
-    }`;
 
     const drawHeaderFooter = (pageNumber: number, totalPages: number) => {
       const headerY = doc.page.margins.top - 10;
-      const headerWidth = pageWidth - marginLeft - marginRight;
+      const headerRuleY = headerY + 30 + rangeLabelHeight + 6;
       doc.save();
       doc.fillColor("#0f172a");
       doc.fontSize(13);
@@ -547,14 +550,14 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
       doc.fontSize(9);
       doc.fillColor("#475569");
       writeTextWithFallback(doc, rangeLabel, { x: marginLeft, y: headerY + 30, width: headerWidth, align: "center" });
-      doc.moveTo(marginLeft, headerY + 44).lineTo(pageWidth - marginRight, headerY + 44).strokeColor("#cbd5f5").stroke();
+      doc.moveTo(marginLeft, headerRuleY).lineTo(pageWidth - marginRight, headerRuleY).strokeColor("#cbd5f5").stroke();
 
       const footerY = pageHeight - doc.page.margins.bottom + 12;
       doc.strokeColor("#e2e8f0");
       doc.moveTo(marginLeft, footerY - 8).lineTo(pageWidth - marginRight, footerY - 8).stroke();
       doc.fillColor("#475569");
       doc.fontSize(9);
-      doc.text(`Page ${pageNumber}`, 0, footerY, { align: "center" });
+      doc.text(`Page ${pageNumber} of ${totalPages}`, 0, footerY, { align: "center" });
       doc.restore();
     };
 
@@ -591,10 +594,10 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
     const tableStartX = marginLeft;
     const tableWidth = pageWidth - marginLeft - marginRight;
     const columns = [
-      { key: "date", label: "Date", width: 0.16 },
+      { key: "date", label: "Date", width: 0.2 },
       { key: "type", label: "Type", width: 0.12 },
       { key: "category", label: "Category", width: 0.18 },
-      { key: "description", label: "Description", width: 0.38 },
+      { key: "description", label: "Description", width: 0.34 },
       { key: "amount", label: "Amount", width: 0.16 },
     ];
     const columnWidths = columns.map((col) => col.width * tableWidth);
