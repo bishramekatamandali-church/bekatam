@@ -1,93 +1,239 @@
-import { Request, Response } from "express";
-import { PassThrough } from "stream";
-import PDFDocument from "pdfkit";
+import type { Request, Response } from "express";
 import path from "path";
+import fs from "fs";
+import { prisma } from "../db";
 
-type PdfDoc = InstanceType<typeof PDFDocument>;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFDocument = require("pdfkit");
 
-const fontBase = path.join(__dirname, "..", "..", "assets", "fonts");
+/**
+ * Fonts:
+ * - Source: backend/assets/fonts/*.ttf
+ * - Copied to: backend/dist/assets/fonts/*.ttf by scripts/copy-assets.js
+ * - Runtime __dirname: backend/dist/controllers
+ */
+function fontPath(rel: string) {
+  return path.join(__dirname, "..", "assets", "fonts", rel);
+}
 
-const fonts = {
-  latinRegular: path.join(fontBase, "NotoSans-Regular.ttf"),
-  latinBold: path.join(fontBase, "NotoSans-Bold.ttf"),
-  devRegular: path.join(fontBase, "NotoSansDevanagari-Regular.ttf"),
-  devBold: path.join(fontBase, "NotoSansDevanagari-Bold.ttf"),
-};
+const FONT_LATIN_REGULAR = fontPath("NotoSans-Regular.ttf");
+const FONT_DEVANAGARI_REGULAR = fontPath("NotoSansDevanagari-Regular.ttf");
+const FONT_DEVANAGARI_BOLD = fontPath("NotoSansDevanagari-Bold.ttf");
 
-const isDevanagari = (ch: string) => {
-  const c = ch.codePointAt(0) ?? 0;
-  return c >= 0x0900 && c <= 0x097f;
-};
+function ensureFontExists(p: string) {
+  if (!fs.existsSync(p)) throw new Error(`Font file missing: ${p}`);
+}
 
-const safeFont = (doc: PdfDoc, fontPath: string, fallbackPathOrName: string) => {
-  try {
-    doc.font(fontPath);
-  } catch {
-    doc.font(fallbackPathOrName as any);
+function hasDevanagari(text: string) {
+  return /[\u0900-\u097F]/.test(String(text || ""));
+}
+
+function setPdfHeaders(res: Response, filename: string) {
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Cache-Control", "no-store");
+}
+
+function createDoc(res: Response) {
+  ensureFontExists(FONT_LATIN_REGULAR);
+  ensureFontExists(FONT_DEVANAGARI_REGULAR);
+  ensureFontExists(FONT_DEVANAGARI_BOLD);
+
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  doc.pipe(res);
+  doc.font(FONT_LATIN_REGULAR);
+  return doc;
+}
+
+function setFontForText(doc: any, text: string, style: "normal" | "bold" = "normal") {
+  const t = String(text || "");
+  if (hasDevanagari(t)) {
+    doc.font(style === "bold" ? FONT_DEVANAGARI_BOLD : FONT_DEVANAGARI_REGULAR);
+  } else {
+    doc.font(FONT_LATIN_REGULAR);
   }
-};
+}
 
-const drawMixedLine = (doc: PdfDoc, text: string, x: number, y: number, bold = false) => {
-  let xx = x;
-  let buf = "";
-  let cur: "dev" | "latin" | null = null;
+function writeLine(doc: any, label: string, value: any) {
+  const v = value === null || value === undefined ? "" : String(value);
+  const line = `${label}${v}`;
+  setFontForText(doc, line, "normal");
+  doc.fontSize(11).text(line);
+}
 
-  const flush = () => {
-    if (!buf) return;
+function writeBlock(doc: any, title: string, body: any) {
+  const t = String(title || "");
+  const b = body === null || body === undefined ? "" : String(body);
 
-    if (cur === "dev") safeFont(doc, bold ? fonts.devBold : fonts.devRegular, fonts.devRegular);
-    else safeFont(doc, bold ? fonts.latinBold : fonts.latinRegular, fonts.latinRegular);
+  setFontForText(doc, t, "bold");
+  doc.fontSize(12).text(t);
 
-    doc.text(buf, xx, y, { lineBreak: false });
-    xx += doc.widthOfString(buf);
-    buf = "";
-  };
+  setFontForText(doc, b, "normal");
+  doc.fontSize(10).text(b);
 
-  for (const ch of String(text ?? "")) {
-    const script: "dev" | "latin" = isDevanagari(ch) ? "dev" : "latin";
-    if (cur === null) {
-      cur = script;
-      buf = ch;
-    } else if (script === cur) {
-      buf += ch;
-    } else {
-      flush();
-      cur = script;
-      buf = ch;
-    }
-  }
-  flush();
-};
+  doc.moveDown(0.5);
+}
 
 export const getTestPdf = async (_req: Request, res: Response) => {
-  const doc = new PDFDocument({
-    size: "A4",
-    margins: { top: 48, left: 48, right: 48, bottom: 48 },
-    info: { Title: "PDF Font Test" },
-  });
+  try {
+    setPdfHeaders(res, "pdf-font-test.pdf");
+    const doc = createDoc(res);
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", 'inline; filename="pdf-font-test.pdf"');
-  res.setHeader("Cache-Control", "no-store");
+    setFontForText(doc, "BEM PDF Test", "bold");
+    doc.fontSize(18).text("BEM PDF Test", { align: "center" });
+    doc.moveDown(1);
 
-  const stream = new PassThrough();
-  doc.pipe(stream);
-  stream.pipe(res);
+    writeLine(doc, "English: ", "Hello World");
+    doc.moveDown(0.3);
+    writeLine(doc, "Nepali: ", "नमस्ते संसार");
+    doc.moveDown(0.3);
 
-  safeFont(doc, fonts.latinRegular, "Helvetica");
+    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.end();
+  } catch (err) {
+    console.error("getTestPdf error:", err);
+    if (!res.headersSent) return res.status(500).json({ message: "Failed to generate test PDF" });
+    try {
+      res.end();
+    } catch {}
+  }
+};
 
-  doc.fontSize(18);
-  drawMixedLine(doc, "Bishram Ekata Mandali - PDF Font Test", doc.x, doc.y, true);
-  doc.moveDown(1);
+export const getMeetingPdf = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "Missing meeting id" });
 
-  doc.fontSize(12);
-  drawMixedLine(doc, "नेपाली Nepali English १२३ ABC xyz", doc.x, doc.y, false);
-  doc.moveDown(0.7);
+    const meeting =
+      (await (prisma as any).meetinglog?.findUnique?.({ where: { id } })) ??
+      (await (prisma as any).meetingLog?.findUnique?.({ where: { id } }));
 
-  drawMixedLine(doc, "कार्यक्रम Schedule: 10:00 AM - प्रार्थना Prayer", doc.x, doc.y, false);
-  doc.moveDown(0.7);
+    if (!meeting) return res.status(404).json({ message: "Meeting log not found" });
 
-  drawMixedLine(doc, "धन्यवाद! Thank you!", doc.x, doc.y, true);
+    setPdfHeaders(res, `Meeting_${id}.pdf`);
+    const doc = createDoc(res);
 
-  doc.end();
+    setFontForText(doc, "Bishram Ekata Mandali", "bold");
+    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
+    doc.fontSize(14).text("Meeting Log", { align: "center" });
+    doc.moveDown(1);
+
+    writeLine(doc, "Title: ", meeting.title || "");
+    writeLine(doc, "Date: ", meeting.meetingDate ? new Date(meeting.meetingDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Type: ", meeting.meetingType || "");
+    writeLine(doc, "Status: ", meeting.status || "");
+    doc.moveDown(0.5);
+
+    if (meeting.attendees) writeBlock(doc, "Attendees:", meeting.attendees);
+    if (meeting.agenda) writeBlock(doc, "Agenda:", meeting.agenda);
+    if (meeting.minutes) writeBlock(doc, "Minutes:", meeting.minutes);
+
+    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.end();
+  } catch (err) {
+    console.error("getMeetingPdf error:", err);
+    if (!res.headersSent) return res.status(500).json({ message: "Failed to generate meeting PDF" });
+    try {
+      res.end();
+    } catch {}
+  }
+};
+
+export const getDecisionPdf = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "Missing decision id" });
+
+    const decision =
+      (await (prisma as any).decisionlog?.findUnique?.({ where: { id } })) ??
+      (await (prisma as any).decisionLog?.findUnique?.({ where: { id } }));
+
+    if (!decision) return res.status(404).json({ message: "Decision log not found" });
+
+    setPdfHeaders(res, `Decision_${id}.pdf`);
+    const doc = createDoc(res);
+
+    setFontForText(doc, "Bishram Ekata Mandali", "bold");
+    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
+    doc.fontSize(14).text("Decision Record", { align: "center" });
+    doc.moveDown(1);
+
+    writeLine(doc, "Title: ", decision.title || "");
+    writeLine(doc, "Date: ", decision.decisionDate ? new Date(decision.decisionDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Made By: ", decision.madeBy || "");
+    writeLine(doc, "Status: ", decision.status || "");
+    doc.moveDown(0.5);
+
+    if (decision.description) writeBlock(doc, "Description:", decision.description);
+
+    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.end();
+  } catch (err) {
+    console.error("getDecisionPdf error:", err);
+    if (!res.headersSent) return res.status(500).json({ message: "Failed to generate decision PDF" });
+    try {
+      res.end();
+    } catch {}
+  }
+};
+
+export const getCollectionRecordPdf = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "Missing collection record id" });
+
+    const record =
+      (await (prisma as any).collectionrecord?.findUnique?.({
+        where: { id },
+        include: { donordetail: true },
+      })) ??
+      (await (prisma as any).collectionRecord?.findUnique?.({
+        where: { id },
+        include: { donordetail: true },
+      }));
+
+    if (!record) return res.status(404).json({ message: "Collection record not found" });
+
+    setPdfHeaders(res, `Collection_Record_${id}.pdf`);
+    const doc = createDoc(res);
+
+    setFontForText(doc, "Bishram Ekata Mandali", "bold");
+    doc.fontSize(18).text("Bishram Ekata Mandali", { align: "center" });
+    doc.fontSize(14).text("Collection Record", { align: "center" });
+    doc.moveDown(1);
+
+    writeLine(doc, "Purpose: ", record.purpose || "");
+    writeLine(doc, "Date: ", record.collectionDate ? new Date(record.collectionDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Collector: ", record.collectorName || "");
+    writeLine(doc, "Amount: NPR ", Number(record.amount ?? 0).toFixed(2));
+    writeLine(doc, "Deposited: ", record.isDeposited ? "Yes" : "No");
+    doc.moveDown(0.5);
+
+    const donors = Array.isArray(record.donordetail) ? record.donordetail : [];
+    if (donors.length) {
+      setFontForText(doc, "Donors:", "bold");
+      doc.fontSize(12).text("Donors:");
+      doc.moveDown(0.2);
+
+      donors.forEach((d: any, idx: number) => {
+        const name = d.donorName || "";
+        const amount = Number(d.amount ?? 0).toFixed(2);
+        const contact = d.contact ? ` (${d.contact})` : "";
+        const line = `${idx + 1}. ${name} - NPR ${amount}${contact}`;
+        setFontForText(doc, line, "normal");
+        doc.fontSize(10).text(line);
+      });
+
+      doc.moveDown(0.4);
+    }
+
+    doc.font(FONT_LATIN_REGULAR).fontSize(9).text(`Generated at: ${new Date().toISOString()}`);
+    doc.end();
+  } catch (err) {
+    console.error("getCollectionRecordPdf error:", err);
+    if (!res.headersSent) return res.status(500).json({ message: "Failed to generate collection record PDF" });
+    try {
+      res.end();
+    } catch {}
+  }
 };

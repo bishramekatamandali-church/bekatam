@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `bem-static-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [

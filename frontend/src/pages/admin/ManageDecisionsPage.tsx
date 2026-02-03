@@ -309,4 +309,4 @@ const ManageDecisionsPage = () => {
   );
 };
 
-export default ManageDecisionsPage; 
+export default ManageDecisionsPage;
