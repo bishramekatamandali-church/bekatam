@@ -6,6 +6,15 @@ import { prisma } from "../db";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require("pdfkit");
 
+const nepaliDateConverterPath = (() => {
+  const distPath = path.join(__dirname, "..", "assets", "vendor", "nepali-date-converter.umd.js");
+  if (fs.existsSync(distPath)) return distPath;
+  return path.join(__dirname, "..", "..", "assets", "vendor", "nepali-date-converter.umd.js");
+})();
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const NepaliDateConverter = require(nepaliDateConverterPath);
+
 /**
  * Fonts:
  * - Source: backend/assets/fonts/*.ttf
@@ -20,12 +29,55 @@ const FONT_LATIN_REGULAR = fontPath("NotoSans-Regular.ttf");
 const FONT_DEVANAGARI_REGULAR = fontPath("NotoSansDevanagari-Regular.ttf");
 const FONT_DEVANAGARI_BOLD = fontPath("NotoSansDevanagari-Bold.ttf");
 
+const BS_MONTH_NAMES_NP = [
+  "बैशाख",
+  "जेठ",
+  "असार",
+  "श्रावण",
+  "भदौ",
+  "आश्विन",
+  "कार्तिक",
+  "मंसिर",
+  "पौष",
+  "माघ",
+  "फाल्गुण",
+  "चैत्र",
+];
+
 function ensureFontExists(p: string) {
   if (!fs.existsSync(p)) throw new Error(`Font file missing: ${p}`);
 }
 
 function hasDevanagari(text: string) {
   return /[\u0900-\u097F]/.test(String(text || ""));
+}
+
+function resolveNepaliDate(): any {
+  return NepaliDateConverter?.default ?? NepaliDateConverter;
+}
+
+function formatBSDate(bs: any): string {
+  const monthName = BS_MONTH_NAMES_NP[bs.getMonth?.() ?? 0] ?? "";
+  return `${monthName} ${bs.getDate?.() ?? ""}, ${bs.getYear?.() ?? ""} BS`.trim();
+}
+
+function formatDateADBS(dateInput?: string | Date) {
+  if (!dateInput) return "";
+  const parsed = typeof dateInput === "string" ? new Date(dateInput) : new Date(dateInput);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const adFormatted = parsed.toISOString().slice(0, 10);
+
+  try {
+    const NepaliDate = resolveNepaliDate();
+    if (!NepaliDate?.fromAD) throw new Error("NepaliDate.fromAD not available");
+    const bs = NepaliDate.fromAD(parsed);
+    const bsFormatted = formatBSDate(bs);
+    return bsFormatted ? `${bsFormatted} (${adFormatted})` : adFormatted;
+  } catch (error) {
+    console.warn("BS date conversion failed:", error);
+    return `${adFormatted} (AD)`;
+  }
 }
 
 function setPdfHeaders(res: Response, filename: string) {
@@ -55,10 +107,14 @@ function setFontForText(doc: any, text: string, style: "normal" | "bold" = "norm
 }
 
 function writeLine(doc: any, label: string, value: any) {
+  const l = label === null || label === undefined ? "" : String(label);
   const v = value === null || value === undefined ? "" : String(value);
-  const line = `${label}${v}`;
-  setFontForText(doc, line, "normal");
-  doc.fontSize(11).text(line);
+
+  setFontForText(doc, l, "normal");
+  doc.fontSize(11).text(l, { continued: true });
+
+  setFontForText(doc, v, "normal");
+  doc.text(v || "");
 }
 
 function writeBlock(doc: any, title: string, body: any) {
@@ -159,7 +215,7 @@ export const getDecisionPdf = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     writeLine(doc, "Title: ", decision.title || "");
-    writeLine(doc, "Date: ", decision.decisionDate ? new Date(decision.decisionDate).toISOString().slice(0, 10) : "");
+    writeLine(doc, "Date: ", formatDateADBS(decision.decisionDate));
     writeLine(doc, "Made By: ", decision.madeBy || "");
     writeLine(doc, "Status: ", decision.status || "");
     doc.moveDown(0.5);
