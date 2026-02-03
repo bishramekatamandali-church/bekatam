@@ -408,9 +408,16 @@ export const getChurchMemberPdf = async (req: Request, res: Response) => {
 
 export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
   try {
-    const parseDate = (value?: string | string[]) => {
+    const parseDate = (value: unknown) => {
       if (!value) return null;
-      const text = Array.isArray(value) ? value[0] : value;
+      const text = Array.isArray(value)
+        ? typeof value[0] === "string"
+          ? value[0]
+          : null
+        : typeof value === "string"
+          ? value
+          : null;
+      if (!text) return null;
       const parsed = new Date(text);
       return Number.isNaN(parsed.getTime()) ? null : parsed;
     };
