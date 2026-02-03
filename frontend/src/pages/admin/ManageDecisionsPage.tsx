@@ -7,8 +7,7 @@ import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { ActionItemStatus, DecisionLog, DecisionLogFormData, DecisionLogStatus, GenericContentFormData } from '../../types';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
-import { jsPDF } from 'jspdf';
-import { preparePdfDoc, setPdfFont } from '../../utils/pdfFonts';
+import { downloadBackendPdf } from '../../utils/downloadBackendPdf';
 import * as XLSX from 'xlsx';
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
@@ -54,17 +53,11 @@ const ManageDecisionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDecision, setEditingDecision] = useState<DecisionLog | null>(null);
 
-  const triggerPdfDownload = (doc: jsPDF, filename: string) => {
-    const pdfBlob = doc.output('blob') as Blob;
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
+  const safeFilenamePiece = (value: unknown) =>
+    String(value ?? '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^\w\-]+/g, '_');
 
   const filteredDecisions = useMemo(() => {
     const query = searchTerm.toLowerCase();
@@ -102,51 +95,10 @@ const ManageDecisionsPage = () => {
     }
   };
 
-  const generateDecisionPdf = async (decision) => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const fontState = await preparePdfDoc(doc);
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPos = margin;
-
-    setPdfFont(doc, fontState, 'bold');
-    doc.setFontSize(16);
-    doc.text("BEM Church", pageWidth / 2, yPos, { align: 'center' });
-    yPos += 7;
-    setPdfFont(doc, fontState, 'normal');
-    doc.setFontSize(14);
-    doc.text("Decision Record", pageWidth / 2, yPos, { align: 'center' });
-    yPos += 10;
-
-    setPdfFont(doc, fontState, 'bold');
-    doc.setFontSize(12);
-    doc.text(decision.title || 'N/A', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    const addDetail = (label: string, value?: string) => {
-      const valueString = String(value ?? '').trim();
-      if (!valueString) return;
-      setPdfFont(doc, fontState, 'bold');
-      doc.text(`${label}: `, margin, yPos);
-      setPdfFont(doc, fontState, 'normal');
-      const labelWidth = doc.getTextWidth(`${label}: `);
-      doc.text(valueString, margin + labelWidth, yPos);
-      yPos += 6;
-    };
-
-    addDetail('Decision Date', formatDateADBS(decision.decisionDate));
-    addDetail('Made By', decision.madeBy);
-    addDetail('Status', decision.status);
-    addDetail('Description', decision.description);
-    addDetail('Recorded By', decision.postedByAdminName);
-    if (decision.createdAt) addDetail('Created At', formatTimestampADBS(decision.createdAt));
-
-    triggerPdfDownload(
-      doc,
-      `Decision_${(decision.title || 'Log').replace(/\s+/g, '_')}.pdf`
-    );
+  const downloadDecisionPdf = async (decision: DecisionLog) => {
+    const safeTitle = safeFilenamePiece(decision.title || 'Decision');
+    const shortId = String(decision.id || '').slice(0, 6) || 'id';
+    await downloadBackendPdf(`/api/pdfs/decisions/${decision.id}`, `Decision_${safeTitle}_${shortId}.pdf`);
   };
 
   const downloadAllDecisionsExcel = () => {
@@ -208,7 +160,7 @@ const ManageDecisionsPage = () => {
         )}
       </CardContent>
       <CardFooter className="flex gap-2">
-        <Button size="sm" onClick={() => generateDecisionPdf(decision)}>PDF</Button>
+        <Button size="sm" onClick={() => downloadDecisionPdf(decision)}>PDF</Button>
         <Button size="sm" onClick={() => handleOpenModal(decision)}>Edit</Button>
         <Button size="sm" variant="destructive" onClick={() => handleDelete(decision.id)}>Delete</Button>
       </CardFooter>
@@ -284,7 +236,7 @@ const ManageDecisionsPage = () => {
                 </span>
               </td>
               <td className="px-6 py-4 text-right space-x-2">
-                <Button size="sm" onClick={() => generateDecisionPdf(decision)}>PDF</Button>
+        <Button size="sm" onClick={() => downloadDecisionPdf(decision)}>PDF</Button>
                 <Button size="sm" onClick={() => handleOpenModal(decision)}>Edit</Button>
                 <Button size="sm" variant="destructive" onClick={() => handleDelete(decision.id)}>Delete</Button>
               </td>

@@ -12,7 +12,7 @@ function getFilenameFromContentDisposition(cd: string | null): string | null {
   return null;
 }
 
-export async function downloadBackendPdf(url: string) {
+export async function downloadBackendPdf(url: string, fallbackFilename?: string) {
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -30,7 +30,7 @@ export async function downloadBackendPdf(url: string) {
 
   const blob = await res.blob();
   const cd = res.headers.get("content-disposition");
-  const filename = getFilenameFromContentDisposition(cd) || "download.pdf";
+  const filename = getFilenameFromContentDisposition(cd) || fallbackFilename || "download.pdf";
 
   const blobUrl = window.URL.createObjectURL(blob);
   try {
