@@ -25,10 +25,33 @@ export const BS_MONTH_NAMES_NP = [
   "चैत्र",
 ];
 
+const BS_MONTH_NAMES_NP_SHORT = [
+  "बैशाख",
+  "जेठ",
+  "असार",
+  "श्राव",
+  "भदौ",
+  "आश्व",
+  "कार्त",
+  "मंसि",
+  "पौष",
+  "माघ",
+  "फाल्गु",
+  "चैत्र",
+];
+
 const resolveNepaliDate = (): any => NepaliDateConverter?.default ?? NepaliDateConverter;
 
+const resolveBsMonthIndex = (bs: any): number => {
+  const rawMonth = bs.getMonth?.();
+  if (rawMonth === undefined || rawMonth === null || Number.isNaN(rawMonth)) return 0;
+  if (rawMonth === 0) return 0;
+  if (rawMonth > 11) return rawMonth - 1;
+  return rawMonth;
+};
+
 const formatBSDate = (bs: any): string => {
-  const monthName = BS_MONTH_NAMES_NP[bs.getMonth?.() ?? 0] ?? "";
+  const monthName = BS_MONTH_NAMES_NP[resolveBsMonthIndex(bs)] ?? "";
   return `${monthName} ${bs.getDate?.() ?? ""}, ${bs.getYear?.() ?? ""} BS`.trim();
 };
 
@@ -56,7 +79,7 @@ const formatADShort = (adDate: Date): string => {
 };
 
 const formatBSShort = (bs: any): string => {
-  const monthName = BS_MONTH_NAMES_NP[bs.getMonth?.() ?? 0] ?? "";
+  const monthName = BS_MONTH_NAMES_NP_SHORT[resolveBsMonthIndex(bs)] ?? "";
   const day = padTwo(bs.getDate?.() ?? 0);
   const year = bs.getYear?.() ?? "";
   return `${monthName} - ${day} - ${year}`.trim();
