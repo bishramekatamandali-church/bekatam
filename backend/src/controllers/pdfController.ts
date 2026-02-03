@@ -41,7 +41,7 @@ function setPdfHeaders(res: Response, filename: string) {
   res.setHeader("Cache-Control", "no-store");
 }
 
-function createDoc(res: Response) {
+function createDoc(res: Response, options: { bufferPages?: boolean } = {}) {
   ensureFontExists(FONT_LATIN_REGULAR);
   ensureFontExists(FONT_DEVANAGARI_REGULAR);
   ensureFontExists(FONT_DEVANAGARI_BOLD);
@@ -49,7 +49,7 @@ function createDoc(res: Response) {
     console.warn("Emoji font missing, emoji rendering may be limited:", FONT_EMOJI_REGULAR);
   }
 
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: options.bufferPages ?? false });
   doc.pipe(res);
   doc.font(FONT_LATIN_REGULAR);
   return doc;
@@ -499,43 +499,172 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
       endDate?.toISOString().slice(0, 10) || "end"
     }.pdf`;
     setPdfHeaders(res, filename);
-    const doc = createDoc(res);
+    const doc = createDoc(res, { bufferPages: true });
 
-    doc.fontSize(18);
-    writeTextWithFallback(doc, "Financial Summary Report", { continued: false, align: "center" }, "bold");
-    doc.moveDown(0.5);
-
-    doc.fontSize(11);
+    const marginLeft = doc.page.margins.left;
+    const marginRight = doc.page.margins.right;
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const headerHeight = 58;
+    const footerHeight = 46;
+    const contentTop = doc.page.margins.top + headerHeight;
+    const contentBottom = pageHeight - doc.page.margins.bottom - footerHeight;
     const rangeLabel = `Date Range: ${startDate?.toISOString().slice(0, 10) || "Start"} to ${
       endDate?.toISOString().slice(0, 10) || "End"
     }`;
-    writeTextWithFallback(doc, rangeLabel, { continued: false, align: "center" });
-    doc.moveDown(0.8);
 
-    writeLine(doc, "Total Income: ", formatCurrency(totalIncome));
-    writeLine(doc, "Total Expense: ", formatCurrency(totalExpense));
-    writeLine(doc, "Net Balance: ", formatCurrency(totalIncome - totalExpense));
-    doc.moveDown(0.8);
+    const drawHeaderFooter = (pageNumber: number, totalPages: number) => {
+      const headerY = doc.page.margins.top - 10;
+      doc.save();
+      doc.fillColor("#0f172a");
+      doc.fontSize(16);
+      writeTextWithFallback(doc, "Financial Summary Report", { continued: false, align: "left" }, "bold");
+      doc.fontSize(9);
+      doc.fillColor("#475569");
+      doc.text(rangeLabel, marginLeft, headerY + 22, { align: "left" });
+      doc.text(`Page ${pageNumber} of ${totalPages}`, 0, headerY + 10, { align: "right" });
+      doc.moveTo(marginLeft, headerY + 40).lineTo(pageWidth - marginRight, headerY + 40).strokeColor("#cbd5f5").stroke();
+
+      const footerY = pageHeight - doc.page.margins.bottom + 12;
+      doc.strokeColor("#e2e8f0");
+      doc.moveTo(marginLeft, footerY - 8).lineTo(pageWidth - marginRight, footerY - 8).stroke();
+      doc.fillColor("#475569");
+      doc.fontSize(9);
+      doc.text(`Page ${pageNumber}`, 0, footerY, { align: "center" });
+      doc.restore();
+    };
+
+    doc.y = contentTop;
+
+    const summaryBoxTop = doc.y;
+    const summaryBoxPadding = 12;
+    const summaryBoxWidth = pageWidth - marginLeft - marginRight;
+    const summaryBoxHeight = 74;
+    doc.roundedRect(marginLeft, summaryBoxTop, summaryBoxWidth, summaryBoxHeight, 6).strokeColor("#cbd5f5").stroke();
+
+    doc.fontSize(11);
+    doc.fillColor("#0f172a");
+    const summaryLabelY = summaryBoxTop + summaryBoxPadding;
+    doc.text(`Total Income: ${formatCurrency(totalIncome)}`, marginLeft + summaryBoxPadding, summaryLabelY);
+    doc.text(
+      `Total Expense: ${formatCurrency(totalExpense)}`,
+      marginLeft + summaryBoxWidth / 2,
+      summaryLabelY,
+    );
+    doc.text(`Net Balance: ${formatCurrency(totalIncome - totalExpense)}`, marginLeft + summaryBoxPadding, summaryLabelY + 24);
+    doc.text(
+      `Generated at: ${formatLocalTimestamp()}`,
+      marginLeft + summaryBoxWidth / 2,
+      summaryLabelY + 24,
+    );
+
+    doc.y = summaryBoxTop + summaryBoxHeight + 18;
 
     doc.fontSize(12);
-    writeTextWithFallback(doc, "Transactions:", { continued: false }, "bold");
+    writeTextWithFallback(doc, "Transactions", { continued: false }, "bold");
     doc.moveDown(0.4);
 
-    doc.fontSize(10);
+    const tableStartX = marginLeft;
+    const tableWidth = pageWidth - marginLeft - marginRight;
+    const columns = [
+      { key: "date", label: "Date", width: 0.16 },
+      { key: "type", label: "Type", width: 0.12 },
+      { key: "category", label: "Category", width: 0.18 },
+      { key: "description", label: "Description", width: 0.38 },
+      { key: "amount", label: "Amount", width: 0.16 },
+    ];
+    const columnWidths = columns.map((col) => col.width * tableWidth);
+    const columnPositions = columnWidths.reduce<number[]>((acc, width, idx) => {
+      const prev = acc[idx - 1] ?? tableStartX;
+      acc.push(idx === 0 ? tableStartX : prev + columnWidths[idx - 1]);
+      return acc;
+    }, []);
+
+    const drawTableHeader = () => {
+      const headerY = doc.y;
+      const headerHeight = 22;
+      doc.rect(tableStartX, headerY, tableWidth, headerHeight).fillAndStroke("#f1f5f9", "#cbd5f5");
+      doc.fillColor("#0f172a");
+      doc.fontSize(10);
+      columns.forEach((col, idx) => {
+        const x = columnPositions[idx] + 6;
+        doc.text(col.label, x, headerY + 6, { width: columnWidths[idx] - 12, align: "left" });
+      });
+      doc.strokeColor("#cbd5f5");
+      columns.slice(1).forEach((_, idx) => {
+        const x = columnPositions[idx + 1];
+        doc.moveTo(x, headerY).lineTo(x, headerY + headerHeight).stroke();
+      });
+      doc.y = headerY + headerHeight;
+    };
+
+    const ensureSpaceForRow = (rowHeight: number) => {
+      if (doc.y + rowHeight > contentBottom) {
+        doc.addPage();
+        doc.y = contentTop;
+        drawTableHeader();
+      }
+    };
+
+    drawTableHeader();
+    doc.fontSize(9);
+    doc.fillColor("#1f2937");
+
     if (!transactionLog.length) {
-      writeTextWithFallback(doc, "No transactions found for the selected period.", { continued: false });
+      const rowHeight = 22;
+      ensureSpaceForRow(rowHeight);
+      const rowY = doc.y;
+      doc.text("No transactions found for the selected period.", tableStartX + 6, rowY + 6, {
+        width: tableWidth - 12,
+        align: "left",
+      });
+      doc.moveTo(tableStartX, rowY).lineTo(tableStartX + tableWidth, rowY).strokeColor("#e2e8f0").stroke();
+      doc.y = rowY + rowHeight;
+      doc.moveTo(tableStartX, doc.y).lineTo(tableStartX + tableWidth, doc.y).strokeColor("#cbd5f5").stroke();
     } else {
-      transactionLog.forEach((item) => {
-        const line = `${formatDateADBSShort(item.date)} | ${item.type} | ${item.category} | ${item.description} | ${formatCurrency(
-          item.amount
-        )}`;
-        writeTextWithFallback(doc, line, { continued: false });
+      transactionLog.forEach((item, index) => {
+        const rowData = [
+          formatDateADBSShort(item.date),
+          item.type,
+          item.category,
+          item.description,
+          formatCurrency(item.amount),
+        ];
+        const cellHeights = rowData.map((text, idx) =>
+          doc.heightOfString(text || "-", { width: columnWidths[idx] - 12, align: "left" }),
+        );
+        const rowHeight = Math.max(18, ...cellHeights) + 8;
+        ensureSpaceForRow(rowHeight);
+        const rowY = doc.y;
+
+        doc.strokeColor("#e2e8f0");
+        doc.moveTo(tableStartX, rowY).lineTo(tableStartX + tableWidth, rowY).stroke();
+
+        rowData.forEach((text, idx) => {
+          const x = columnPositions[idx] + 6;
+          const width = columnWidths[idx] - 12;
+          const align = idx === rowData.length - 1 ? "right" : "left";
+          doc.text(text || "-", x, rowY + 4, { width, align });
+          doc.strokeColor("#e2e8f0");
+          doc.moveTo(columnPositions[idx], rowY).lineTo(columnPositions[idx], rowY + rowHeight).stroke();
+        });
+        doc.moveTo(tableStartX + tableWidth, rowY).lineTo(tableStartX + tableWidth, rowY + rowHeight).stroke();
+
+        doc.y = rowY + rowHeight;
+
+        const isLastRow = index === transactionLog.length - 1;
+        if (isLastRow) {
+          doc.moveTo(tableStartX, doc.y).lineTo(tableStartX + tableWidth, doc.y).strokeColor("#cbd5f5").stroke();
+        }
       });
     }
 
-    doc.moveDown(0.6);
-    doc.fontSize(9);
-    writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i += 1) {
+      doc.switchToPage(i);
+      drawHeaderFooter(i + 1, range.count);
+    }
+
     doc.end();
   } catch (err) {
     console.error("getFinancialSummaryPdf error:", err);
