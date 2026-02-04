@@ -41,6 +41,7 @@ const shapeTestimonialForFrontend = (item: any): any => {
         submittedAt: rest.submittedAt ? new Date(rest.submittedAt).toISOString() : null,
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
+        moderatedAt: rest.moderatedAt ? new Date(rest.moderatedAt).toISOString() : null,
         mediaUrls: rest.mediaUrls || [],
     });
 };
@@ -49,6 +50,7 @@ const shapeTestimonialForFrontend = (item: any): any => {
 router.get('/', async (req, res) => {
     try {
         const testimonials = await prisma.testimonial.findMany({
+          where: { isDeleted: false },
           include: { comment: true },  
           orderBy: { submittedAt: 'desc' },
         });
@@ -61,12 +63,20 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST a new testimonial (admin only)
+// POST a new testimonial (registered users)
 router.post('/', authMiddleware, async (req, res) => {
-    if (!ensureAdmin(req, res)) return;
-    const { title, contentText, visibility, mediaUrls, location, postedByAdminId, postedByAdminName, userId, userName, userProfileImageUrl } = req.body;
+    const requestUser = (req as any).user;
+    if (!requestUser?.id) {
+        return res.status(401).json({ error: 'Authentication required to submit a testimonial.' });
+    }
+    const { title, contentText, visibility, mediaUrls, location } = req.body;
 
     try {
+        const user = await prisma.user.findUnique({ where: { id: requestUser.id } });
+        if (!user) {
+            return res.status(401).json({ error: 'User account not found.' });
+        }
+        const isAdmin = requestUser.role === 'admin';
         const newTestimonial = await prisma.testimonial.create({
             data: {
                 id: crypto.randomUUID(), // REQUIRED in your schema
@@ -76,11 +86,11 @@ router.post('/', authMiddleware, async (req, res) => {
                 visibility: visibility as testimonial_visibility,
                 mediaUrls: mediaUrls || undefined,
                 location,
-                postedByAdminId,
-                postedByAdminName,
-                userId,
-                userName,
-                userProfileImageUrl,
+                postedByAdminId: isAdmin ? requestUser.id : undefined,
+                postedByAdminName: isAdmin ? requestUser.fullName : undefined,
+                userId: user.id,
+                userName: user.fullName,
+                userProfileImageUrl: user.profileImageUrl || undefined,
             }
         });
         res.status(201).json(shapeTestimonialForFrontend(newTestimonial));
@@ -93,15 +103,23 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
-    const { title, contentText, visibility } = req.body;
+    const { title, contentText, visibility, moderationReason } = req.body;
+    if (!moderationReason || !String(moderationReason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required for testimonial edits.' });
+    }
     
     try {
+        const adminUser = (req as any).user;
         const updatedTestimonial = await prisma.testimonial.update({
             where: { id },
             data: {
                 title,
                 contentText,
                 visibility: visibility as testimonial_visibility,
+                moderationReason: String(moderationReason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             }
         });
@@ -118,9 +136,24 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required to delete a testimonial.' });
+    }
     try {
-        await prisma.testimonial.delete({ where: { id } });
-        res.status(204).send();
+        const adminUser = (req as any).user;
+        const updatedTestimonial = await prisma.testimonial.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+                moderationReason: String(reason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
+                updatedAt: new Date(),
+            }
+        });
+        res.json(shapeTestimonialForFrontend(updatedTestimonial));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Testimonial not found.' });

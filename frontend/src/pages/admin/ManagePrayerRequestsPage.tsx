@@ -5,6 +5,7 @@ import { PrayerRequest, PrayerRequestStatus, prayerRequestStatusList, PrayerRequ
 import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import AdminDeleteModal from '../../components/admin/AdminDeleteModal';
 import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
 
 const ITEMS_PER_PAGE = 10;
@@ -24,6 +25,9 @@ const ManagePrayerRequestsPage: React.FC = () => {
 
   const [newStatus, setNewStatus] = useState<PrayerRequestStatus>('active');
   const [adminNotes, setAdminNotes] = useState('');
+  const [moderationReason, setModerationReason] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<PrayerRequest | null>(null);
 
   const filteredAndSortedRequests = useMemo(() => {
     return prayerRequests
@@ -55,12 +59,18 @@ const ManagePrayerRequestsPage: React.FC = () => {
     setSelectedRequest(request);
     setNewStatus(request.status);
     setAdminNotes(request.adminNotes || '');
+    setModerationReason(request.moderationReason || '');
     setIsProcessModalOpen(true);
   };
   
   const handleUpdateStatus = async () => {
     if (!selectedRequest || !currentUser) return;
-    const success = await updatePrayerRequestStatusByAdmin(selectedRequest.id, newStatus, adminNotes);
+    const trimmedReason = moderationReason.trim();
+    if (!trimmedReason) {
+      alert('Please provide a public reason for this status update.');
+      return;
+    }
+    const success = await updatePrayerRequestStatusByAdmin(selectedRequest.id, newStatus, adminNotes, trimmedReason);
     if (success) {
       alert('Prayer request status updated successfully.');
       setIsProcessModalOpen(false);
@@ -70,10 +80,16 @@ const ManagePrayerRequestsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this prayer request? This action cannot be undone.')) {
-      await deleteContent('prayerRequest', id);
-    }
+  const handleDelete = (request: PrayerRequest) => {
+    setRequestToDelete(request);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (reason: string) => {
+    if (!requestToDelete) return;
+    await deleteContent('prayerRequest', requestToDelete.id, reason);
+    setIsDeleteModalOpen(false);
+    setRequestToDelete(null);
   };
   
   const getStatusColor = (status: PrayerRequestStatus) => {
@@ -151,7 +167,7 @@ const ManagePrayerRequestsPage: React.FC = () => {
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-2">
                         <Button variant="outline" size="sm" onClick={() => openViewModal(pr)} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">View</Button>
                         <Button variant="primary" size="sm" onClick={() => openProcessModal(pr)}>Update Status</Button>
-                        <Button variant="secondary" size="sm" onClick={() => handleDelete(pr.id)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
+                        <Button variant="secondary" size="sm" onClick={() => handleDelete(pr)} className="!bg-red-500 hover:!bg-red-600 text-white">Delete</Button>
                       </td>
                     </tr>
                   ))}
@@ -192,6 +208,14 @@ const ManagePrayerRequestsPage: React.FC = () => {
                     </div>
                 </div>
             )}
+            {selectedRequest.moderationReason && (
+                <div>
+                    <p className="font-medium"><strong>Public Reason:</strong></p>
+                    <div className="mt-1 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded max-h-32 overflow-y-auto whitespace-pre-line">
+                        {selectedRequest.moderationReason}
+                    </div>
+                </div>
+            )}
             <div className="flex justify-end space-x-2 pt-4 border-t dark:border-slate-600">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">Close</Button>
               <Button variant="primary" onClick={() => { setIsViewModalOpen(false); openProcessModal(selectedRequest); }}>Update Status</Button>
@@ -225,12 +249,32 @@ const ManagePrayerRequestsPage: React.FC = () => {
                 placeholder="Internal notes about this status update..."
               />
             </div>
+            <div>
+              <label htmlFor="moderationReason" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Public Reason</label>
+              <textarea
+                id="moderationReason"
+                value={moderationReason}
+                onChange={(e) => setModerationReason(e.target.value)}
+                rows={3}
+                className="mt-1 w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-slate-200 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Explain the reason for this status update..."
+              />
+            </div>
             <div className="flex justify-end space-x-2 pt-3 border-t dark:border-slate-600">
               <Button variant="outline" onClick={() => setIsProcessModalOpen(false)} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">Cancel</Button>
               <Button variant="primary" onClick={handleUpdateStatus}>Save Status</Button>
             </div>
           </div>
         </Modal>
+      )}
+      {isDeleteModalOpen && requestToDelete && (
+        <AdminDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleConfirmDelete}
+          itemName={requestToDelete.title}
+          isSubmitting={loadingContent}
+        />
       )}
     </div>
   );
