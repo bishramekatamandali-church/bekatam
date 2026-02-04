@@ -403,6 +403,7 @@ export const getChurchMemberPdf = async (req: Request, res: Response) => {
     if (member.dateOfBirth) writeLine(doc, "Date of Birth: ", formatDateADBS(member.dateOfBirth));
     if (member.baptismDate) writeLine(doc, "Baptism Date: ", formatDateADBS(member.baptismDate));
     writeLine(doc, "Member Status: ", member.memberStatus || (member.isActiveMember ? "Active" : "Left"));
+    if (member.deactivatedDate) writeLine(doc, "Deactivated/Left Date: ", formatDateADBS(member.deactivatedDate));
     if (member.familyMembers) writeLine(doc, "Family Members: ", member.familyMembers);
     if (member.notes) writeBlock(doc, "Notes:", member.notes);
 

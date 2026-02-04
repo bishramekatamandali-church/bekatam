@@ -15,7 +15,7 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { userId, fullName, username, contactPhone, contactEmail, address, memberSince, dateOfBirth, baptismDate, familyMembers, notes, isActiveMember, memberStatus, profileImageUrl, postedByAdminId, postedByAdminName } = req.body;
+  const { userId, fullName, username, contactPhone, contactEmail, address, memberSince, dateOfBirth, baptismDate, familyMembers, notes, isActiveMember, memberStatus, deactivatedDate, profileImageUrl, postedByAdminId, postedByAdminName } = req.body;
 
   if (!fullName || !memberSince) {
     return res.status(400).json({ error: 'Full name and member since date are required.' });
@@ -41,6 +41,7 @@ router.post('/', async (req, res) => {
         notes,
         isActiveMember: resolvedIsActive,
         memberStatus: resolvedMemberStatus,
+        deactivatedDate: deactivatedDate ? new Date(deactivatedDate) : null,
         profileImageUrl,
         postedByAdminId,
         postedByAdminName,
@@ -55,7 +56,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { userId, fullName, username, contactPhone, contactEmail, address, memberSince, dateOfBirth, baptismDate, familyMembers, notes, isActiveMember, memberStatus, profileImageUrl, postedByAdminId, postedByAdminName } = req.body;
+  const { userId, fullName, username, contactPhone, contactEmail, address, memberSince, dateOfBirth, baptismDate, familyMembers, notes, isActiveMember, memberStatus, deactivatedDate, profileImageUrl, postedByAdminId, postedByAdminName } = req.body;
 
   try {
     const resolvedMemberStatus = memberStatus || (isActiveMember ? 'Active' : 'Left');
@@ -77,6 +78,7 @@ router.put('/:id', async (req, res) => {
         notes,
         isActiveMember: resolvedIsActive,
         memberStatus: resolvedMemberStatus,
+        deactivatedDate: deactivatedDate ? new Date(deactivatedDate) : null,
         profileImageUrl,
         postedByAdminId,
         postedByAdminName,

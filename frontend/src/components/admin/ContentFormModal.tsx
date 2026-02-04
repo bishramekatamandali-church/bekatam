@@ -478,6 +478,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     memberSince: new Date().toISOString().split('T')[0],
     isActiveMember: true,
     memberStatus: churchMemberStatusList[0],
+    deactivatedDate: '',
     dateOfBirth: '',
     baptismDate: '',
     contactEmail: '',
@@ -1403,6 +1404,9 @@ const updateActionItem = (
       const status = String(memberData.memberStatus || '').toLowerCase();
       if (status) {
         memberData.isActiveMember = status === 'active';
+        if (status === 'active') {
+          memberData.deactivatedDate = undefined;
+        }
       }
     }
 
@@ -3799,6 +3803,11 @@ const updateActionItem = (
 
       case 'churchMember': {
         const data = formData as ChurchMemberFormData;
+        const statusValue = String(data.memberStatus || '').toLowerCase();
+        const showDeactivatedDate =
+          statusValue === 'deactivated' ||
+          statusValue === 'left' ||
+          statusValue === 'shifted to other church';
 
         return (
           <>
@@ -3838,6 +3847,8 @@ const updateActionItem = (
                   ))}
                 </select>
               </div>
+
+              {showDeactivatedDate && renderDateFieldWithBSPicker('deactivatedDate', 'Deactivated/Left Date')}
             </FormSection>
 
             <FormSection title="Contact Information">
