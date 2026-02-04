@@ -4,8 +4,7 @@ import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import { useContent } from '../contexts/ContentContext';
 import { donationPurposeList, DonationRecord } from '../types';
 import { formatDateADBS } from '../dateConverter';
-import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../utils/pdfFonts';
+import { downloadBackendPdf } from '../utils/downloadBackendPdf';
 import { useAuth } from '../contexts/AuthContext';
 
 const HeartIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -78,18 +77,7 @@ const DonationReceipt: React.FC<{ record: DonationRecord; verses?: string; onMak
 
   const handlePrint = () => window.print();
   const handleDownload = async () => {
-    const doc = new jsPDF();
-    await preparePdfDoc(doc);
-    doc.text(`Donation Receipt`, 10, 10);
-    doc.text(`Thank you, ${record.donorName}!`, 10, 20);
-    doc.text(`Amount: NPR ${Number(record.amount ?? 0).toFixed(2)}`, 10, 30);
-    doc.text(`Purpose: ${record.purpose}`, 10, 40);
-    doc.text(`Date: ${formatDateADBS(record.donationDate)}`, 10, 50);
-    doc.text(`Transaction ID: ${record.id}`, 10, 60);
-    if (randomVerse) {
-      doc.text(doc.splitTextToSize(randomVerse, 180), 10, 70);
-    }
-    doc.save(`Donation_Receipt_${record.id}.pdf`);
+    await downloadBackendPdf(`/api/donation-records/${record.id}/receipt.pdf`, `Donation_Receipt_${record.id}.pdf`);
   };
 
   return (

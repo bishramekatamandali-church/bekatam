@@ -448,6 +448,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     meetingLogs: meetingLogs as MeetingLog[],
     decisionLogs: decisionLogs as DecisionLog[],
     advertisements: advertisements as Advertisement[],
+    churchMembers: churchMembers as ChurchMember[],
   });
 
   const dataFetchConfig = useMemo(() => ([
@@ -473,6 +474,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     { key: 'meeting-logs', setter: setMeetingLogs, storageKey: 'bem_meetingLogs', getCurrent: () => contentRef.current.meetingLogs },
     { key: 'decision-logs', setter: setDecisionLogs, storageKey: 'bem_decisionLogs', getCurrent: () => contentRef.current.decisionLogs },
     { key: 'advertisements', setter: setAdvertisements, storageKey: 'bem_advertisements', getCurrent: () => contentRef.current.advertisements },
+    { key: 'church-members', setter: setChurchMembers, storageKey: 'bem_churchMembers', getCurrent: () => contentRef.current.churchMembers },
  ]), []);
 
   const fetchContentBatch = useCallback(async (setLoading: boolean) => {
@@ -825,9 +827,9 @@ const nowTimestamp = new Date().toISOString();
   useEffect(() => { contentRef.current.meetingLogs = meetingLogs; saveStoredData('bem_meetingLogs', meetingLogs); }, [meetingLogs]);
   useEffect(() => { contentRef.current.decisionLogs = decisionLogs; saveStoredData('bem_decisionLogs', decisionLogs); }, [decisionLogs]);
   useEffect(() => { contentRef.current.advertisements = advertisements; saveStoredData('bem_advertisements', advertisements); }, [advertisements]);
+  useEffect(() => { contentRef.current.churchMembers = churchMembers; saveStoredData('bem_churchMembers', churchMembers); }, [churchMembers]);
   useEffect(() => { saveStoredData('bem_fellowshipRosters', fellowshipRosters); }, [fellowshipRosters]);
   useEffect(() => { saveStoredData('bem_generatedSchedules', generatedSchedules); }, [generatedSchedules]);
-  useEffect(() => { saveStoredData('bem_churchMembers', churchMembers); }, [churchMembers]);
   useEffect(() => { saveStoredData('bem_expenseRecords', expenseRecords); }, [expenseRecords]);
   useEffect(() => { saveStoredData('bem_content_activity_logs', contentActivityLogs); }, [contentActivityLogs]);
 
@@ -857,9 +859,12 @@ const nowTimestamp = new Date().toISOString();
   }, [currentUser]);
 
   const addContent = async (type: ContentType, data: GenericContentFormData): Promise<{ success: boolean; newItem?: ContentItem; message?: string }> => {
-    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest', 'donation'];
+    const allowedForNonAdmins: ContentType[] = ['contactMessage', 'ministryJoinRequest', 'donation', 'prayerRequest', 'testimonial'];
     if (!isAdmin && !allowedForNonAdmins.includes(type)) {
         return { success: false, message: 'Only administrators can create this type of content.' };
+    }
+    if ((type === 'prayerRequest' || type === 'testimonial') && !currentUser) {
+      return { success: false, message: 'Please log in to submit a prayer request or testimonial.' };
     }
     const contentTypeToEndpoint: Partial<Record<ContentType, string>> = {
     sermon: 'sermons',
@@ -883,6 +888,7 @@ const nowTimestamp = new Date().toISOString();
     meetingLog: 'meeting-logs',
     decisionLog: 'decision-logs',
     advertisement: 'advertisements',
+    churchMember: 'church-members',
     fellowshipRoster: 'fellowship-schedules/rosters',
     generatedSchedule: 'fellowship-schedules/generated',
 };
@@ -933,7 +939,7 @@ const nowTimestamp = new Date().toISOString();
                       : type === 'generatedSchedule'
                         ? (normalizeGeneratedScheduleItem(newItem) as ContentItem)
                         : newItem;
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements, fellowshipRoster: setFellowshipRosters, generatedSchedule: setGeneratedSchedules };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements, churchMember: setChurchMembers, fellowshipRoster: setFellowshipRosters, generatedSchedule: setGeneratedSchedules };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => [normalizedNewItem, ...ensureArray(prev)]);
@@ -1142,7 +1148,7 @@ const nowTimestamp = new Date().toISOString();
  directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials',
  donation: 'donation-records', collectionRecord: 'collection-records', contactMessage: 'contact-messages',
  ministryJoinRequest: 'ministry-join-requests', meetingLog: 'meeting-logs', decisionLog: 'decision-logs',
- advertisement: 'advertisements', fellowshipRoster: 'fellowship-schedules/rosters', generatedSchedule: 'fellowship-schedules/generated' };
+ advertisement: 'advertisements', churchMember: 'church-members', fellowshipRoster: 'fellowship-schedules/rosters', generatedSchedule: 'fellowship-schedules/generated' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
@@ -1203,6 +1209,7 @@ const nowTimestamp = new Date().toISOString();
           meetingLog: setMeetingLogs,
           decisionLog: setDecisionLogs,
           advertisement: setAdvertisements,
+          churchMember: setChurchMembers,
         };
         const setter = setterMap[type];
         if (setter) {
@@ -1267,14 +1274,19 @@ const nowTimestamp = new Date().toISOString();
     return { success, updatedItem, message };
   }
 
-  const deleteContent = async (type: ContentType, id: string): Promise<boolean> => {
-    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages', meetingLog: 'meeting-logs', decisionLog: 'decision-logs', advertisement: 'advertisements' };
+  const deleteContent = async (type: ContentType, id: string, reason?: string): Promise<boolean> => {
+    const contentTypeToEndpoint: Partial<Record<ContentType, string>> = { sermon: 'sermons', event: 'events', ministry: 'ministries', blogPost: 'blogposts', news: 'newsitems', aboutSection: 'aboutsections', keyPerson: 'keypersons', historyMilestone: 'historymilestones', historyChapter: 'historychapters', branchChurch: 'branchchurches', directMedia: 'direct-media', prayerRequest: 'prayer-requests', testimonial: 'testimonials', donation: 'donation-records', collectionRecord: 'collection-records', ministryJoinRequest: 'ministry-join-requests', contactMessage: 'contact-messages', meetingLog: 'meeting-logs', decisionLog: 'decision-logs', advertisement: 'advertisements', churchMember: 'church-members' };
     const endpoint = contentTypeToEndpoint[type];
     if (endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+            const shouldSendReason = Boolean(reason && reason.trim());
+            const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
+              method: 'DELETE',
+              headers: { ...getAuthHeaders(), ...(shouldSendReason ? { 'Content-Type': 'application/json' } : {}) },
+              body: shouldSendReason ? JSON.stringify({ reason }) : undefined,
+            });
             if (!response.ok && response.status !== 204) throw new Error(`Failed to delete ${type} from server`);
-            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements };
+            const setterMap: Record<string, Function> = { sermon: setSermons, event: setEvents, ministry: setMinistries, blogPost: setBlogPosts, news: setNewsItems, aboutSection: setAboutSections, keyPerson: setKeyPersons, historyMilestone: setHistoryMilestones, historyChapter: setHistoryChapters, branchChurch: setBranchChurches, directMedia: setDirectMediaItems, prayerRequest: setPrayerRequests, testimonial: setTestimonials, donation: setDonationRecords, collectionRecord: setCollectionRecords, ministryJoinRequest: setMinistryJoinRequests, meetingLog: setMeetingLogs, decisionLog: setDecisionLogs, advertisement: setAdvertisements, churchMember: setChurchMembers };
             const setter = setterMap[type];
             if (setter) {
               setter((prev: any[]) => ensureArray(prev).filter(item => item.id !== id));
@@ -1648,9 +1660,9 @@ const nowTimestamp = new Date().toISOString();
           return true;
       } catch (error) { return false; }
   };
-  const updatePrayerRequestStatusByAdmin = async (id: string, status: PrayerRequestStatus, adminNotes?: string): Promise<boolean> => {
+  const updatePrayerRequestStatusByAdmin = async (id: string, status: PrayerRequestStatus, adminNotes?: string, moderationReason?: string): Promise<boolean> => {
       try {
-          const response = await fetch(`${API_BASE_URL}/prayer-requests/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ status, adminNotes }) });
+          const response = await fetch(`${API_BASE_URL}/prayer-requests/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ status, adminNotes, moderationReason }) });
           if (!response.ok) throw new Error('Failed to update status');
           const updatedRequest = await response.json();
           setPrayerRequests(prev => prev.map(pr => pr.id === id ? updatedRequest : pr));
@@ -1659,7 +1671,8 @@ const nowTimestamp = new Date().toISOString();
   };
   const updatePrayerRequestStatusByUser = async (id: string, status: PrayerRequestStatus): Promise<boolean> => {
       if(status !== 'answered' && status !== 'active') return false;
-      return updatePrayerRequestStatusByAdmin(id, status);
+      const fallbackReason = isAdmin ? 'Status updated by administrator.' : undefined;
+      return updatePrayerRequestStatusByAdmin(id, status, undefined, fallbackReason);
   };
  
   const updateGeneratedSchedule = async (id: string, data: Partial<GeneratedScheduleItem>): Promise<boolean> => {

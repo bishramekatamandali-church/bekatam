@@ -1,4 +1,5 @@
-import { applyPdfFont, pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts"; 
+import { pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
+import { formatDateADBS, formatDateADBSShort } from "../utils/dateFormatters"; 
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
@@ -28,14 +29,6 @@ type RefinedDonorEntry = {
   totalAmount: number;
   purposes: string[];
   mergedCount: number;
-};
-
-const formatDate = (date: Date) => {
-  try {
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
-  } catch {
-    return date.toISOString().split('T')[0];
-  }
 };
 
 const parseDateParam = (value?: string) => {
@@ -179,7 +172,11 @@ const buildRefinedDonorList = (donors: DonorListEntry[]): RefinedDonorEntry[] =>
 };
 
 const buildDonorListPdfBuffer = (
-  title: string,
+  params: {
+    title: string;
+    churchName: string;
+    dateRangeLabel: string;
+  },
   donors: DonorListEntry[],
   refinedDonors: RefinedDonorEntry[]
 ): Promise<Buffer> => {
@@ -198,8 +195,15 @@ const buildDonorListPdfBuffer = (
       };
 
       // Title
-      applyPdfFont(doc, fontRegistry, title);
-      doc.fontSize(18).text(title, { align: 'center' });
+      doc.fontSize(18);
+      line(params.churchName, { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(14);
+      line(params.title, { align: 'center' });
+      doc.moveDown(0.2);
+      doc.fontSize(11).fillColor('#555555');
+      line(params.dateRangeLabel, { align: 'center' });
+      doc.fillColor('#000000');
       doc.moveDown(1);
 
       // Donors list
@@ -210,8 +214,8 @@ const buildDonorListPdfBuffer = (
           doc.moveDown(0.6);
         }
 
-        applyPdfFont(doc, fontRegistry, donor.donorName);
-        doc.fontSize(12).text(donor.donorName);
+        doc.fontSize(12);
+        line(donor.donorName);
 
         doc.fontSize(10).fillColor('#555555');
         if (donor.address) line(`Address: ${donor.address}`);
@@ -223,9 +227,9 @@ const buildDonorListPdfBuffer = (
           doc.moveDown(0.3);
           donor.donations.forEach((donation) => {
             const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : '';
-            const bullet = `• ${formatDate(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
-            applyPdfFont(doc, fontRegistry, bullet);
-            doc.fontSize(9).text(bullet);
+            const bullet = `• ${formatDateADBS(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
+            doc.fontSize(9);
+            line(bullet);
           });
         }
       });
@@ -234,8 +238,8 @@ const buildDonorListPdfBuffer = (
       if (refinedDonors.length > 0) {
         doc.addPage();
         const heading = 'Refined donors list';
-        applyPdfFont(doc, fontRegistry, heading);
-        doc.fontSize(16).text(heading);
+        doc.fontSize(16);
+        line(heading);
         doc.moveDown(0.6);
 
         refinedDonors.forEach((donor, index) => {
@@ -272,7 +276,7 @@ const buildDonorListXml = (title: string, donors: DonorListEntry[], refinedDonor
         .map(
           (donation) =>
             `      <donation>
-        <date>${donation.date.toISOString()}</date>
+        <date>${formatDateADBS(donation.date)}</date>
         <amount>${donation.amount.toFixed(2)}</amount>
         <collectionId>${safeXmlText(donation.collectionId)}</collectionId>
         <purpose>${safeXmlText(donation.purpose)}</purpose>
@@ -405,14 +409,25 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
       .flat()
       .sort((a, b) => b.totalAmount - a.totalAmount);
     const titleParts = [
-      start ? formatDate(start) : 'All time',
-      end ? formatDate(end) : 'Present',
+      start ? formatDateADBS(start) : 'All time',
+      end ? formatDateADBS(end) : 'Present',
     ];
     const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
+    const dateRangeLabel = `${start ? formatDateADBSShort(start) : 'Start'} to ${
+      end ? formatDateADBSShort(end) : 'Present'
+    }`;
     const refinedDonors = buildRefinedDonorList(donors);
 
     if (format === 'pdf') {
-      const pdfBuffer = await buildDonorListPdfBuffer(title, donors, refinedDonors);
+      const pdfBuffer = await buildDonorListPdfBuffer(
+        {
+          title,
+          churchName: 'Bishram Ekata Mandali',
+          dateRangeLabel,
+        },
+        donors,
+        refinedDonors
+      );
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.pdf"');
       return res.status(200).send(pdfBuffer);

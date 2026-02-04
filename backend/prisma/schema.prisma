@@ -104,13 +104,17 @@ model churchmember {
   baptismDate       DateTime?
   familyMembers     String?   @db.Text
   notes             String?   @db.Text
+  memberStatus      String    @default("Active")
   isActiveMember    Boolean
+  deactivatedDate   DateTime?
   profileImageUrl   String?   @db.Text
   postedByAdminId   String?
   postedByAdminName String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime
   user              user?     @relation(fields: [userId], references: [id], map: "ChurchMember_userId_fkey")
+  
+  @@map("ChurchMember")
 }
 
 model collectionrecord {
@@ -665,6 +669,11 @@ model prayerrequest {
   submittedAt         DateTime                 @default(now())
   lastPrayedAt        DateTime?
   adminNotes          String?                  @db.Text
+  moderationReason    String?                  @db.Text
+  moderatedAt         DateTime?
+  moderatedByAdminId  String?
+  moderatedByAdminName String?
+  isDeleted           Boolean                  @default(false)
   postedByAdminId     String?
   postedByAdminName   String?
   createdAt           DateTime                 @default(now())
@@ -724,6 +733,11 @@ model testimonial {
   contentText         String                 @db.Text
   visibility          testimonial_visibility
   submittedAt         DateTime               @default(now())
+  moderationReason    String?                @db.Text
+  moderatedAt         DateTime?
+  moderatedByAdminId  String?
+  moderatedByAdminName String?
+  isDeleted           Boolean                @default(false)
   postedByAdminId     String?
   postedByAdminName   String?
   createdAt           DateTime               @default(now())

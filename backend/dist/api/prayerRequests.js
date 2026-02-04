@@ -49,12 +49,14 @@ const shapePrayerRequestForFrontend = (item) => {
         submittedAt: rest.submittedAt ? new Date(rest.submittedAt).toISOString() : null,
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
+        moderatedAt: rest.moderatedAt ? new Date(rest.moderatedAt).toISOString() : null,
     };
 };
 // GET all prayer requests
 router.get('/', async (req, res) => {
     try {
         const requests = await db_1.prisma.prayerrequest.findMany({
+            where: { isDeleted: false },
             include: {
                 comment: true,
                 prayer: true,
@@ -70,28 +72,47 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch prayer requests" });
     }
 });
-// POST a new prayer request (admin only)
+// POST a new prayer request (all registered users)
 router.post('/', auth_1.authMiddleware, async (req, res) => {
-    if (!ensureAdmin(req, res))
-        return;
-    const { title, requestText, visibility, category, mediaUrls, location, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
+    const requestUser = req.user;
+    if (!requestUser?.id) {
+        return res.status(401).json({ error: 'Authentication required to submit a prayer request.' });
+    }
+    const { title, requestText, visibility, category, mediaUrls, location } = req.body;
+    const trimmedTitle = String(title || '').trim();
+    const trimmedRequestText = String(requestText || '').trim();
+    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    if (!trimmedRequestText && !hasMedia) {
+        return res.status(400).json({ error: 'Prayer request text or media is required.' });
+    }
+    const resolvedVisibility = Object.values(client_1.prayerrequest_visibility).includes(visibility)
+        ? visibility
+        : client_1.prayerrequest_visibility.public;
+    const resolvedCategory = Object.values(client_1.prayerrequest_category).includes(category)
+        ? category
+        : client_1.prayerrequest_category.Other;
     try {
+        const user = await db_1.prisma.user.findUnique({ where: { id: requestUser.id } });
+        if (!user) {
+            return res.status(401).json({ error: 'User account not found.' });
+        }
+        const isAdmin = requestUser.role === 'admin';
         const newRequest = await db_1.prisma.prayerrequest.create({
             data: {
                 id: crypto_1.default.randomUUID(), // REQUIRED in your schema
                 updatedAt: new Date(), // REQUIRED
-                title,
-                requestText,
-                visibility: visibility,
-                category,
+                title: trimmedTitle || trimmedRequestText.split(' ').slice(0, 7).join(' ') || 'Prayer Request',
+                requestText: trimmedRequestText,
+                visibility: resolvedVisibility,
+                category: resolvedCategory,
                 status: 'active',
                 mediaUrls: mediaUrls || undefined,
                 location,
-                postedByAdminId,
-                postedByAdminName,
-                userProfileImageUrl,
-                userName,
-                userId,
+                postedByAdminId: isAdmin ? requestUser.id : undefined,
+                postedByAdminName: isAdmin ? requestUser.fullName : undefined,
+                userProfileImageUrl: user.profileImageUrl || undefined,
+                userName: user.fullName,
+                userId: user.id,
             }
         });
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
@@ -105,16 +126,24 @@ router.put('/:id/status', auth_1.authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res))
         return;
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
+    const { status, adminNotes, moderationReason } = req.body;
     if (!Object.values(client_1.prayerrequest_status).includes(status)) {
         return res.status(400).json({ error: 'Invalid status provided.' });
     }
+    if (!moderationReason || !String(moderationReason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required for status updates.' });
+    }
     try {
+        const adminUser = req.user;
         const updatedRequest = await db_1.prisma.prayerrequest.update({
             where: { id },
             data: {
                 status: status,
                 adminNotes: adminNotes || undefined,
+                moderationReason: String(moderationReason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
             include: { prayer: true }
@@ -198,10 +227,25 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res))
         return;
     const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required to delete a prayer request.' });
+    }
     try {
-        // Prisma's onDelete: Cascade will handle deleting related comments and prayers
-        await db_1.prisma.prayerrequest.delete({ where: { id } });
-        res.status(204).send();
+        const adminUser = req.user;
+        const updated = await db_1.prisma.prayerrequest.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+                moderationReason: String(reason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
+                updatedAt: new Date(),
+            },
+            include: { prayer: true }
+        });
+        res.json(shapePrayerRequestForFrontend(updated));
     }
     catch (error) {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

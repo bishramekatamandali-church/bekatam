@@ -51,7 +51,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, onCommen
   const handleDelete = (reason: string) => {
     if (!isAdmin) return;
     setIsSubmittingDelete(true);
-    deleteContent('testimonial', testimonial.id).then(() => {
+    deleteContent('testimonial', testimonial.id, reason).then(() => {
         logAdminAction("Deleted Testimonial", testimonial.id, `Title: "${testimonial.title}", Reason: ${reason}`);
         setIsSubmittingDelete(false);
         setIsDeleteModalOpen(false);
@@ -121,6 +121,12 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, onCommen
             <p className="text-sm leading-relaxed whitespace-pre-line mt-2 text-slate-700">
             {testimonial.contentText}
             </p>
+            {testimonial.moderationReason && (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <strong className="mr-1">Admin note:</strong>
+                {testimonial.moderationReason}
+              </div>
+            )}
         </div>
 
         <PostMediaDisplay mediaUrls={mediaUrls} title={testimonial.title} />

@@ -121,11 +121,11 @@ const prepareDonationSheetData = (items: DonationRecord[]): SheetPreparationResu
 
 // Church Members Sheet
 const prepareMemberSheetData = (items: ChurchMember[]): SheetPreparationResult => {
-  const headers = ["ID", "Full Name", "Email", "Phone", "Address", "Member Since (AD)", "DOB (AD)", "Baptism Date (AD)", "Active", "Family Members", "Notes", "Profile Image URL", "Posted By ID", "Posted By Name", "Created At (ISO)", "Updated At (ISO)"];
-  const largeContentFieldIndices = { address: 4, familyMembers: 9, notes: 10 };
+  const headers = ["ID", "Full Name", "Email", "Phone", "Address", "Member Since (AD)", "DOB (AD)", "Baptism Date (AD)", "Member Status", "Active", "Family Members", "Notes", "Profile Image URL", "Posted By ID", "Posted By Name", "Created At (ISO)", "Updated At (ISO)"];
+  const largeContentFieldIndices = { address: 4, familyMembers: 10, notes: 11 };
   const columnWidths = [
     { wch: 28 }, { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
-    { wch: 10 }, { wch: 30 }, { wch: 50 }, { wch: 30 }, { wch: 28 }, { wch: 20 }, { wch: 25 }, { wch: 25 }
+    { wch: 18 }, { wch: 10 }, { wch: 30 }, { wch: 50 }, { wch: 30 }, { wch: 28 }, { wch: 20 }, { wch: 25 }, { wch: 25 }
   ];
   const sheetDataArray: any[][] = [headers];
   const comments: CellCommentInstruction[] = [];
@@ -146,7 +146,9 @@ const prepareMemberSheetData = (items: ChurchMember[]): SheetPreparationResult =
       item.memberSince ? new Date(item.memberSince).toLocaleDateString('en-CA') : '',
       item.dateOfBirth ? new Date(item.dateOfBirth).toLocaleDateString('en-CA') : '',
       item.baptismDate ? new Date(item.baptismDate).toLocaleDateString('en-CA') : '',
-      item.isActiveMember ? "Yes" : "No", familyValue, notesValue, item.profileImageUrl || '',
+      item.memberStatus || (item.isActiveMember ? "Active" : "Left"),
+      item.isActiveMember ? "Yes" : "No",
+      familyValue, notesValue, item.profileImageUrl || '',
       item.postedByAdminId || '', item.postedByAdminName || '',
       item.createdAt ? new Date(item.createdAt).toISOString() : '',
       item.updatedAt ? new Date(item.updatedAt).toISOString() : ''

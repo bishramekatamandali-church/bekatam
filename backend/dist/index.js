@@ -71,7 +71,6 @@ const pdfRoutes_1 = __importDefault(require("./routes/pdfRoutes"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
 // --- Middlewares ---
-app.use("/api/pdfs", pdfRoutes_1.default);
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, morgan_1.default)("dev"));
@@ -135,6 +134,7 @@ app.use((0, cors_1.default)({
     allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Content-Disposition"],
 }));
+app.use("/api/pdfs", pdfRoutes_1.default);
 // Default route for quick server status check
 app.get("/", (req, res) => {
     res.send("Bishram Ekata Mandali API Server is running!");

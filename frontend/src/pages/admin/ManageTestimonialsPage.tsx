@@ -41,7 +41,7 @@ const ManageTestimonialsPage: React.FC = () => {
 
   const handleConfirmDelete = async (reason: string) => {
     if (!itemToDelete) return;
-    await deleteContent('testimonial', itemToDelete.id);
+    await deleteContent('testimonial', itemToDelete.id, reason);
     logAdminAction('Deleted Testimonial', itemToDelete.id, `Reason: ${reason}`);
     setIsDeleteModalOpen(false);
     setItemToDelete(null);

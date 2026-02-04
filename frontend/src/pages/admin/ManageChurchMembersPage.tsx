@@ -4,9 +4,8 @@ import Card, { CardContent, CardHeader, CardFooter } from '../../components/ui/C
 import Button from '../../components/ui/Button';
 import ContentFormModal from '../../components/admin/ContentFormModal';
 import { ChurchMember, ChurchMemberFormData, GenericContentFormData } from '../../types';
-import { formatDateADBS, formatTimestampADBS } from '../../dateConverter';
-import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../../utils/pdfFonts';
+import { formatDateADBS } from '../../dateConverter';
+import { downloadBackendPdf } from '../../utils/downloadBackendPdf';
 import * as XLSX from 'xlsx'; 
 import { PlusIcon as HeroPlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
@@ -35,18 +34,6 @@ const ViewListIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
-const BASE_FONT_NAME = 'Helvetica';
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-const getCurrentFont = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
-
 const ManageChurchMembersPage: React.FC = () => {
   const { churchMembers, addContent, updateContent, deleteContent, loadingContent } = useContent();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,6 +42,22 @@ const ManageChurchMembersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   const churchName = "BEM Church";
+
+  const resolveMemberStatus = (member: ChurchMember) =>
+    member.memberStatus || (member.isActiveMember ? 'Active' : 'Left');
+
+  const statusStyles: Record<string, string> = {
+    active: 'text-green-600',
+    deactivated: 'text-amber-700',
+    left: 'text-red-500',
+    contactless: 'text-amber-600',
+    'shifted to other church': 'text-purple-600',
+    other: 'text-slate-600',
+  };
+  const isInactiveStatus = (member: ChurchMember) => {
+    const status = resolveMemberStatus(member).toLowerCase();
+    return status === 'deactivated' || status === 'left' || status === 'shifted to other church';
+  };
 
   const filteredMembers = useMemo(() => {
     return churchMembers
@@ -91,109 +94,20 @@ const ManageChurchMembersPage: React.FC = () => {
     }
   };
 
-  const generateMemberPdf = async (member: ChurchMember, appName: string) => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-
-    const fontState = await preparePdfDoc(doc);
-    isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
-
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPos = margin;
-    const lineSpacing = 7;
-    const baseFontSize = 10;
-    const footerFontSize = 8;
-
-    const memberName = `Member Profile: ${member.fullName}`;
-    doc.setFont(getCurrentFont(memberName), 'bold');
-    doc.setFontSize(16);
-    doc.text(memberName, pageWidth / 2, yPos, { align: 'center' });
-    yPos += lineSpacing * 2;
-
-    doc.setFontSize(baseFontSize);
-
-    const addDetail = (label: string, value: string | undefined | boolean) => {
-      if (value === undefined || String(value).trim() === '') return;
-      if (yPos > pageHeight - margin - 20) { doc.addPage(); yPos = margin; }
-      
-      const valueString = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value);
-
-      doc.setFont(getCurrentFont(label), 'bold');
-      doc.text(`${label}:`, margin, yPos);
-      
-      doc.setFont(getCurrentFont(valueString), 'normal');
-      const labelWidth = doc.getTextWidth(`${label}:`) + 2;
-      const valueXPos = margin + labelWidth;
-      const textBlockWidth = pageWidth - 2 * margin - labelWidth;
-      const lines = doc.splitTextToSize(valueString, textBlockWidth);
-      doc.text(lines, valueXPos, yPos);
-      yPos += lines.length * lineSpacing * 0.85;
-    };
-
-    if (member.profileImageUrl) {
-      try {
-        const response = await fetch(member.profileImageUrl);
-        if (!response.ok) throw new Error('Network response was not ok');
-        const blob = await response.blob();
-        const imgData = await new Promise<string | ArrayBuffer | null>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-        if (imgData && typeof imgData === 'string') {
-          const imgProps = doc.getImageProperties(imgData);
-          const imgWidth = 30;
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth, margin + 5, imgWidth, imgHeight);
-        }
-      } catch (e) { console.error("Error loading profile image for PDF:", e); }
-    }
-    
-    addDetail("Full Name", member.fullName);
-    addDetail("Email", member.contactEmail);
-    addDetail("Phone", member.contactPhone);
-    addDetail("Address", member.address);
-    addDetail("Member Since", member.memberSince ? formatDateADBS(member.memberSince) : undefined);
-    addDetail("Date of Birth", member.dateOfBirth ? formatDateADBS(member.dateOfBirth) : undefined);
-    addDetail("Baptism Date", member.baptismDate ? formatDateADBS(member.baptismDate) : undefined);
-    addDetail("Active Member", member.isActiveMember);
-    addDetail("Family Members", member.familyMembers);
-    if (member.notes) {
-        yPos += lineSpacing / 2;
-        doc.setFont(getCurrentFont("Notes:"), 'bold');
-        doc.text("Notes:", margin, yPos);
-        yPos += lineSpacing * 0.8;
-        doc.setFont(getCurrentFont(member.notes), 'normal');
-        const notesLines = doc.splitTextToSize(member.notes, pageWidth - (margin * 2));
-        doc.text(notesLines, margin, yPos);
-        yPos += notesLines.length * lineSpacing * 0.8;
-    }
-    
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFont(BASE_FONT_NAME, 'normal'); // Footer is always base font
-        doc.setFontSize(footerFontSize);
-        doc.setTextColor(100);
-        const footerText = `${appName} | Page ${i} of ${pageCount}`;
-        const textWidth = doc.getTextWidth(footerText);
-        doc.text(footerText, (pageWidth - textWidth) / 2, pageHeight - margin / 2);
-    }
-
-    doc.save(`${(member.fullName || 'Member').replace(/\s+/g, '_')}_profile.pdf`);
+  const generateMemberPdf = async (member: ChurchMember, _appName: string) => {
+    const filename = `${(member.fullName || 'Member').replace(/\s+/g, '_')}_profile.pdf`;
+    await downloadBackendPdf(`/api/pdfs/church-members/${member.id}`, filename);
   };
 
   const excelHeaders = [
     "ID", "Full Name", "Email", "Phone", "Address", 
     "Member Since", "Date of Birth", "Baptism Date", 
-    "Active Member", "Family Members", "Notes", "Profile Image URL",
+    "Member Status", "Deactivated/Left Date", "Active Member", "Family Members", "Notes", "Profile Image URL",
     "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"
   ];
 
   const memberToExcelRow = (member: ChurchMember): (string | number | boolean | null)[] => {
+    const status = resolveMemberStatus(member);
     return [
       member.id,
       member.fullName,
@@ -203,6 +117,8 @@ const ManageChurchMembersPage: React.FC = () => {
       member.memberSince ? new Date(member.memberSince).toLocaleDateString('en-CA') : '', 
       member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString('en-CA') : '',
       member.baptismDate ? new Date(member.baptismDate).toLocaleDateString('en-CA') : '',
+      status,
+      member.deactivatedDate ? new Date(member.deactivatedDate).toLocaleDateString('en-CA') : '',
       member.isActiveMember ? 'Yes' : 'No',
       member.familyMembers || '',
       member.notes || '',
@@ -249,19 +165,26 @@ const ManageChurchMembersPage: React.FC = () => {
         )}
         <div className="flex-grow">
           <h2 className="text-lg font-semibold text-gray-700 truncate" title={member.fullName}>{member.fullName}</h2>
-          <p className={`text-xs font-medium ${member.isActiveMember ? 'text-green-600' : 'text-red-500'}`}>
-              {member.isActiveMember ? 'Active Member' : 'Inactive Member'}
+          <p
+            className={`text-xs font-medium ${
+              statusStyles[resolveMemberStatus(member).toLowerCase()] || 'text-slate-600'
+            }`}
+          >
+            {resolveMemberStatus(member)}
           </p>
-          <p className="text-xs text-gray-500">Joined: {formatDateADBS(member.memberSince).split(' ')[0]}</p>
+          <p className="text-xs text-gray-500">Joined: {formatDateADBS(member.memberSince)}</p>
         </div>
       </CardHeader>
       <CardContent className="py-2 px-4 text-xs text-gray-600 space-y-1 flex-grow">
           {member.contactEmail && <p><strong>Email:</strong> {member.contactEmail}</p>}
           {member.contactPhone && <p><strong>Phone:</strong> {member.contactPhone}</p>}
-          {member.dateOfBirth && <p><strong>DOB:</strong> {formatDateADBS(member.dateOfBirth).split(' ')[0]}</p>}
-          {member.baptismDate && <p><strong>Baptized:</strong> {formatDateADBS(member.baptismDate).split(' ')[0]}</p>}
+          {member.dateOfBirth && <p><strong>DOB:</strong> {formatDateADBS(member.dateOfBirth)}</p>}
+          {member.baptismDate && <p><strong>Baptized:</strong> {formatDateADBS(member.baptismDate)}</p>}
           {member.address && <p className="line-clamp-1"><strong>Address:</strong> {member.address}</p>}
           {member.familyMembers && <p className="line-clamp-1"><strong>Family:</strong> {member.familyMembers}</p>}
+          {member.deactivatedDate && isInactiveStatus(member) && (
+            <p><strong>Deactivated/Left:</strong> {formatDateADBS(member.deactivatedDate)}</p>
+          )}
           {member.notes && <p className="mt-1 italic line-clamp-2"><strong>Notes:</strong> {member.notes}</p>}
       </CardContent>
       <CardFooter className="flex flex-wrap justify-end gap-2 bg-gray-50 p-3">
@@ -283,9 +206,18 @@ const ManageChurchMembersPage: React.FC = () => {
     { header: "Email", accessor: (m: ChurchMember) => m.contactEmail || 'N/A', hiddenInList: true, hiddenInExcel: false },
     { header: "Phone", accessor: (m: ChurchMember) => m.contactPhone || 'N/A', hiddenInList: false, hiddenInExcel: false },
     { header: "Address", accessor: (m: ChurchMember) => m.address || 'N/A', hiddenInList: true, hiddenInExcel: true, truncate: true },
-    { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince).split(' ')[0], hiddenInList: false, hiddenInExcel: false },
-    { header: "Status", accessor: (m: ChurchMember) => m.isActiveMember ? 'Active' : 'Inactive', hiddenInList: false, hiddenInExcel: false,
-      cellClass: (m: ChurchMember) => m.isActiveMember ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' },
+    { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince), hiddenInList: false, hiddenInExcel: false },
+    { header: "Deactivated/Left Date", accessor: (m: ChurchMember) => m.deactivatedDate ? formatDateADBS(m.deactivatedDate) : '—', hiddenInList: false, hiddenInExcel: false },
+    { header: "Status", accessor: (m: ChurchMember) => resolveMemberStatus(m), hiddenInList: false, hiddenInExcel: false,
+      cellClass: (m: ChurchMember) => {
+        const status = resolveMemberStatus(m).toLowerCase();
+        if (status === 'active') return 'bg-green-100 text-green-800';
+        if (status === 'deactivated') return 'bg-amber-100 text-amber-800';
+        if (status === 'contactless') return 'bg-amber-100 text-amber-800';
+        if (status === 'shifted to other church') return 'bg-purple-100 text-purple-800';
+        if (status === 'left') return 'bg-red-100 text-red-800';
+        return 'bg-slate-100 text-slate-700';
+      } },
     { header: "Actions", accessor: null, hiddenInList: false, hiddenInExcel: false }
   ];
 

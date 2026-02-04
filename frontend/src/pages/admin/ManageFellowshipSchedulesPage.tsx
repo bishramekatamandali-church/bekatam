@@ -23,6 +23,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import * as XLSX from 'xlsx';
+import { downloadBackendPdf } from '../../utils/downloadBackendPdf';
 
 const parseAdditionalDetailsForDisplay = (detailsString?: string): Record<string, string> => {
   if (!detailsString) return {};
@@ -117,24 +118,7 @@ const ManageFellowshipSchedulesPage: React.FC = () => {
   // ---------------------------
   const downloadSchedulePdf = async (generatedScheduleId: string) => {
     try {
-      // If your backend auth uses cookies/sessions, keep credentials: "include"
-      const res = await fetch(`/api/pdfs/fellowship/schedule/${generatedScheduleId}`, {
-        credentials: 'include',
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch PDF');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Fellowship_Schedule_${generatedScheduleId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
+      await downloadBackendPdf(`/api/pdfs/fellowship/schedule/${generatedScheduleId}`, `Fellowship_Schedule_${generatedScheduleId}.pdf`);
     } catch (err) {
       console.error(err);
       alert('Unable to download PDF. Please try again.');

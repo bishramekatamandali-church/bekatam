@@ -2,10 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useContent } from '../../contexts/ContentContext';
 import Card, { CardContent, CardHeader } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { CollectionRecord, DonationRecord, ExpenseRecord } from '../../types';
-import { jsPDF } from 'jspdf';
-import { preparePdfDoc } from '../../utils/pdfFonts';
-import { autoTable } from 'jspdf-autotable';
+import { downloadBackendPdf } from '../../utils/downloadBackendPdf';
 import * as XLSX from 'xlsx';
 import { ArrowDownTrayIcon, BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import { adToBs, bsToAd, BS_MONTH_NAMES_NP, getDaysInBsMonth, formatDateADBS, getLocalToday, toAdIsoString } from '../../dateConverter';
@@ -18,18 +15,6 @@ interface TransactionLogItem {
   description: string;
   amount: number;
 }
-
-const NotoSansDevanagariBase64: string = "AAEAAAARAQAABAAQR0RFRgBsAmsAAEV0AAAABkdQT1O2B51VAAEVrAAAAGxHU1VC4spaYQAA+LAAAAA4T1MvMmpgKQQAAAFgAAAAYGNtYXABDQGXAAACDAAAAGxnbHlm/nK3EAAABWAAAAJgaGVhZBsAmsAAAADcAAAANmhoZWEH3gOFAAABJAAAACRobXR4DAAD/AAAAfQAAAAybG9jYQG8BIwAAARcAAAAMm1heHABGQCbAAABOAAAACBuYW1l406XlQAA+NgAAASxcG9zdBvYcFEAARMUAAAAOwABAAADUv9qAAMAAQAAAAAAAAAAAAAAAAAAAAABAAAD//3PAAEAAQAAAAoAAgAEAAMAAAAAAADUASQAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAAAAAQAAAgAAAAAAAAAAAAAAAwAAAAMAAAAcAAEAAAAAAHAACAAEAAAAAAG4ABQADAAEAAAAAAAQABAANAAAAAABcABcAEgAAAAAQABgAAgABAAEAEAAg//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8AAAAg//8ADgABAAgAAgAAAAAAAgABAAAAAAABAAAAAAACAAAAAwAAABQAAwABAAAAFAAEAEAAAAAMAAgAIgAEAAAAAAB0AEgAFAAMAAQAgAAoADABH//8=";
-const DEVANAGARI_FONT_NAME = 'NotoSansDevanagari';
-const BASE_FONT_NAME = 'Helvetica';
-let isDevanagariFontSuccessfullyEmbedded = false;
-
-const getCurrentFont = (text: string): string => {
-  if (isDevanagariFontSuccessfullyEmbedded && text && /[^\x00-\x7F]+/.test(text)) {
-    return DEVANAGARI_FONT_NAME;
-  }
-  return BASE_FONT_NAME;
-};
 
 const FinancialSummaryPage: React.FC = () => {
   const { collectionRecords, donationRecords, expenseRecords, loadingContent } = useContent();
@@ -225,68 +210,10 @@ const FinancialSummaryPage: React.FC = () => {
   };
 
   const handleExportPDF = async () => {
-    const doc = new jsPDF();
-    const fontState = await preparePdfDoc(doc);
-    isDevanagariFontSuccessfullyEmbedded = fontState.fontName === DEVANAGARI_FONT_NAME;
-
-
-    const titleText = 'Financial Summary Report';
-    doc.setFont(getCurrentFont(titleText), 'bold');
-    doc.setFontSize(18);
-    doc.text(titleText, 14, 22);
-    
-    doc.setFont(BASE_FONT_NAME, 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    const dateRangeText = `Date Range: ${startDate || 'Start'} to ${endDate || 'End'}`;
-    doc.text(dateRangeText, 14, 30);
-
-    const summaryY = 40;
-    doc.setFontSize(12);
-    const totalIncomeText = `Total Income: ${formatCurrency(financialData.totalIncome)}`;
-    const totalExpenseText = `Total Expense: ${formatCurrency(financialData.totalExpense)}`;
-    const netBalanceText = `Net Balance: ${formatCurrency(financialData.netBalance)}`;
-
-    doc.setFont(getCurrentFont(totalIncomeText)); doc.text(totalIncomeText, 14, summaryY);
-    doc.setFont(getCurrentFont(totalExpenseText)); doc.text(totalExpenseText, 80, summaryY);
-    doc.setFont(getCurrentFont(netBalanceText), 'bold'); doc.text(netBalanceText, 140, summaryY);
-    doc.setFont(BASE_FONT_NAME, 'normal');
-
-    autoTable(doc, {
-      startY: summaryY + 10,
-      head: [['Date', 'Type', 'Category/Purpose', 'Description', 'Income', 'Expense']],
-      body: financialData.transactionLog.map(item => [
-        formatDateADBS(item.date),
-        item.type,
-        item.category,
-        item.description,
-        item.type === 'Income' ? formatCurrency(item.amount) : '',
-        item.type === 'Expense' ? formatCurrency(item.amount) : '',
-      ]),
-      headStyles: { fillColor: [79, 70, 229], font: BASE_FONT_NAME },
-      foot: [[
-          'Grand Total',
-          '', '', '',
-          formatCurrency(financialData.totalIncome),
-          formatCurrency(financialData.totalExpense),
-      ]],
-      footStyles: { fillColor: [49, 46, 129], textColor: 255, fontStyle: 'bold', font: BASE_FONT_NAME },
-      didParseCell: function(data: any) {
-        if (data.cell.text && data.cell.text.length > 0) {
-            const textToTest = Array.isArray(data.cell.text) ? data.cell.text.join(' ') : String(data.cell.text);
-            data.cell.styles.font = getCurrentFont(textToTest);
-        }
-        if (data.section === 'body' && (data.column.index === 4 || data.column.index === 5)) {
-           data.cell.styles.halign = 'right';
-        }
-        if (data.section === 'foot') {
-           data.cell.styles.halign = 'right';
-           if (data.column.index === 0) data.cell.styles.halign = 'left';
-        }
-      }
-    });
-
-    doc.save(`financial_summary_${startDate}_to_${endDate}.pdf`);
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    await downloadBackendPdf(`/api/pdfs/financial-summary?${params.toString()}`, `financial_summary_${startDate}_to_${endDate}.pdf`);
   };
 
   const handleExportExcel = () => {

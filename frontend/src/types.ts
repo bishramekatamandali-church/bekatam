@@ -95,6 +95,11 @@ export interface PrayerRequest {
   lastPrayedAt?: string; // ISO timestamp, updated when someone indicates they prayed for it
   prayers: Array<{ userId?: string | null; userName: string; timestamp: string; }>; // Users who prayed
   adminNotes?: string; // Private notes by admins/pastors
+  moderationReason?: string; // Public reason for admin moderation
+  moderatedAt?: string;
+  moderatedByAdminId?: string;
+  moderatedByAdminName?: string;
+  isDeleted?: boolean;
   postedByAdminId?: string; // ID of the user who submitted OR admin who entered it
   postedByAdminName?: string; // Name of the user who submitted OR admin who entered it
   linkPath: string; // e.g. /prayer-requests#prayer-id or /prayer-requests/:id
@@ -130,6 +135,11 @@ export interface Testimonial {
   publishedAt?: string; // ISO timestamp when testimonial is published
   postedByAdminId?: string;
   postedByAdminName?: string;
+  moderationReason?: string;
+  moderatedAt?: string;
+  moderatedByAdminId?: string;
+  moderatedByAdminName?: string;
+  isDeleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
   likes?: number;
@@ -546,12 +556,24 @@ export interface ChurchMember {
   familyMembers?: string; 
   notes?: string;
   isActiveMember: boolean; 
+  memberStatus?: ChurchMemberStatus;
+  deactivatedDate?: string;
   profileImageUrl?: string;
   postedByAdminId?: string;
   postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export const churchMemberStatusList = [
+  "Active",
+  "Deactivated",
+  "Left",
+  "Contactless",
+  "Shifted to Other Church",
+  "Other",
+] as const;
+export type ChurchMemberStatus = typeof churchMemberStatusList[number];
 
 export const meetingTypeList = [
   "General Leaders Meeting", "Elders Meeting", "Deacons Meeting",
@@ -1235,6 +1257,8 @@ export interface ChurchMemberFormData {
   familyMembers?: string;
   notes?: string;
   isActiveMember: boolean;
+  memberStatus?: ChurchMemberStatus;
+  deactivatedDate?: string;
   profileImageUrl?: string;
 }
 
@@ -1449,7 +1473,7 @@ export interface ContentContextType {
   loadingContent: boolean;
   addContent: (type: ContentType, data: GenericContentFormData) => Promise<{ success: boolean; newItem?: ContentItem; message?: string }>;
   updateContent: (type: ContentType, id: string, data: GenericContentFormData) => Promise<{ success: boolean; updatedItem?: ContentItem; message?: string }>;
-  deleteContent: (type: ContentType, id: string) => Promise<boolean>;
+  deleteContent: (type: ContentType, id: string, reason?: string) => Promise<boolean>;
   getContentById: (type: ContentType, id: string) => ContentItem | undefined;
   
   contentActivityLogs: FrontendActivityLog[];
@@ -1475,7 +1499,7 @@ export interface ContentContextType {
 
   // New for Prayer Requests
   addPrayerRequest: (data: PrayerRequestFormData) => Promise<PrayerRequest | null>;
-  updatePrayerRequestStatusByAdmin: (id: string, status: PrayerRequestStatus, adminNotes?: string) => Promise<boolean>;
+  updatePrayerRequestStatusByAdmin: (id: string, status: PrayerRequestStatus, adminNotes?: string, moderationReason?: string) => Promise<boolean>;
   updatePrayerRequestStatusByUser: (id: string, newStatus: PrayerRequestStatus) => Promise<boolean>;
   togglePrayerOnRequest: (id: string, guestContact?: { email?: string; phone?: string }) => Promise<boolean>;
   toggleLikeOnItem: (itemType: ContentType, itemId: string, isLiked: boolean) => Promise<ContentItem | null>;

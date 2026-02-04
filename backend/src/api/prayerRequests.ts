@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Prisma, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
+import { Prisma, prayerrequest_visibility, prayerrequest_status, prayerrequest_category } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -47,6 +47,7 @@ const shapePrayerRequestForFrontend = (item: any): any => {
         submittedAt: rest.submittedAt ? new Date(rest.submittedAt).toISOString() : null,
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
+        moderatedAt: rest.moderatedAt ? new Date(rest.moderatedAt).toISOString() : null,
     };
 };
 
@@ -55,7 +56,8 @@ const shapePrayerRequestForFrontend = (item: any): any => {
 router.get('/', async (req, res) => {
     try {
         const requests = await prisma.prayerrequest.findMany({
-  include: {
+   where: { isDeleted: false },
+   include: {
     comment: true,
     prayer: true,
   },
@@ -72,28 +74,48 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST a new prayer request (admin only)
+// POST a new prayer request (all registered users)
 router.post('/', authMiddleware, async (req, res) => {
-    if (!ensureAdmin(req, res)) return;
-    const { title, requestText, visibility, category, mediaUrls, location, postedByAdminId, postedByAdminName, userProfileImageUrl, userName, userId } = req.body;
+    const requestUser = (req as any).user;
+    if (!requestUser?.id) {
+        return res.status(401).json({ error: 'Authentication required to submit a prayer request.' });
+    }
+    const { title, requestText, visibility, category, mediaUrls, location } = req.body;
+    const trimmedTitle = String(title || '').trim();
+    const trimmedRequestText = String(requestText || '').trim();
+    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    if (!trimmedRequestText && !hasMedia) {
+        return res.status(400).json({ error: 'Prayer request text or media is required.' });
+    }
+    const resolvedVisibility = Object.values(prayerrequest_visibility).includes(visibility as prayerrequest_visibility)
+        ? (visibility as prayerrequest_visibility)
+        : prayerrequest_visibility.public;
+    const resolvedCategory = Object.values(prayerrequest_category).includes(category as prayerrequest_category)
+        ? (category as prayerrequest_category)
+        : prayerrequest_category.Other;
 
     try {
+        const user = await prisma.user.findUnique({ where: { id: requestUser.id } });
+        if (!user) {
+            return res.status(401).json({ error: 'User account not found.' });
+        }
+        const isAdmin = requestUser.role === 'admin';
         const newRequest = await prisma.prayerrequest.create({
             data: {
                 id: crypto.randomUUID(), // REQUIRED in your schema
     updatedAt: new Date(),   // REQUIRED
-                title,
-                requestText,
-                visibility: visibility as prayerrequest_visibility,
-                category,
+                title: trimmedTitle || trimmedRequestText.split(' ').slice(0, 7).join(' ') || 'Prayer Request',
+                requestText: trimmedRequestText,
+                visibility: resolvedVisibility,
+                category: resolvedCategory,
                 status: 'active',
                 mediaUrls: mediaUrls || undefined,
                 location,
-                postedByAdminId,
-                postedByAdminName,
-                userProfileImageUrl,
-                userName,
-                userId,
+                postedByAdminId: isAdmin ? requestUser.id : undefined,
+                postedByAdminName: isAdmin ? requestUser.fullName : undefined,
+                userProfileImageUrl: user.profileImageUrl || undefined,
+                userName: user.fullName,
+                userId: user.id,
             }
         });
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
@@ -106,18 +128,26 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id/status', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
+    const { status, adminNotes, moderationReason } = req.body;
 
     if (!Object.values(prayerrequest_status).includes(status as prayerrequest_status)) {
         return res.status(400).json({ error: 'Invalid status provided.' });
     }
+    if (!moderationReason || !String(moderationReason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required for status updates.' });
+    }
 
     try {
+        const adminUser = (req as any).user;
         const updatedRequest = await prisma.prayerrequest.update({
             where: { id },
             data: {
                 status: status as prayerrequest_status,
                 adminNotes: adminNotes || undefined,
+                 moderationReason: String(moderationReason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
             include: { prayer: true }
@@ -213,10 +243,25 @@ router.post('/:id/toggle-prayer', async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ error: 'A public reason is required to delete a prayer request.' });
+    }
     try {
-        // Prisma's onDelete: Cascade will handle deleting related comments and prayers
-        await prisma.prayerrequest.delete({ where: { id } });
-        res.status(204).send();
+        const adminUser = (req as any).user;
+        const updated = await prisma.prayerrequest.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+                moderationReason: String(reason).trim(),
+                moderatedAt: new Date(),
+                moderatedByAdminId: adminUser?.id,
+                moderatedByAdminName: adminUser?.fullName,
+                updatedAt: new Date(),
+            },
+            include: { prayer: true }
+        });
+        res.json(shapePrayerRequestForFrontend(updated));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Prayer request not found.' });
