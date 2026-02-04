@@ -76,7 +76,6 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // --- Middlewares ---
-app.use("/api/pdfs", pdfRoutes);
 app.use(helmet());
 app.use(compression());
 app.use(morgan("dev"));
@@ -147,6 +146,8 @@ app.use(
     exposedHeaders: ["Content-Disposition"],
   })
 );
+
+app.use("/api/pdfs", pdfRoutes);
 
 // Default route for quick server status check
 app.get("/", (req, res) => {

@@ -166,14 +166,14 @@ const ManageChurchMembersPage: React.FC = () => {
           >
             {resolveMemberStatus(member)}
           </p>
-          <p className="text-xs text-gray-500">Joined: {formatDateADBS(member.memberSince).split(' ')[0]}</p>
+          <p className="text-xs text-gray-500">Joined: {formatDateADBS(member.memberSince)}</p>
         </div>
       </CardHeader>
       <CardContent className="py-2 px-4 text-xs text-gray-600 space-y-1 flex-grow">
           {member.contactEmail && <p><strong>Email:</strong> {member.contactEmail}</p>}
           {member.contactPhone && <p><strong>Phone:</strong> {member.contactPhone}</p>}
-          {member.dateOfBirth && <p><strong>DOB:</strong> {formatDateADBS(member.dateOfBirth).split(' ')[0]}</p>}
-          {member.baptismDate && <p><strong>Baptized:</strong> {formatDateADBS(member.baptismDate).split(' ')[0]}</p>}
+          {member.dateOfBirth && <p><strong>DOB:</strong> {formatDateADBS(member.dateOfBirth)}</p>}
+          {member.baptismDate && <p><strong>Baptized:</strong> {formatDateADBS(member.baptismDate)}</p>}
           {member.address && <p className="line-clamp-1"><strong>Address:</strong> {member.address}</p>}
           {member.familyMembers && <p className="line-clamp-1"><strong>Family:</strong> {member.familyMembers}</p>}
           {member.notes && <p className="mt-1 italic line-clamp-2"><strong>Notes:</strong> {member.notes}</p>}
@@ -197,7 +197,7 @@ const ManageChurchMembersPage: React.FC = () => {
     { header: "Email", accessor: (m: ChurchMember) => m.contactEmail || 'N/A', hiddenInList: true, hiddenInExcel: false },
     { header: "Phone", accessor: (m: ChurchMember) => m.contactPhone || 'N/A', hiddenInList: false, hiddenInExcel: false },
     { header: "Address", accessor: (m: ChurchMember) => m.address || 'N/A', hiddenInList: true, hiddenInExcel: true, truncate: true },
-    { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince).split(' ')[0], hiddenInList: false, hiddenInExcel: false },
+    { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince), hiddenInList: false, hiddenInExcel: false },
     { header: "Status", accessor: (m: ChurchMember) => resolveMemberStatus(m), hiddenInList: false, hiddenInExcel: false,
       cellClass: (m: ChurchMember) => {
         const status = resolveMemberStatus(m).toLowerCase();
