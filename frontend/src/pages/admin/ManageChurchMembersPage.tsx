@@ -43,6 +43,17 @@ const ManageChurchMembersPage: React.FC = () => {
 
   const churchName = "BEM Church";
 
+  const resolveMemberStatus = (member: ChurchMember) =>
+    member.memberStatus || (member.isActiveMember ? 'Active' : 'Left');
+
+  const statusStyles: Record<string, string> = {
+    active: 'text-green-600',
+    left: 'text-red-500',
+    contactless: 'text-amber-600',
+    'shifted to other church': 'text-purple-600',
+    other: 'text-slate-600',
+  };
+
   const filteredMembers = useMemo(() => {
     return churchMembers
       .filter(member => 
@@ -86,11 +97,12 @@ const ManageChurchMembersPage: React.FC = () => {
   const excelHeaders = [
     "ID", "Full Name", "Email", "Phone", "Address", 
     "Member Since", "Date of Birth", "Baptism Date", 
-    "Active Member", "Family Members", "Notes", "Profile Image URL",
+    "Member Status", "Active Member", "Family Members", "Notes", "Profile Image URL",
     "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"
   ];
 
   const memberToExcelRow = (member: ChurchMember): (string | number | boolean | null)[] => {
+    const status = resolveMemberStatus(member);
     return [
       member.id,
       member.fullName,
@@ -100,6 +112,7 @@ const ManageChurchMembersPage: React.FC = () => {
       member.memberSince ? new Date(member.memberSince).toLocaleDateString('en-CA') : '', 
       member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString('en-CA') : '',
       member.baptismDate ? new Date(member.baptismDate).toLocaleDateString('en-CA') : '',
+      status,
       member.isActiveMember ? 'Yes' : 'No',
       member.familyMembers || '',
       member.notes || '',
@@ -146,8 +159,12 @@ const ManageChurchMembersPage: React.FC = () => {
         )}
         <div className="flex-grow">
           <h2 className="text-lg font-semibold text-gray-700 truncate" title={member.fullName}>{member.fullName}</h2>
-          <p className={`text-xs font-medium ${member.isActiveMember ? 'text-green-600' : 'text-red-500'}`}>
-              {member.isActiveMember ? 'Active Member' : 'Inactive Member'}
+          <p
+            className={`text-xs font-medium ${
+              statusStyles[resolveMemberStatus(member).toLowerCase()] || 'text-slate-600'
+            }`}
+          >
+            {resolveMemberStatus(member)}
           </p>
           <p className="text-xs text-gray-500">Joined: {formatDateADBS(member.memberSince).split(' ')[0]}</p>
         </div>
@@ -181,8 +198,15 @@ const ManageChurchMembersPage: React.FC = () => {
     { header: "Phone", accessor: (m: ChurchMember) => m.contactPhone || 'N/A', hiddenInList: false, hiddenInExcel: false },
     { header: "Address", accessor: (m: ChurchMember) => m.address || 'N/A', hiddenInList: true, hiddenInExcel: true, truncate: true },
     { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince).split(' ')[0], hiddenInList: false, hiddenInExcel: false },
-    { header: "Status", accessor: (m: ChurchMember) => m.isActiveMember ? 'Active' : 'Inactive', hiddenInList: false, hiddenInExcel: false,
-      cellClass: (m: ChurchMember) => m.isActiveMember ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' },
+    { header: "Status", accessor: (m: ChurchMember) => resolveMemberStatus(m), hiddenInList: false, hiddenInExcel: false,
+      cellClass: (m: ChurchMember) => {
+        const status = resolveMemberStatus(m).toLowerCase();
+        if (status === 'active') return 'bg-green-100 text-green-800';
+        if (status === 'contactless') return 'bg-amber-100 text-amber-800';
+        if (status === 'shifted to other church') return 'bg-purple-100 text-purple-800';
+        if (status === 'left') return 'bg-red-100 text-red-800';
+        return 'bg-slate-100 text-slate-700';
+      } },
     { header: "Actions", accessor: null, hiddenInList: false, hiddenInExcel: false }
   ];
 

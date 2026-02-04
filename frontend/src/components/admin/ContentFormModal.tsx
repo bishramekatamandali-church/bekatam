@@ -62,6 +62,7 @@ import {
   Responsibility,
   decisionLogStatusList as decisionPointStatusList,
   expenseStatusList,
+  churchMemberStatusList,
   } from '../../types';
 import { adToBs, formatBSDate } from '../../dateConverter';
 
@@ -476,6 +477,7 @@ const defaultFormValues: Record<ContentType, GenericContentFormData> = {
     fullName: '',
     memberSince: new Date().toISOString().split('T')[0],
     isActiveMember: true,
+    memberStatus: churchMemberStatusList[0],
     dateOfBirth: '',
     baptismDate: '',
     contactEmail: '',
@@ -809,6 +811,13 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
       ) {
         (dataToSet as FellowshipRosterFormData).responsibilities = [];
       }
+
+      if (contentType === 'churchMember') {
+        const memberData = dataToSet as ChurchMemberFormData;
+        if (!memberData.memberStatus) {
+          memberData.memberStatus = memberData.isActiveMember ? 'Active' : 'Left';
+        }
+      }
       
       if (contentType === 'event') {
         const eventData = dataToSet as EventFormData;
@@ -985,8 +994,6 @@ const ContentFormModal: React.FC<ContentFormModalProps> = ({
           ...prev,
           [name]: value,
         };
-
-  const handleChange = handleChange;
 
         if (name === 'incidentAt') {
           next.date = value;
@@ -1380,7 +1387,7 @@ const updateActionItem = (
       dataToSubmit.incidentAt = dataToSubmit.date;
     }
 
-  if (contentType === 'event') {
+    if (contentType === 'event') {
       const eventData = dataToSubmit as EventFormData;
       eventData.eventType = eventData.eventType || 'REGULAR';
       eventData.locations = (eventData.locations || []).map((entry) => entry.trim()).filter(Boolean);
@@ -1388,6 +1395,14 @@ const updateActionItem = (
       eventData.speakers = (eventData.speakers || []).map((entry) => entry.trim()).filter(Boolean);
       if (!eventData.location && eventData.locations.length > 0) {
         eventData.location = eventData.locations[0];
+      }
+    }
+
+    if (contentType === 'churchMember') {
+      const memberData = dataToSubmit as ChurchMemberFormData;
+      const status = String(memberData.memberStatus || '').toLowerCase();
+      if (status) {
+        memberData.isActiveMember = status === 'active';
       }
     }
 
@@ -3776,6 +3791,151 @@ const updateActionItem = (
                   <PlusCircleIcon className="w-4 h-4 mr-1.5" />
                   Add Follow-up Action
                 </Button>
+              </FullWidthField>
+            </FormSection>
+          </>
+        );
+      }
+
+      case 'churchMember': {
+        const data = formData as ChurchMemberFormData;
+
+        return (
+          <>
+            <FormSection title="Member Details">
+              <FullWidthField>
+                <label htmlFor="fullName" className={resolvedLabelClasses}>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={data.fullName}
+                  onChange={handleChange}
+                  required
+                  className={resolvedInputClasses}
+                  placeholder="Enter member full name"
+                />
+              </FullWidthField>
+
+              {renderDateFieldWithBSPicker('memberSince', 'Member Since')}
+
+              <div>
+                <label htmlFor="memberStatus" className={resolvedLabelClasses}>
+                  Member Status
+                </label>
+                <select
+                  id="memberStatus"
+                  name="memberStatus"
+                  value={data.memberStatus || churchMemberStatusList[0]}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                >
+                  {churchMemberStatusList.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FormSection>
+
+            <FormSection title="Contact Information">
+              <div>
+                <label htmlFor="contactEmail" className={resolvedLabelClasses}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="contactEmail"
+                  value={data.contactEmail || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="Email address"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contactPhone" className={resolvedLabelClasses}>
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  name="contactPhone"
+                  value={data.contactPhone || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="Phone number"
+                />
+              </div>
+
+              <FullWidthField>
+                <label htmlFor="address" className={resolvedLabelClasses}>
+                  Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={data.address || ''}
+                  onChange={handleChange}
+                  className={resolvedInputClasses}
+                  placeholder="Address"
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Personal Details">
+              {renderDateFieldWithBSPicker('dateOfBirth', 'Date of Birth')}
+              {renderDateFieldWithBSPicker('baptismDate', 'Baptism Date')}
+
+              <FullWidthField>
+                <label htmlFor="familyMembers" className={resolvedLabelClasses}>
+                  Family Members
+                </label>
+                <textarea
+                  name="familyMembers"
+                  value={data.familyMembers || ''}
+                  onChange={handleChange}
+                  rows={3}
+                  className={resolvedInputClasses}
+                  placeholder="List family members or notes about household"
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Notes">
+              <FullWidthField>
+                <label htmlFor="notes" className={resolvedLabelClasses}>
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  value={data.notes || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className={resolvedInputClasses}
+                  placeholder="Additional notes about this member"
+                />
+              </FullWidthField>
+            </FormSection>
+
+            <FormSection title="Profile Image">
+              <FullWidthField>
+                <AdvancedMediaUploader
+                  label="Member Photo"
+                  mediaType="image"
+                  currentUrl={data.profileImageUrl}
+                  onUrlChange={(url) =>
+                    setFormData((prev) => ({
+                      ...(prev as ChurchMemberFormData),
+                      profileImageUrl: url,
+                    }))
+                  }
+                  onFileUpload={(file) => handleCloudinaryUpload(file, 'profileImageUrl')}
+                  isUploading={isFieldUploading['profileImageUrl']}
+                  uploadStatus={uploadingStatus['profileImageUrl']}
+                  onSelectFromLibrary={() => handleImageFieldSelect('profileImageUrl')}
+                />
               </FullWidthField>
             </FormSection>
           </>

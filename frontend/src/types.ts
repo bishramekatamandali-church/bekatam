@@ -546,12 +546,22 @@ export interface ChurchMember {
   familyMembers?: string; 
   notes?: string;
   isActiveMember: boolean; 
+  memberStatus?: ChurchMemberStatus;
   profileImageUrl?: string;
   postedByAdminId?: string;
   postedByAdminName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export const churchMemberStatusList = [
+  "Active",
+  "Left",
+  "Contactless",
+  "Shifted to Other Church",
+  "Other",
+] as const;
+export type ChurchMemberStatus = typeof churchMemberStatusList[number];
 
 export const meetingTypeList = [
   "General Leaders Meeting", "Elders Meeting", "Deacons Meeting",
@@ -1235,6 +1245,7 @@ export interface ChurchMemberFormData {
   familyMembers?: string;
   notes?: string;
   isActiveMember: boolean;
+  memberStatus?: ChurchMemberStatus;
   profileImageUrl?: string;
 }
 
