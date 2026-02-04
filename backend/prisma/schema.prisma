@@ -105,6 +105,7 @@ model churchmember {
   familyMembers     String?   @db.Text
   notes             String?   @db.Text
   isActiveMember    Boolean
+  memberStatus      String    @default("Active")
   profileImageUrl   String?   @db.Text
   postedByAdminId   String?
   postedByAdminName String?
