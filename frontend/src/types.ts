@@ -547,6 +547,7 @@ export interface ChurchMember {
   notes?: string;
   isActiveMember: boolean; 
   memberStatus?: ChurchMemberStatus;
+  deactivatedDate?: string;
   profileImageUrl?: string;
   postedByAdminId?: string;
   postedByAdminName?: string;
@@ -556,6 +557,7 @@ export interface ChurchMember {
 
 export const churchMemberStatusList = [
   "Active",
+  "Deactivated",
   "Left",
   "Contactless",
   "Shifted to Other Church",
@@ -1246,6 +1248,7 @@ export interface ChurchMemberFormData {
   notes?: string;
   isActiveMember: boolean;
   memberStatus?: ChurchMemberStatus;
+  deactivatedDate?: string;
   profileImageUrl?: string;
 }
 

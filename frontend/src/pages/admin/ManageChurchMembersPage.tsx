@@ -48,10 +48,15 @@ const ManageChurchMembersPage: React.FC = () => {
 
   const statusStyles: Record<string, string> = {
     active: 'text-green-600',
+    deactivated: 'text-amber-700',
     left: 'text-red-500',
     contactless: 'text-amber-600',
     'shifted to other church': 'text-purple-600',
     other: 'text-slate-600',
+  };
+  const isInactiveStatus = (member: ChurchMember) => {
+    const status = resolveMemberStatus(member).toLowerCase();
+    return status === 'deactivated' || status === 'left' || status === 'shifted to other church';
   };
 
   const filteredMembers = useMemo(() => {
@@ -97,7 +102,7 @@ const ManageChurchMembersPage: React.FC = () => {
   const excelHeaders = [
     "ID", "Full Name", "Email", "Phone", "Address", 
     "Member Since", "Date of Birth", "Baptism Date", 
-    "Member Status", "Active Member", "Family Members", "Notes", "Profile Image URL",
+    "Member Status", "Deactivated/Left Date", "Active Member", "Family Members", "Notes", "Profile Image URL",
     "Posted By Admin ID", "Posted By Admin Name", "Created At", "Updated At"
   ];
 
@@ -113,6 +118,7 @@ const ManageChurchMembersPage: React.FC = () => {
       member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString('en-CA') : '',
       member.baptismDate ? new Date(member.baptismDate).toLocaleDateString('en-CA') : '',
       status,
+      member.deactivatedDate ? new Date(member.deactivatedDate).toLocaleDateString('en-CA') : '',
       member.isActiveMember ? 'Yes' : 'No',
       member.familyMembers || '',
       member.notes || '',
@@ -176,6 +182,9 @@ const ManageChurchMembersPage: React.FC = () => {
           {member.baptismDate && <p><strong>Baptized:</strong> {formatDateADBS(member.baptismDate)}</p>}
           {member.address && <p className="line-clamp-1"><strong>Address:</strong> {member.address}</p>}
           {member.familyMembers && <p className="line-clamp-1"><strong>Family:</strong> {member.familyMembers}</p>}
+          {member.deactivatedDate && isInactiveStatus(member) && (
+            <p><strong>Deactivated/Left:</strong> {formatDateADBS(member.deactivatedDate)}</p>
+          )}
           {member.notes && <p className="mt-1 italic line-clamp-2"><strong>Notes:</strong> {member.notes}</p>}
       </CardContent>
       <CardFooter className="flex flex-wrap justify-end gap-2 bg-gray-50 p-3">
@@ -198,10 +207,12 @@ const ManageChurchMembersPage: React.FC = () => {
     { header: "Phone", accessor: (m: ChurchMember) => m.contactPhone || 'N/A', hiddenInList: false, hiddenInExcel: false },
     { header: "Address", accessor: (m: ChurchMember) => m.address || 'N/A', hiddenInList: true, hiddenInExcel: true, truncate: true },
     { header: "Member Since", accessor: (m: ChurchMember) => formatDateADBS(m.memberSince), hiddenInList: false, hiddenInExcel: false },
+    { header: "Deactivated/Left Date", accessor: (m: ChurchMember) => m.deactivatedDate ? formatDateADBS(m.deactivatedDate) : '—', hiddenInList: false, hiddenInExcel: false },
     { header: "Status", accessor: (m: ChurchMember) => resolveMemberStatus(m), hiddenInList: false, hiddenInExcel: false,
       cellClass: (m: ChurchMember) => {
         const status = resolveMemberStatus(m).toLowerCase();
         if (status === 'active') return 'bg-green-100 text-green-800';
+        if (status === 'deactivated') return 'bg-amber-100 text-amber-800';
         if (status === 'contactless') return 'bg-amber-100 text-amber-800';
         if (status === 'shifted to other church') return 'bg-purple-100 text-purple-800';
         if (status === 'left') return 'bg-red-100 text-red-800';
