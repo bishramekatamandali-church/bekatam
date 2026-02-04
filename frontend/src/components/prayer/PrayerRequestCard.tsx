@@ -80,7 +80,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
   const handleDelete = (reason: string) => {
     if (!isAdmin) return;
     setIsSubmittingDelete(true);
-    deleteContent('prayerRequest', request.id).then(() => {
+    deleteContent('prayerRequest', request.id, reason).then(() => {
         logAdminAction("Deleted Prayer Request", request.id, `Title: "${request.title}", Reason: ${reason}`);
         setIsSubmittingDelete(false);
         setIsDeleteModalOpen(false);
@@ -185,6 +185,12 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
                   </button>
                 )}
               </p>
+              {request.moderationReason && (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <strong className="mr-1">Admin note:</strong>
+                  {request.moderationReason}
+                </div>
+              )}
           </div>
           <PostMediaDisplay mediaUrls={mediaUrls} title={request.title} />
           <PostMeta className={'text-slate-500'} />

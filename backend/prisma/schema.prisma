@@ -667,6 +667,11 @@ model prayerrequest {
   submittedAt         DateTime                 @default(now())
   lastPrayedAt        DateTime?
   adminNotes          String?                  @db.Text
+  moderationReason    String?                  @db.Text
+  moderatedAt         DateTime?
+  moderatedByAdminId  String?
+  moderatedByAdminName String?
+  isDeleted           Boolean                  @default(false)
   postedByAdminId     String?
   postedByAdminName   String?
   createdAt           DateTime                 @default(now())
@@ -726,6 +731,11 @@ model testimonial {
   contentText         String                 @db.Text
   visibility          testimonial_visibility
   submittedAt         DateTime               @default(now())
+  moderationReason    String?                @db.Text
+  moderatedAt         DateTime?
+  moderatedByAdminId  String?
+  moderatedByAdminName String?
+  isDeleted           Boolean                @default(false)
   postedByAdminId     String?
   postedByAdminName   String?
   createdAt           DateTime               @default(now())
