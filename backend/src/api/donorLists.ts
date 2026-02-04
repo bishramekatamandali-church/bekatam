@@ -1,4 +1,4 @@
-import { applyPdfFont, pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
+import { pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
 import { formatDateADBS } from "../utils/dateFormatters";
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
@@ -191,8 +191,8 @@ const buildDonorListPdfBuffer = (
       };
 
       // Title
-      applyPdfFont(doc, fontRegistry, title);
-      doc.fontSize(18).text(title, { align: 'center' });
+      doc.fontSize(18);
+      line(title, { align: 'center' });
       doc.moveDown(1);
 
       // Donors list
@@ -203,8 +203,8 @@ const buildDonorListPdfBuffer = (
           doc.moveDown(0.6);
         }
 
-        applyPdfFont(doc, fontRegistry, donor.donorName);
-        doc.fontSize(12).text(donor.donorName);
+        doc.fontSize(12);
+        line(donor.donorName);
 
         doc.fontSize(10).fillColor('#555555');
         if (donor.address) line(`Address: ${donor.address}`);
@@ -217,8 +217,8 @@ const buildDonorListPdfBuffer = (
           donor.donations.forEach((donation) => {
             const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : '';
             const bullet = `• ${formatDateADBS(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
-            applyPdfFont(doc, fontRegistry, bullet);
-            doc.fontSize(9).text(bullet);
+            doc.fontSize(9);
+            line(bullet);
           });
         }
       });
@@ -227,8 +227,8 @@ const buildDonorListPdfBuffer = (
       if (refinedDonors.length > 0) {
         doc.addPage();
         const heading = 'Refined donors list';
-        applyPdfFont(doc, fontRegistry, heading);
-        doc.fontSize(16).text(heading);
+        doc.fontSize(16);
+        line(heading);
         doc.moveDown(0.6);
 
         refinedDonors.forEach((donor, index) => {
