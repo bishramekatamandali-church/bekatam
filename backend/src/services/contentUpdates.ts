@@ -1,11 +1,21 @@
 import { EventEmitter } from 'events';
 
 export type ContentUpdatePayload = {
-   type: 'sermon' | 'event' | 'blogPost' | 'news' | 'ministry' | 'donation' | 'donatePageContent' | 'advertisement';
+  type:
+    | 'sermon'
+    | 'event'
+    | 'blogPost'
+    | 'news'
+    | 'ministry'
+    | 'donation'
+    | 'donatePageContent'
+    | 'advertisement'
+    | 'churchMember';
   action: 'created' | 'updated' | 'deleted';
   id: string;
   timestamp: string;
 };
+
 
 const contentUpdateEmitter = new EventEmitter();
 

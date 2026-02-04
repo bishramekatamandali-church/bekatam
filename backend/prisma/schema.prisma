@@ -114,7 +114,7 @@ model churchmember {
   updatedAt         DateTime
   user              user?     @relation(fields: [userId], references: [id], map: "ChurchMember_userId_fkey")
   
-  @@map("ChurchMember")
+  @@map("churchmember")
 }
 
 model collectionrecord {
