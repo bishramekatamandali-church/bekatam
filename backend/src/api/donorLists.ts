@@ -1,5 +1,5 @@
 import { pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
-import { formatDateADBS } from "../utils/dateFormatters";
+import { formatDateADBS, formatDateADBSShort } from "../utils/dateFormatters";
 import express, { Request } from 'express';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
@@ -172,7 +172,11 @@ const buildRefinedDonorList = (donors: DonorListEntry[]): RefinedDonorEntry[] =>
 };
 
 const buildDonorListPdfBuffer = (
-  title: string,
+  params: {
+    title: string;
+    churchName: string;
+    dateRangeLabel: string;
+  },
   donors: DonorListEntry[],
   refinedDonors: RefinedDonorEntry[]
 ): Promise<Buffer> => {
@@ -192,7 +196,14 @@ const buildDonorListPdfBuffer = (
 
       // Title
       doc.fontSize(18);
-      line(title, { align: 'center' });
+      line(params.churchName, { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(14);
+      line(params.title, { align: 'center' });
+      doc.moveDown(0.2);
+      doc.fontSize(11).fillColor('#555555');
+      line(params.dateRangeLabel, { align: 'center' });
+      doc.fillColor('#000000');
       doc.moveDown(1);
 
       // Donors list
@@ -402,10 +413,21 @@ router.get('/', async (req: Request<Record<string, never>, unknown, unknown, Don
       end ? formatDateADBS(end) : 'Present',
     ];
     const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
+    const dateRangeLabel = `${start ? formatDateADBSShort(start) : 'Start'} to ${
+      end ? formatDateADBSShort(end) : 'Present'
+    }`;
     const refinedDonors = buildRefinedDonorList(donors);
 
     if (format === 'pdf') {
-      const pdfBuffer = await buildDonorListPdfBuffer(title, donors, refinedDonors);
+      const pdfBuffer = await buildDonorListPdfBuffer(
+        {
+          title,
+          churchName: 'Bishram Ekata Mandali',
+          dateRangeLabel,
+        },
+        donors,
+        refinedDonors
+      );
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="donors_list.pdf"');
       return res.status(200).send(pdfBuffer);
