@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Prisma, prayerrequest_visibility, prayerrequest_status } from '@prisma/client';
+import { Prisma, prayerrequest_visibility, prayerrequest_status, prayerrequest_category } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 
@@ -81,6 +81,18 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(401).json({ error: 'Authentication required to submit a prayer request.' });
     }
     const { title, requestText, visibility, category, mediaUrls, location } = req.body;
+    const trimmedTitle = String(title || '').trim();
+    const trimmedRequestText = String(requestText || '').trim();
+    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    if (!trimmedRequestText && !hasMedia) {
+        return res.status(400).json({ error: 'Prayer request text or media is required.' });
+    }
+    const resolvedVisibility = Object.values(prayerrequest_visibility).includes(visibility as prayerrequest_visibility)
+        ? (visibility as prayerrequest_visibility)
+        : prayerrequest_visibility.public;
+    const resolvedCategory = Object.values(prayerrequest_category).includes(category as prayerrequest_category)
+        ? (category as prayerrequest_category)
+        : prayerrequest_category.Other;
 
     try {
         const user = await prisma.user.findUnique({ where: { id: requestUser.id } });
@@ -92,10 +104,10 @@ router.post('/', authMiddleware, async (req, res) => {
             data: {
                 id: crypto.randomUUID(), // REQUIRED in your schema
     updatedAt: new Date(),   // REQUIRED
-                title,
-                requestText,
-                visibility: visibility as prayerrequest_visibility,
-                category,
+                title: trimmedTitle || trimmedRequestText.split(' ').slice(0, 7).join(' ') || 'Prayer Request',
+                requestText: trimmedRequestText,
+                visibility: resolvedVisibility,
+                category: resolvedCategory,
                 status: 'active',
                 mediaUrls: mediaUrls || undefined,
                 location,

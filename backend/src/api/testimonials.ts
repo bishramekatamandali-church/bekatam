@@ -70,6 +70,18 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(401).json({ error: 'Authentication required to submit a testimonial.' });
     }
     const { title, contentText, visibility, mediaUrls, location } = req.body;
+    const trimmedTitle = String(title || '').trim();
+    const trimmedContentText = String(contentText || '').trim();
+    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    if (!trimmedTitle) {
+        return res.status(400).json({ error: 'A title is required to submit a testimonial.' });
+    }
+    if (!trimmedContentText && !hasMedia) {
+        return res.status(400).json({ error: 'Testimonial text or media is required.' });
+    }
+    const resolvedVisibility = Object.values(testimonial_visibility).includes(visibility as testimonial_visibility)
+        ? (visibility as testimonial_visibility)
+        : testimonial_visibility.public;
 
     try {
         const user = await prisma.user.findUnique({ where: { id: requestUser.id } });
@@ -81,9 +93,9 @@ router.post('/', authMiddleware, async (req, res) => {
             data: {
                 id: crypto.randomUUID(), // REQUIRED in your schema
     updatedAt: new Date(),   // REQUIRED
-                title,
-                contentText,
-                visibility: visibility as testimonial_visibility,
+                title: trimmedTitle,
+                contentText: trimmedContentText,
+                visibility: resolvedVisibility,
                 mediaUrls: mediaUrls || undefined,
                 location,
                 postedByAdminId: isAdmin ? requestUser.id : undefined,
