@@ -231,16 +231,20 @@ function formatLocalTimestamp(date = new Date()): string {
 
 const buildDonorListPdfBuffer = (
   params: {
-    title: string;
-    churchName: string;
-    dateRangeLabel: string;
-  },
+  title: string;
+  churchName: string;
+  headerBsLine: string;
+  headerAdLine: string;
+  totalDonors: number;
+  totalDonated: number;
+},
+
   donors: DonorListEntry[],
   refinedDonors: RefinedDonorEntry[],
 ): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
       const fontRegistry = registerPdfFonts(doc);
 
       const chunks: Buffer[] = [];
@@ -253,23 +257,62 @@ const buildDonorListPdfBuffer = (
       };
 
       const headerWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
- 
-       // Header (clean, non-overlapping)
-       doc.fontSize(18);
-       line(params.churchName, { align: "center", width: headerWidth });
-       doc.moveDown(0.25);
- 
-       doc.fontSize(14);
-       line(params.title, { align: "center", width: headerWidth });
-       doc.moveDown(0.15);
- 
-       doc.fontSize(11).fillColor("#555555");
-       line(params.dateRangeLabel, { align: "center", width: headerWidth, lineGap: 2 });
-       doc.fillColor("#000000");
- 
-       doc.moveDown(0.6);
-       doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke();
-       doc.moveDown(0.8);
+const marginLeft = doc.page.margins.left;
+const marginRight = doc.page.margins.right;
+
+const formatNpr = (amount: number) => `NPR ${Number(amount || 0).toFixed(2)}`;
+
+const drawHeader = (pageNumber: number, totalPages: number) => {
+  doc.save();
+
+  // Start header at top margin area
+  doc.y = doc.page.margins.top;
+
+  // Church
+  doc.font(FONT_LATIN_REGULAR).fontSize(18).fillColor("#0f172a");
+  doc.text(params.churchName, marginLeft, doc.y, { width: headerWidth, align: "center" });
+
+  doc.moveDown(0.25);
+
+  // Title
+  doc.font(FONT_LATIN_REGULAR).fontSize(14).fillColor("#0f172a");
+  doc.text(params.title, marginLeft, doc.y, { width: headerWidth, align: "center" });
+
+  doc.moveDown(0.15);
+
+  // Date range (two lines, no overlap)
+  doc.fillColor("#555555");
+
+  // BS line
+  doc.font(FONT_DEVANAGARI_REGULAR).fontSize(11);
+  doc.text(params.headerBsLine, marginLeft, doc.y, { width: headerWidth, align: "center" });
+
+  doc.moveDown(0.10);
+
+  // AD line
+  doc.font(FONT_LATIN_REGULAR).fontSize(10).fillColor("#666666");
+  doc.text(params.headerAdLine, marginLeft, doc.y, { width: headerWidth, align: "center" });
+
+  doc.moveDown(0.20);
+
+  // Summary + Page X of N
+  doc.font(FONT_LATIN_REGULAR).fontSize(9).fillColor("#475569");
+  const summary = `Total Donors: ${params.totalDonors}   |   Total Donated: ${formatNpr(params.totalDonated)}   |   Page ${pageNumber} of ${totalPages}`;
+  doc.text(summary, marginLeft, doc.y, { width: headerWidth, align: "center" });
+
+  doc.moveDown(0.35);
+
+  // Divider line
+  doc.strokeColor("#cbd5f5");
+  doc.moveTo(marginLeft, doc.y).lineTo(doc.page.width - marginRight, doc.y).stroke();
+
+  doc.restore();
+};
+
+// Reserve space for header so content never overlaps it
+const headerBlockHeight = 120;
+doc.y = doc.page.margins.top + headerBlockHeight;
+
 
       donors.forEach((donor, index) => {
         if (index > 0) {
@@ -324,6 +367,18 @@ const buildDonorListPdfBuffer = (
           doc.fillColor("#000000");
         });
       }
+      // Draw header on every page with correct total pages
+const range = doc.bufferedPageRange();
+const totalPages = range.count;
+
+for (let i = range.start; i < range.start + range.count; i += 1) {
+  doc.switchToPage(i);
+  drawHeader(i + 1, totalPages);
+
+  // Re-apply content start Y (important if any page was switched before writing ended)
+  // Not strictly required here since we draw after all content, but safe to keep layout stable.
+}
+
 
       doc.end();
     } catch (error) {
@@ -1189,20 +1244,30 @@ export const getDonorListPdf = async (req: Request, res: Response) => {
        }
      };
  
-     const bsRange = `${start ? formatBsHeader(start) : "Start"} – ${end ? formatBsHeader(end) : "Present"}`;
-     const adRange = `(${start ? formatAdHeader(start) : "Start"} – ${end ? formatAdHeader(end) : "Present"})`;
-     const dateRangeLabel = `${bsRange}\n${adRange}`;
+     const headerBsLine = `${start ? formatBsHeader(start) : "Start"} – ${end ? formatBsHeader(end) : "Present"}`;
+     const headerAdLine = `(${start ? formatAdHeader(start) : "Start"} – ${end ? formatAdHeader(end) : "Present"})`;
+
     const refinedDonors = buildRefinedDonorList(donors);
+    
+    const totalDonors = donors.length;
+const totalDonated = donors.reduce(
+  (sum, d) => sum + Number(d.totalAmount || 0),
+  0
+);
 
     const pdfBuffer = await buildDonorListPdfBuffer(
-      {
-        title,
-        churchName: "Bishram Ekata Mandali",
-        dateRangeLabel,
-      },
-      donors,
-      refinedDonors,
-    );
+  {
+    title,
+    churchName: "Bishram Ekata Mandali",
+    headerBsLine,
+    headerAdLine,
+    totalDonors,
+    totalDonated,
+  },
+  donors,
+  refinedDonors,
+);
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="donors_list.pdf"');
     return res.status(200).send(pdfBuffer);
