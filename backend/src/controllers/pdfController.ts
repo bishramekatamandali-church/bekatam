@@ -3,7 +3,6 @@ import path from "path";
 import fs from "fs";
 import { prisma } from "../db";
 import { BS_MONTH_NAMES_NP, formatDateADBS, formatDateADBSShort, getBsDateParts } from "../utils/dateFormatters";
-import { buildFellowshipSchedulePdf } from "../services/pdf/buildFellowshipSchedulePdf";
 import { pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
 import { handleDatabaseFallback } from "../utils/databaseFallback";
 import {
@@ -43,6 +42,13 @@ const DEVANAGARI_REGEX = /[\u0900-\u097F]/;
 const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
 
 type TextRunType = "latin" | "devanagari" | "emoji";
+
+type FellowshipScheduleItem = {
+  timeLabel: string;
+  title: string;
+  speakerName?: string;
+  details?: string;
+};
 
 
 function setPdfHeaders(res: Response, filename: string) {
@@ -150,6 +156,68 @@ function writeBlock(doc: any, title: string, body: any) {
 
   doc.moveDown(0.5);
 }
+
+const buildFellowshipSchedulePdf = (
+  doc: any,
+  params: {
+    churchName: string;
+    items: FellowshipScheduleItem[];
+  },
+) => {
+  const pageWidth = doc.page.width;
+  const margin = doc.page.margins.left;
+  const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
+
+  doc.info.Title = "Fellowship Schedule";
+  doc.x = margin;
+
+  // Header
+  doc.fontSize(16);
+  writeTextWithFallback(doc, params.churchName, { width: contentWidth }, "bold");
+  doc.moveDown(0.5);
+
+  doc.fontSize(14);
+  writeTextWithFallback(doc, "Fellowship Schedule", { width: contentWidth }, "bold");
+  doc.moveDown(0.3);
+
+  doc.moveTo(margin, doc.y).lineTo(margin + contentWidth, doc.y).stroke();
+  doc.moveDown(0.6);
+
+  // Body
+  doc.fontSize(11);
+  for (const item of params.items) {
+    const line1 = item.timeLabel ? `${item.timeLabel} - ${item.title}` : item.title;
+    doc.x = margin;
+    writeTextWithFallback(doc, line1, { width: contentWidth }, "bold");
+
+    if (item.speakerName) {
+      doc.x = margin + 12;
+      writeTextWithFallback(
+        doc,
+        `Speaker: ${item.speakerName}`,
+        { width: contentWidth - 12 },
+        "normal",
+      );
+    }
+
+    if (item.details) {
+      doc.x = margin + 12;
+      writeTextWithFallback(doc, item.details, { width: contentWidth - 12 }, "normal");
+    }
+
+    doc.moveDown(0.5);
+  }
+
+  // Footer
+  const footerY = doc.page.height - doc.page.margins.bottom + 14;
+  doc.fontSize(9);
+  writeTextWithFallback(
+    doc,
+    params.churchName,
+    { x: margin, y: footerY, width: contentWidth, align: "center" },
+    "bold",
+  );
+};
 
 function formatLocalTimestamp(date = new Date()): string {
   const year = date.getFullYear();
@@ -991,8 +1059,10 @@ export const getFellowshipSchedulePdf = async (req: Request, res: Response) => {
       .join("\n");
 
     const timeLabel = schedule.timeSlot ? `${formatDateADBSShort(schedule.scheduledDate)} | ${schedule.timeSlot}` : "";
-
-    const doc = buildFellowshipSchedulePdf({
+    
+    setPdfHeaders(res, `Fellowship_Schedule_${id}.pdf`);
+    const doc = createDoc(res);
+    buildFellowshipSchedulePdf(doc, {
       churchName: "Bishram Ekata Mandali",
       items: [
         {
@@ -1003,9 +1073,6 @@ export const getFellowshipSchedulePdf = async (req: Request, res: Response) => {
         },
       ],
     });
-
-    setPdfHeaders(res, `Fellowship_Schedule_${id}.pdf`);
-    doc.pipe(res);
     doc.end();
   } catch (err) {
     console.error("getFellowshipSchedulePdf error:", err);
