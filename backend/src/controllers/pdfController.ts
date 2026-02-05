@@ -262,56 +262,92 @@ const marginRight = doc.page.margins.right;
 
 const formatNpr = (amount: number) => `NPR ${Number(amount || 0).toFixed(2)}`;
 
-const drawHeader = (pageNumber: number, totalPages: number) => {
+       const drawHeader = (pageNumber: number, totalPages: number) => {
+  // 🔒 Save cursor position (VERY IMPORTANT)
+  const prevX = doc.x;
+  const prevY = doc.y;
+
   doc.save();
 
-  // Start header at top margin area
+  // Start drawing header at top margin (visual only)
   doc.y = doc.page.margins.top;
 
-  // Church
+  // --- HEADER CONTENT ---
   doc.font(FONT_LATIN_REGULAR).fontSize(18).fillColor("#0f172a");
-  doc.text(params.churchName, marginLeft, doc.y, { width: headerWidth, align: "center" });
+  doc.text(params.churchName, doc.page.margins.left, doc.y, {
+    width: headerWidth,
+    align: "center",
+  });
 
   doc.moveDown(0.25);
 
-  // Title
-  doc.font(FONT_LATIN_REGULAR).fontSize(14).fillColor("#0f172a");
-  doc.text(params.title, marginLeft, doc.y, { width: headerWidth, align: "center" });
+  doc.font(FONT_LATIN_REGULAR).fontSize(14);
+  doc.text(params.title, doc.page.margins.left, doc.y, {
+    width: headerWidth,
+    align: "center",
+  });
 
   doc.moveDown(0.15);
 
-  // Date range (two lines, no overlap)
-  doc.fillColor("#555555");
-
   // BS line
-  doc.font(FONT_DEVANAGARI_REGULAR).fontSize(11);
-  doc.text(params.headerBsLine, marginLeft, doc.y, { width: headerWidth, align: "center" });
+  doc.font(FONT_DEVANAGARI_REGULAR).fontSize(11).fillColor("#555555");
+  doc.text(params.headerBsLine, doc.page.margins.left, doc.y, {
+    width: headerWidth,
+    align: "center",
+  });
 
   doc.moveDown(0.10);
 
   // AD line
   doc.font(FONT_LATIN_REGULAR).fontSize(10).fillColor("#666666");
-  doc.text(params.headerAdLine, marginLeft, doc.y, { width: headerWidth, align: "center" });
+  doc.text(params.headerAdLine, doc.page.margins.left, doc.y, {
+    width: headerWidth,
+    align: "center",
+  });
 
   doc.moveDown(0.20);
 
-  // Summary + Page X of N
+  // Summary + page number
   doc.font(FONT_LATIN_REGULAR).fontSize(9).fillColor("#475569");
-  const summary = `Total Donors: ${params.totalDonors}   |   Total Donated: ${formatNpr(params.totalDonated)}   |   Page ${pageNumber} of ${totalPages}`;
-  doc.text(summary, marginLeft, doc.y, { width: headerWidth, align: "center" });
+  doc.text(
+    `Total Donors: ${params.totalDonors}   |   Total Donated: NPR ${params.totalDonated.toFixed(
+      2
+    )}   |   Page ${pageNumber} of ${totalPages}`,
+    doc.page.margins.left,
+    doc.y,
+    { width: headerWidth, align: "center" }
+  );
 
   doc.moveDown(0.35);
 
-  // Divider line
+  // Divider
   doc.strokeColor("#cbd5f5");
-  doc.moveTo(marginLeft, doc.y).lineTo(doc.page.width - marginRight, doc.y).stroke();
+  doc
+    .moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .stroke();
 
   doc.restore();
+
+  // 🔒 Restore cursor position so body layout is NOT affected
+  doc.x = prevX;
+  doc.y = prevY;
 };
 
-// Reserve space for header so content never overlaps it
-const headerBlockHeight = 120;
-doc.y = doc.page.margins.top + headerBlockHeight;
+
+
+       // Reserve space for header so content never overlaps it (ALL pages)
+      const headerBlockHeight = 120;
+      const contentStartY = doc.page.margins.top + headerBlockHeight;
+
+      // Apply for first page
+      doc.y = contentStartY;
+
+      // Apply automatically for every new page created by PDFKit (auto page breaks)
+      doc.on("pageAdded", () => {
+      doc.y = contentStartY;
+     });
+
 
 
       donors.forEach((donor, index) => {
@@ -343,6 +379,8 @@ doc.y = doc.page.margins.top + headerBlockHeight;
 
       if (refinedDonors.length > 0) {
         doc.addPage();
+        doc.y = contentStartY; // <-- add this line
+
         const heading = "Refined donors list";
         doc.fontSize(16);
         line(heading);
