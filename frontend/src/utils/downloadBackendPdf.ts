@@ -12,6 +12,7 @@ function getFilenameFromContentDisposition(cd: string | null): string | null {
   return null;
 }
 
+// Centralized helper for PDFs served by the backend (client-side PDF generators removed).
 export async function downloadBackendPdf(url: string, fallbackFilename?: string) {
   const res = await fetch(url, {
     method: "GET",
