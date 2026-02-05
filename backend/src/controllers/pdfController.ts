@@ -4,6 +4,16 @@ import fs from "fs";
 import { prisma } from "../db";
 import { BS_MONTH_NAMES_NP, formatDateADBS, formatDateADBSShort, getBsDateParts } from "../utils/dateFormatters";
 import { buildFellowshipSchedulePdf } from "../services/pdf/buildFellowshipSchedulePdf";
+import { pdfTextMixed, registerPdfFonts } from "../utils/pdfFonts";
+import { handleDatabaseFallback } from "../utils/databaseFallback";
+import {
+  addDonorDonation,
+  buildRefinedDonorList,
+  normalizeDateRange,
+  DonorDonationEntry,
+  DonorListEntry,
+  RefinedDonorEntry,
+} from "../utils/donorListReport";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require("pdfkit");
@@ -150,6 +160,101 @@ function formatLocalTimestamp(date = new Date()): string {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
+
+const buildDonorListPdfBuffer = (
+  params: {
+    title: string;
+    churchName: string;
+    dateRangeLabel: string;
+  },
+  donors: DonorListEntry[],
+  refinedDonors: RefinedDonorEntry[],
+): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      const fontRegistry = registerPdfFonts(doc);
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      const line = (text: string, options?: Record<string, unknown>) => {
+        pdfTextMixed(doc, fontRegistry, text, options as any);
+      };
+
+      doc.fontSize(18);
+      line(params.churchName, { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(14);
+      line(params.title, { align: "center" });
+      doc.moveDown(0.2);
+      doc.fontSize(11).fillColor("#555555");
+      line(params.dateRangeLabel, { align: "center" });
+      doc.fillColor("#000000");
+      doc.moveDown(1);
+
+      donors.forEach((donor, index) => {
+        if (index > 0) {
+          doc.moveDown(0.5);
+          doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+          doc.moveDown(0.6);
+        }
+
+        doc.fontSize(12);
+        line(donor.donorName);
+
+        doc.fontSize(10).fillColor("#555555");
+        if (donor.address) line(`Address: ${donor.address}`);
+        if (donor.contact) line(`Contact: ${donor.contact}`);
+        line(`Total Donated: NPR ${Number(donor.totalAmount || 0).toFixed(2)}`);
+        doc.fillColor("#000000");
+
+        if (donor.donations.length > 0) {
+          doc.moveDown(0.3);
+          donor.donations.forEach((donation) => {
+            const purposeLabel = donation.purpose ? ` - ${donation.purpose}` : "";
+            const bullet = `• ${formatDateADBS(donation.date)} - NPR ${Number(donation.amount || 0).toFixed(2)}${purposeLabel}`;
+            doc.fontSize(9);
+            line(bullet);
+          });
+        }
+      });
+
+      if (refinedDonors.length > 0) {
+        doc.addPage();
+        const heading = "Refined donors list";
+        doc.fontSize(16);
+        line(heading);
+        doc.moveDown(0.6);
+
+        refinedDonors.forEach((donor, index) => {
+          if (index > 0) {
+            doc.moveDown(0.4);
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+            doc.moveDown(0.4);
+          }
+
+          const mergedLabel = donor.mergedCount > 1 ? ` (merged ${donor.mergedCount})` : "";
+          const purposes = donor.purposes.length > 0 ? donor.purposes.join(", ") : "—";
+
+          line(`${donor.donorName}${mergedLabel}`);
+          doc.fontSize(10).fillColor("#555555");
+          line(`Address: ${donor.address ?? "—"}`);
+          line(`Contact: ${donor.contact ?? "—"}`);
+          line(`Total Donated: NPR ${Number(donor.totalAmount || 0).toFixed(2)}`);
+          line(`Purposes: ${purposes}`);
+          doc.fillColor("#000000");
+        });
+      }
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 export const getTestPdf = async (_req: Request, res: Response) => {
   try {
@@ -514,54 +619,103 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
     setPdfHeaders(res, filename);
     const doc = createDoc(res, { bufferPages: true });
     
-    const rangeLabel = `Date Range: ${startDate ? formatDateADBSShort(startDate) : "Start"} to ${
-      endDate ? formatDateADBSShort(endDate) : "End"
-    }`;
-    const marginLeft = doc.page.margins.left;
-    const marginRight = doc.page.margins.right;
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-    const headerWidth = pageWidth - marginLeft - marginRight;
-    doc.fontSize(9);
-    const rangeLabelHeight = doc.heightOfString(rangeLabel, { width: headerWidth, align: "center" });
-    const headerHeight = 40 + rangeLabelHeight;
-    const footerHeight = 46;
-    const contentTop = doc.page.margins.top + headerHeight;
-    const contentBottom = pageHeight - doc.page.margins.bottom - footerHeight;
-    
-    const drawHeaderFooter = (pageNumber: number, totalPages: number) => {
-      const headerY = doc.page.margins.top - 10;
-      const headerRuleY = headerY + 30 + rangeLabelHeight + 6;
-      doc.save();
-      doc.fillColor("#0f172a");
-      doc.fontSize(13);
-      writeTextWithFallback(
-        doc,
-        "Bishram Ekata Mandali",
-        { x: marginLeft, y: headerY, width: headerWidth, align: "center" },
-        "bold",
-      );
-      doc.fontSize(12);
-      writeTextWithFallback(
-        doc,
-        "Financial Summary",
-        { x: marginLeft, y: headerY + 16, width: headerWidth, align: "center" },
-        "bold",
-      );
-      doc.fontSize(9);
-      doc.fillColor("#475569");
-       writeTextWithFallback(doc, rangeLabel, { x: marginLeft, y: headerY + 30, width: headerWidth, align: "center" });
-      doc.moveTo(marginLeft, headerRuleY).lineTo(pageWidth - marginRight, headerRuleY).strokeColor("#cbd5f5").stroke();
+    // --- Date range parsing helpers (keep only ONE copy; remove duplicates) ---
+const splitDateLabel = (value: string) => {
+  const trimmed = String(value ?? "").trim();
+  const match = trimmed.match(/^(.*)\s+\((.*)\)\s*$/);
+  if (!match) return { bs: trimmed, ad: "" };
+  return { bs: match[1].trim(), ad: match[2].trim() };
+};
 
-      const footerY = pageHeight - doc.page.margins.bottom + 12;
-      doc.strokeColor("#e2e8f0");
-      doc.moveTo(marginLeft, footerY - 8).lineTo(pageWidth - marginRight, footerY - 8).stroke();
-      doc.fillColor("#475569");
-      doc.fontSize(9);
-      doc.text(`Page ${pageNumber} of ${totalPages}`, 0, footerY, { align: "center" });
-      doc.restore();
-    };
+const startLabel = startDate ? formatDateADBSShort(startDate) : "Start";
+const endLabel = endDate ? formatDateADBSShort(endDate) : "End";
+const startParts = splitDateLabel(startLabel);
+const endParts = splitDateLabel(endLabel);
 
+// Short + predictable (prevents wrap/overlap)
+const lineBS = `${startParts.bs} देखि ${endParts.bs}`; // Nepali BS range
+const lineAD = startParts.ad && endParts.ad ? `${startParts.ad} to ${endParts.ad}` : "";
+
+// --- Page metrics ---
+const marginLeft = doc.page.margins.left;
+const marginRight = doc.page.margins.right;
+const pageWidth = doc.page.width;
+const pageHeight = doc.page.height;
+const headerWidth = pageWidth - marginLeft - marginRight;
+
+// --- Measure header height using the SAME fonts you will draw with ---
+const headerY = doc.page.margins.top - 10;
+const dateFontSize = 9;
+const dateGap = lineAD ? 2 : 0;
+
+// measure BS (Devanagari)
+doc.font(FONT_DEVANAGARI_REGULAR).fontSize(dateFontSize);
+const bsLineH = doc.heightOfString(lineBS, { width: headerWidth, align: "center" });
+
+// measure AD (Latin)
+let adLineH = 0;
+if (lineAD) {
+  doc.font(FONT_LATIN_REGULAR).fontSize(dateFontSize);
+  adLineH = doc.heightOfString(lineAD, { width: headerWidth, align: "center" });
+}
+
+// Titles area: 2 headings (about 30px) + date lines + rule gap
+const titlesHeight = 30; // Bishram + Financial Summary block height
+const headerRuleGap = 8;
+const headerHeight = titlesHeight + bsLineH + dateGap + adLineH + headerRuleGap;
+
+const footerHeight = 46;
+const contentTop = doc.page.margins.top + headerHeight;
+const contentBottom = pageHeight - doc.page.margins.bottom - footerHeight;
+
+// --- Draw header/footer on each page (NO re-definitions inside) ---
+const drawHeaderFooter = (pageNumber: number, totalPages: number) => {
+  const headerRuleY = headerY + titlesHeight + bsLineH + dateGap + adLineH + 6;
+
+  doc.save();
+
+  // Titles
+  doc.fillColor("#0f172a");
+  doc.font(FONT_LATIN_REGULAR).fontSize(13);
+  doc.text("Bishram Ekata Mandali", marginLeft, headerY, { width: headerWidth, align: "center" });
+
+  doc.font(FONT_LATIN_REGULAR).fontSize(12);
+  doc.text("Financial Summary", marginLeft, headerY + 16, { width: headerWidth, align: "center" });
+
+  // Date lines (draw with fixed fonts => no messy wrap order)
+  doc.fillColor("#475569");
+
+  // BS line (Devanagari)
+  doc.font(FONT_DEVANAGARI_REGULAR).fontSize(dateFontSize);
+  doc.text(lineBS, marginLeft, headerY + titlesHeight, { width: headerWidth, align: "center" });
+
+  // AD line (Latin)
+  if (lineAD) {
+    doc.font(FONT_LATIN_REGULAR).fontSize(dateFontSize);
+    doc.text(lineAD, marginLeft, headerY + titlesHeight + bsLineH + dateGap, {
+      width: headerWidth,
+      align: "center",
+    });
+  }
+
+  // Header rule
+  doc.moveTo(marginLeft, headerRuleY)
+    .lineTo(pageWidth - marginRight, headerRuleY)
+    .strokeColor("#cbd5f5")
+    .stroke();
+
+  // Footer
+  const footerY = pageHeight - doc.page.margins.bottom + 12;
+  doc.strokeColor("#e2e8f0");
+  doc.moveTo(marginLeft, footerY - 8).lineTo(pageWidth - marginRight, footerY - 8).stroke();
+
+  doc.fillColor("#475569");
+  doc.font(FONT_LATIN_REGULAR).fontSize(9);
+  doc.text(`Page ${pageNumber} of ${totalPages}`, 0, footerY, { align: "center" });
+
+  doc.restore();
+};
+      
     doc.y = contentTop;
 
     const summaryBoxTop = doc.y;
@@ -672,7 +826,16 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
           const x = columnPositions[idx] + 6;
           const width = columnWidths[idx] - 12;
           const align = idx === rowData.length - 1 ? "right" : "left";
-          doc.text(text || "-", x, rowY + 4, { width, align });
+
+if (idx === 0) {
+  // ✅ Date column: Nepali month short names render correctly
+  writeTextWithFallback(doc, text || "-", { x, y: rowY + 4, width, align: "left" });
+  // ✅ Reset font so other columns stay normal latin font
+  doc.font(FONT_LATIN_REGULAR);
+} else {
+  doc.text(text || "-", x, rowY + 4, { width, align });
+}
+
           doc.strokeColor("#e2e8f0");
           doc.moveTo(columnPositions[idx], rowY).lineTo(columnPositions[idx], rowY + rowHeight).stroke();
         });
@@ -702,6 +865,7 @@ export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
     } catch {}
   }
 };
+
 
 export const getCalendarPdf = async (req: Request, res: Response) => {
   try {
@@ -849,5 +1013,108 @@ export const getFellowshipSchedulePdf = async (req: Request, res: Response) => {
     try {
       res.end();
     } catch {}
+  }
+};
+
+export const getDonorListPdf = async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.query;
+  const { start, end } = normalizeDateRange(
+    typeof startDate === "string" ? startDate : undefined,
+    typeof endDate === "string" ? endDate : undefined,
+  );
+
+  if ((startDate && !start) || (endDate && !end)) {
+    return res.status(400).json({ error: "Invalid startDate or endDate." });
+  }
+
+  if (start && end && start > end) {
+    return res.status(400).json({ error: "startDate must be before endDate." });
+  }
+
+  try {
+    const [collectionRecords, donationRecords] = await Promise.all([
+      prisma.collectionrecord.findMany({
+        where: {
+          ...(start || end
+            ? {
+                collectionDate: {
+                  ...(start ? { gte: start } : {}),
+                  ...(end ? { lte: end } : {}),
+                },
+              }
+            : {}),
+        },
+        include: {
+          donordetail: true,
+        },
+        orderBy: {
+          collectionDate: "asc",
+        },
+      }),
+      prisma.donationrecord.findMany({
+        where: {
+          ...(start || end
+            ? {
+                donationDate: {
+                  ...(start ? { gte: start } : {}),
+                  ...(end ? { lte: end } : {}),
+                },
+              }
+            : {}),
+        },
+        orderBy: {
+          donationDate: "asc",
+        },
+      }),
+    ]);
+
+    const donorsByName = new Map<string, DonorListEntry[]>();
+    collectionRecords.forEach((record) => {
+      record.donordetail.forEach((donor) => {
+        const donationEntry: DonorDonationEntry = {
+          amount: Number(donor.amount ?? 0),
+          date: record.collectionDate,
+          collectionId: record.id,
+          purpose: record.purpose,
+        };
+        addDonorDonation(donorsByName, donor.donorName, donor.address, donor.contact, donationEntry);
+      });
+    });
+
+    donationRecords.forEach((record) => {
+      const donationEntry: DonorDonationEntry = {
+        amount: Number(record.amount ?? 0),
+        date: record.donationDate,
+        collectionId: record.id,
+        purpose: record.purpose,
+      };
+      addDonorDonation(donorsByName, record.donorName, null, record.donorPhone ?? null, donationEntry);
+    });
+
+    const donors = Array.from(donorsByName.values())
+      .flat()
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+    const titleParts = [start ? formatDateADBS(start) : "All time", end ? formatDateADBS(end) : "Present"];
+    const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
+    const dateRangeLabel = `${start ? formatDateADBSShort(start) : "Start"} to ${
+      end ? formatDateADBSShort(end) : "Present"
+    }`;
+    const refinedDonors = buildRefinedDonorList(donors);
+
+    const pdfBuffer = await buildDonorListPdfBuffer(
+      {
+        title,
+        churchName: "Bishram Ekata Mandali",
+        dateRangeLabel,
+      },
+      donors,
+      refinedDonors,
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="donors_list.pdf"');
+    return res.status(200).send(pdfBuffer);
+  } catch (error) {
+    if (handleDatabaseFallback(req, res, error)) return;
+    return res.status(500).json({ error: "Failed to fetch donors list." });
   }
 };

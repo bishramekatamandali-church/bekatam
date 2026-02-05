@@ -118,8 +118,10 @@ const DonorListReportPage: React.FC = () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const query = buildQuery(format);
-      const response = await fetch(`${API_BASE_URL}/donor-lists?${query}`, { credentials: 'include' });
+      const query = buildQuery(format === 'xml' ? 'xml' : undefined);
+      const endpoint =
+        format === 'pdf' ? `${API_BASE_URL}/pdfs/donor-lists?${query}` : `${API_BASE_URL}/donor-lists?${query}`;
+      const response = await fetch(endpoint, { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to download report.');
       }
