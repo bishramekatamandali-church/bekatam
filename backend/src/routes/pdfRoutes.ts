@@ -7,10 +7,12 @@ import {
   getHistoryChapterPdf,
   getChurchMemberPdf,
   getFinancialSummaryPdf,
-  getCalendarPdf,
   getFellowshipSchedulePdf,
   getDonorListPdf,
 } from "../controllers/pdfController";
+
+import { getCalendarPdf } from "../controllers/calendarPdfController";
+
 
 const router = Router();
 
