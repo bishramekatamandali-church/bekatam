@@ -218,6 +218,14 @@ export const pdfTextMixed = (
     const isLast = idx === runs.length - 1;
     const sample = run.script === 'emoji' ? '🙂' : run.script === 'devanagari' ? 'अ' : 'A';
     applyPdfFont(doc, registry, sample);
-    doc.text(run.text, { ...(options as any), continued: !isLast });
+
+    // When using PDFKit's `continued`, re-applying layout options (like align/width)
+    // on every chunk can cause wrapping/overlap issues with mixed scripts (Nepali + English).
+    // Apply full options only on the first chunk, then only control `continued`.
+    if (idx === 0) {
+      doc.text(run.text, { ...(options as any), continued: !isLast });
+    } else {
+      doc.text(run.text, { continued: !isLast });
+    }
   });
 };

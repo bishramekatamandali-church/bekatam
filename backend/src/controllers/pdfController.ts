@@ -252,16 +252,24 @@ const buildDonorListPdfBuffer = (
         pdfTextMixed(doc, fontRegistry, text, options as any);
       };
 
-      doc.fontSize(18);
-      line(params.churchName, { align: "center" });
-      doc.moveDown(0.3);
-      doc.fontSize(14);
-      line(params.title, { align: "center" });
-      doc.moveDown(0.2);
-      doc.fontSize(11).fillColor("#555555");
-      line(params.dateRangeLabel, { align: "center" });
-      doc.fillColor("#000000");
-      doc.moveDown(1);
+      const headerWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+ 
+       // Header (clean, non-overlapping)
+       doc.fontSize(18);
+       line(params.churchName, { align: "center", width: headerWidth });
+       doc.moveDown(0.25);
+ 
+       doc.fontSize(14);
+       line(params.title, { align: "center", width: headerWidth });
+       doc.moveDown(0.15);
+ 
+       doc.fontSize(11).fillColor("#555555");
+       line(params.dateRangeLabel, { align: "center", width: headerWidth, lineGap: 2 });
+       doc.fillColor("#000000");
+ 
+       doc.moveDown(0.6);
+       doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke();
+       doc.moveDown(0.8);
 
       donors.forEach((donor, index) => {
         if (index > 0) {
@@ -1161,11 +1169,29 @@ export const getDonorListPdf = async (req: Request, res: Response) => {
     const donors = Array.from(donorsByName.values())
       .flat()
       .sort((a, b) => b.totalAmount - a.totalAmount);
-    const titleParts = [start ? formatDateADBS(start) : "All time", end ? formatDateADBS(end) : "Present"];
-    const title = `Donors list on ${titleParts[0]} - ${titleParts[1]}`;
-    const dateRangeLabel = `${start ? formatDateADBSShort(start) : "Start"} to ${
-      end ? formatDateADBSShort(end) : "Present"
-    }`;
+    const title = "Donors List";
+ 
+     const formatBsHeader = (d?: Date | null): string => {
+       if (!d) return "";
+       const parts = getBsDateParts(d);
+       if (!parts) return formatDateADBSShort(d);
+       const monthName = BS_MONTH_NAMES_NP[(parts.month ?? 1) - 1] ?? "";
+       const day = String(parts.day).padStart(2, "0");
+       return `${monthName} ${day}, ${parts.year}`.trim();
+     };
+ 
+     const formatAdHeader = (d?: Date | null): string => {
+       if (!d) return "";
+       try {
+         return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit" }).format(d);
+       } catch {
+         return d.toISOString().slice(0, 10);
+       }
+     };
+ 
+     const bsRange = `${start ? formatBsHeader(start) : "Start"} – ${end ? formatBsHeader(end) : "Present"}`;
+     const adRange = `(${start ? formatAdHeader(start) : "Start"} – ${end ? formatAdHeader(end) : "Present"})`;
+     const dateRangeLabel = `${bsRange}\n${adRange}`;
     const refinedDonors = buildRefinedDonorList(donors);
 
     const pdfBuffer = await buildDonorListPdfBuffer(
