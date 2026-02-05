@@ -598,6 +598,10 @@ export const getCollectionRecordPdf = async (req: Request, res: Response) => {
 
 const formatCurrency = (amount: number) => `NPR ${Number(amount ?? 0).toFixed(2)}`;
 
+
+
+/* CHURCH HISTORY CHAPTER PDF*/
+
 export const getHistoryChapterPdf = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id || "").trim();
@@ -648,6 +652,10 @@ export const getHistoryChapterPdf = async (req: Request, res: Response) => {
   }
 };
 
+
+
+/* CHURCH MEMBER PDF */
+
 export const getChurchMemberPdf = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id || "").trim();
@@ -692,6 +700,10 @@ export const getChurchMemberPdf = async (req: Request, res: Response) => {
     } catch {}
   }
 };
+
+
+
+/* FINANCIAL SUMMARY PDF */
 
 export const getFinancialSummaryPdf = async (req: Request, res: Response) => {
   try {
@@ -1036,55 +1048,78 @@ if (idx === 0) {
 };
 
 
-export const getCalendarPdf = async (req: Request, res: Response) => {
-  try {
-    const bsYearRaw = String(req.query.bsYear || req.query.year || "").trim();
-    const bsYear = Number(bsYearRaw);
-    if (!bsYear || Number.isNaN(bsYear)) {
-      return res.status(400).json({ message: "Missing bsYear" });
-    }
 
+
+        /* EVENT CALENDAR PDF */
+       
+import { isDatabaseUnavailableError } from "../utils/databaseFallback";
+// keep your existing imports too
+
+export const getCalendarPdf = async (req: Request, res: Response) => {
+  const bsYearRaw = String(req.query.bsYear || req.query.year || "").trim();
+  const bsYear = Number(bsYearRaw);
+
+  if (!bsYear || Number.isNaN(bsYear)) {
+    return res.status(400).json({ message: "Missing bsYear" });
+  }
+
+  try {
     const [events, newsItems, sermons, blogPosts, rosterItems, generatedSchedules] = await Promise.all([
-      (prisma as any).event?.findMany?.({ where: { date: { not: null } } }) ?? [],
-      (prisma as any).newsitem?.findMany?.({ where: { date: { not: null } } }) ??
-        (await (prisma as any).newsItem?.findMany?.({ where: { date: { not: null } } })),
-      (prisma as any).sermon?.findMany?.({ where: { date: { not: null } } }) ?? [],
-      (prisma as any).blogpost?.findMany?.({ where: { date: { not: null } } }) ??
-        (await (prisma as any).blogPost?.findMany?.({ where: { date: { not: null } } })),
-      (prisma as any).fellowshiprosteritem?.findMany?.({ where: { assignedDate: { not: null } } }) ?? [],
-      (prisma as any).generatedscheduleitem?.findMany?.({ where: { scheduledDate: { not: null } } }) ?? [],
+      prisma.eventitem.findMany({
+        where: { date: { not: null } },
+        select: { date: true, title: true, time: true },
+      }),
+      prisma.newsitem.findMany({
+        where: { date: { not: null } },
+        select: { date: true, title: true },
+      }),
+      prisma.sermon.findMany({
+        where: { date: { not: null } },
+        select: { date: true, title: true, speaker: true },
+      }),
+      prisma.blogpost.findMany({
+        where: { date: { not: null } },
+        select: { date: true, title: true },
+      }),
+      prisma.fellowshiprosteritem.findMany({
+        select: { assignedDate: true, groupNameOrEventTitle: true, timeSlot: true },
+     }),
+      prisma.generatedscheduleitem.findMany({
+        select: { scheduledDate: true, groupNameOrEventTitle: true, timeSlot: true },
+    }),
+
     ]);
 
-    type CalendarEntry = { month: number; day: number; title: string; type: string; time?: string; date: string };
+    type CalendarEntry = { month: number; day: number; title: string; type: string; time?: string; dateIso: string };
     const entriesByMonth = new Map<number, CalendarEntry[]>();
 
-    const pushEntry = (dateValue: any, title: string, type: string, time?: string) => {
+    const pushEntry = (dateValue: Date | null, title: string, type: string, time?: string) => {
       if (!dateValue) return;
+
       const bs = getBsDateParts(dateValue);
       if (!bs || bs.year !== bsYear) return;
+
+      const dateIso = new Date(dateValue).toISOString();
       const entry: CalendarEntry = {
         month: bs.month,
         day: bs.day,
-        title,
+        title: String(title || "").trim() || type,
         type,
-        time,
-        date: new Date(dateValue).toISOString(),
+        time: time ? String(time).trim() : undefined,
+        dateIso,
       };
+
       const list = entriesByMonth.get(bs.month) ?? [];
       list.push(entry);
       entriesByMonth.set(bs.month, list);
     };
 
-    (events || []).forEach((item: any) => pushEntry(item.date, item.title || "Event", "Event", item.time));
-    (newsItems || []).forEach((item: any) => pushEntry(item.date, item.title || "News", "News"));
-    (sermons || []).forEach((item: any) => pushEntry(item.date, item.title || "Sermon", "Sermon", item.time));
-    (blogPosts || []).forEach((item: any) => pushEntry(item.date, item.title || "Blog", "Blog"));
-    (rosterItems || []).forEach((item: any) =>
-      pushEntry(item.assignedDate, item.groupNameOrEventTitle || "Notice", "Roster", item.timeSlot)
-    );
-    (generatedSchedules || []).forEach((item: any) =>
-      pushEntry(item.scheduledDate, item.groupNameOrEventTitle || "Notice", "Schedule", item.timeSlot)
-    );
+    events.forEach((e) => pushEntry(e.date, e.title || "Event", "Event", e.time || undefined));
+    newsItems.forEach((n) => pushEntry(n.date, n.title || "News", "News"));
+    sermons.forEach((s) => pushEntry(s.date, s.title || "Sermon", "Sermon"));
+    blogPosts.forEach((b) => pushEntry(b.date, b.title || "Blog", "Blog"));
+    rosterItems.forEach((r) => pushEntry(r.assignedDate, r.groupNameOrEventTitle || "Notice", "Roster", r.timeSlot || undefined));
+    generatedSchedules.forEach((g) => pushEntry(g.scheduledDate, g.groupNameOrEventTitle || "Notice", "Schedule", g.timeSlot || undefined));
 
     setPdfHeaders(res, `BEM_Calendar_${bsYear}_BS.pdf`);
     const doc = createDoc(res);
@@ -1095,26 +1130,30 @@ export const getCalendarPdf = async (req: Request, res: Response) => {
     writeTextWithFallback(doc, `Event Calendar (${bsYear} BS)`, { continued: false, align: "center" }, "bold");
     doc.moveDown(1);
 
+    let printedAny = false;
+
     for (let month = 1; month <= 12; month += 1) {
       const monthEntries = entriesByMonth.get(month);
-      if (!monthEntries || monthEntries.length === 0) continue;
+      if (!monthEntries?.length) continue;
 
+      printedAny = true;
       monthEntries.sort((a, b) => a.day - b.day);
+
       doc.fontSize(13);
       writeTextWithFallback(doc, `${BS_MONTH_NAMES_NP[month - 1]} ${bsYear} BS`, { continued: false }, "bold");
       doc.moveDown(0.4);
 
       doc.fontSize(10);
-      monthEntries.forEach((entry) => {
+      for (const entry of monthEntries) {
         const timeLabel = entry.time ? ` @ ${entry.time}` : "";
-        const line = `${entry.day}. ${entry.title} (${entry.type}${timeLabel}) - ${formatDateADBS(entry.date)}`;
+        const line = `${entry.day}. ${entry.title} (${entry.type}${timeLabel}) - ${formatDateADBS(entry.dateIso)}`;
         writeTextWithFallback(doc, line, { continued: false });
-      });
+      }
 
       doc.moveDown(0.6);
     }
 
-    if (entriesByMonth.size === 0) {
+    if (!printedAny) {
       doc.fontSize(11);
       writeTextWithFallback(doc, "No events or notices found for the selected year.", { continued: false });
     }
@@ -1123,6 +1162,31 @@ export const getCalendarPdf = async (req: Request, res: Response) => {
     writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
     doc.end();
   } catch (err) {
+    // If DB is down, still return a PDF (better than 500)
+    if (isDatabaseUnavailableError(err)) {
+      setPdfHeaders(res, `BEM_Calendar_${bsYear}_BS.pdf`);
+      const doc = createDoc(res);
+
+      doc.fontSize(16);
+      writeTextWithFallback(doc, "Bishram Ekata Mandali", { align: "center" }, "bold");
+      doc.moveDown(0.5);
+      doc.fontSize(12);
+      writeTextWithFallback(doc, `Event Calendar (${bsYear} BS)`, { align: "center" }, "bold");
+      doc.moveDown(1);
+
+      doc.fontSize(11);
+      writeTextWithFallback(doc, "Database is currently unavailable, so calendar data could not be loaded.", {});
+      doc.moveDown(0.5);
+      writeTextWithFallback(doc, "Please try again after the database connection is restored.", {});
+
+      doc.fontSize(9);
+      doc.moveDown(1);
+      writeTextWithFallback(doc, `Generated at: ${formatLocalTimestamp()}`);
+
+      doc.end();
+      return;
+    }
+
     console.error("getCalendarPdf error:", err);
     if (!res.headersSent) return res.status(500).json({ message: "Failed to generate calendar PDF" });
     try {
@@ -1130,6 +1194,11 @@ export const getCalendarPdf = async (req: Request, res: Response) => {
     } catch {}
   }
 };
+
+
+
+
+/* FELLOWSHIP SCHEDULE PDF */
 
 export const getFellowshipSchedulePdf = async (req: Request, res: Response) => {
   try {
