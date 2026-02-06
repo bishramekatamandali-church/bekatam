@@ -1,3 +1,4 @@
+// backend/src/controllers/calendarPdfController.ts
 import type { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
@@ -10,7 +11,9 @@ import { BS_MONTH_NAMES_NP, getBsDateParts } from "../utils/dateFormatters";
 const PDFDocument = require("pdfkit");
 
 /**
- * Fonts (same as pdfController.ts)
+ * -----------------------
+ * Fonts + Nepali fallback
+ * -----------------------
  */
 function fontPath(rel: string) {
   return path.join(__dirname, "..", "assets", "fonts", rel);
@@ -44,7 +47,15 @@ function setFontForRun(doc: any, runType: TextRunType, style: "normal" | "bold" 
 function writeTextWithFallback(
   doc: any,
   text: string,
-  options: { continued?: boolean; align?: "left" | "center" | "right"; width?: number; x?: number; y?: number } = {},
+  options: {
+  continued?: boolean;
+  align?: "left" | "center" | "right";
+  width?: number;
+  x?: number;
+  y?: number;
+  lineBreak?: boolean;
+} = {},
+
   style: "normal" | "bold" = "normal",
 ) {
   const value = String(text ?? "");
@@ -73,7 +84,7 @@ function writeTextWithFallback(
     doc.text(seg.text, first ? x : undefined, first ? y : undefined, { ...textOptions, continued: true });
     first = false;
   }
-  doc.text("", { continued: options.continued }); // end continued chain
+  doc.text("", { continued: options.continued });
   doc.font(FONT_LATIN_REGULAR);
 }
 
@@ -89,8 +100,8 @@ function createDoc(res: Response, paper: string) {
   ensureFontExists(FONT_DEVANAGARI_BOLD);
   if (!fs.existsSync(FONT_EMOJI_REGULAR)) console.warn("Emoji font missing:", FONT_EMOJI_REGULAR);
 
-  const size = paper.toUpperCase(); // "A4", "A3", ...
-  const doc = new PDFDocument({ size, margin: 36 });
+  const size = paper.toUpperCase(); // A4, A3...
+  const doc = new PDFDocument({ size, margin: 24 }); // smaller margins to "full cover" paper
   doc.pipe(res);
   doc.font(FONT_LATIN_REGULAR);
   return doc;
@@ -100,8 +111,35 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+function adMonthShort(date: Date) {
+  return date.toLocaleString("en-US", { month: "short" }).toUpperCase();
+}
+
+function cleanNoticeTitle(input: string) {
+  return String(input || "")
+    .replace(/[\r\n]+/g, " ")     // remove line breaks
+    .replace(/\s+/g, " ")         // collapse multiple spaces/tabs
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // remove zero-width chars
+    .trim();
+}
+
+function drawNoticeTitleSingleLine(doc: any, title: string, x: number, y: number, width: number) {
+  const t = cleanNoticeTitle(title || "");
+  // Use devanagari font if any devanagari chars exist, otherwise latin
+  const hasDev = DEVANAGARI_REGEX.test(t);
+  doc.font(hasDev ? FONT_DEVANAGARI_REGULAR : FONT_LATIN_REGULAR);
+  doc.text(t, x, y, {
+    width,
+    lineBreak: false,
+    ellipsis: true, // truncate if too long
+  });
+  doc.font(FONT_LATIN_REGULAR); // restore
+}
+
 /**
- * NepaliDateConverter (same vendor file you already have in backend/assets/vendor)
+ * -----------------------
+ * BS <-> AD conversion
+ * -----------------------
  */
 const nepaliDateConverterPath = (() => {
   const distPath = path.join(__dirname, "..", "assets", "vendor", "nepali-date-converter.umd.js");
@@ -113,11 +151,15 @@ const NepaliDateConverter = require(nepaliDateConverterPath);
 const NepaliDate = NepaliDateConverter?.default ?? NepaliDateConverter;
 
 function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
-  // parse "YYYY-MM-DD" in BS and convert to JS date
   const d = NepaliDate.parse(`${bsYear}-${pad2(bsMonth)}-${pad2(bsDay)}`);
   return d.toJsDate();
 }
 
+/**
+ * -----------------------
+ * Image fetching
+ * -----------------------
+ */
 async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   try {
     if (!url) return null;
@@ -139,50 +181,59 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-type CalendarItem = { bsDay: number; title: string; type: string; time?: string };
+/**
+ * -----------------------
+ * Notices (ONLY)
+ * -----------------------
+ */
+type NoticeItem = { bsDay: number; title: string };
 
-async function loadMonthItems(bsYear: number, bsMonth: number): Promise<CalendarItem[]> {
-  // NOTE: No `not: null` filters here — your Prisma types showed those fields are non-nullable.
-  const [events, news, sermons, blogs, rosters, schedules] = await Promise.all([
-    prisma.eventitem.findMany({ select: { date: true, title: true, time: true } }),
-    prisma.newsitem.findMany({ select: { date: true, title: true } }),
-    prisma.sermon.findMany({ select: { date: true, title: true } }),
-    prisma.blogpost.findMany({ select: { date: true, title: true } }),
-    prisma.fellowshiprosteritem.findMany({ select: { assignedDate: true, groupNameOrEventTitle: true, timeSlot: true } }),
-    prisma.generatedscheduleitem.findMany({ select: { scheduledDate: true, groupNameOrEventTitle: true, timeSlot: true } }),
+async function loadMonthNotices(bsYear: number, bsMonth: number): Promise<NoticeItem[]> {
+  const [rosters, schedules] = await Promise.all([
+    prisma.fellowshiprosteritem.findMany({
+      select: { assignedDate: true, groupNameOrEventTitle: true },
+    }),
+    prisma.generatedscheduleitem.findMany({
+      select: { scheduledDate: true, groupNameOrEventTitle: true },
+    }),
   ]);
 
-  const out: CalendarItem[] = [];
+  const out: NoticeItem[] = [];
 
-  const add = (dateValue: Date | null, title: string, type: string, time?: string) => {
+  const add = (dateValue: Date | null, title: string) => {
     if (!dateValue) return;
     const bs = getBsDateParts(dateValue);
     if (!bs) return;
     if (bs.year !== bsYear || bs.month !== bsMonth) return;
-    out.push({ bsDay: bs.day, title: String(title || "").trim() || type, type, time });
+
+    out.push({
+      bsDay: bs.day,
+      title: cleanNoticeTitle(title || "") || "Notice",
+    });
   };
 
-  events.forEach((e) => add(e.date ?? null, e.title ?? "Event", "Event", e.time ?? undefined));
-  news.forEach((n) => add(n.date ?? null, n.title ?? "News", "News"));
-  sermons.forEach((s) => add(s.date ?? null, s.title ?? "Sermon", "Sermon"));
-  blogs.forEach((b) => add(b.date ?? null, b.title ?? "Blog", "Blog"));
-  rosters.forEach((r) => add(r.assignedDate ?? null, r.groupNameOrEventTitle ?? "Notice", "Notice", r.timeSlot ?? undefined));
-  schedules.forEach((g) => add(g.scheduledDate ?? null, g.groupNameOrEventTitle ?? "Notice", "Notice", g.timeSlot ?? undefined));
+  rosters.forEach((r) => add(r.assignedDate ?? null, r.groupNameOrEventTitle ?? "Notice"));
+  schedules.forEach((g) => add(g.scheduledDate ?? null, g.groupNameOrEventTitle ?? "Notice"));
 
-  return out.sort((a, b) => a.bsDay - b.bsDay);
+  out.sort((a, b) => a.bsDay - b.bsDay);
+  return out;
 }
 
+/**
+ * -----------------------
+ * Drawing helpers
+ * -----------------------
+ */
 function drawHeader(doc: any, x: number, y: number, w: number) {
   doc.save();
-  doc.rect(x, y, w, 52).fill("#f1f5f9");
-  doc.fillColor("#0f172a");
-  doc.fontSize(18);
-  writeTextWithFallback(doc, "Bishram Ekata Mandali", { x: x + 12, y: y + 10, width: w - 24 }, "bold");
-  doc.fontSize(9);
+  doc.rect(x, y, w, 50).fill("#f1f5f9");
+  doc.fillColor("#0f172a").fontSize(18);
+  writeTextWithFallback(doc, "Bishram Ekata Mandali", { x: x + 10, y: y + 9, width: w - 20 }, "bold");
+  doc.fillColor("#334155").fontSize(9);
   writeTextWithFallback(
     doc,
     "Gauri Marg, Sinamangal, Kathmandu | www.bekatam.org",
-    { x: x + 12, y: y + 34, width: w - 24 },
+    { x: x + 10, y: y + 32, width: w - 20 },
     "normal",
   );
   doc.restore();
@@ -190,237 +241,357 @@ function drawHeader(doc: any, x: number, y: number, w: number) {
 
 function drawFooter(doc: any, x: number, y: number, w: number) {
   doc.save();
-  doc.strokeColor("#e2e8f0").lineWidth(1);
-  doc.moveTo(x, y).lineTo(x + w, y).stroke();
-  doc.fillColor("#64748b").fontSize(8);
-  doc.text(`Generated at: ${new Date().toLocaleString()}`, x, y + 6, { width: w, align: "left" });
+  doc.rect(x, y, w, 18).fill("#f1f5f9");
+  doc.fillColor("#334155").fontSize(8);
+  doc.text(`Generated at: ${new Date().toLocaleString()}`, x + 8, y + 5, { width: w - 16, align: "left" });
+  doc.text("Calendar by: Bishram Ekata Mandali", x + 8, y + 5, { width: w - 16, align: "right" });
   doc.restore();
 }
 
-function drawMonthPage(
-  doc: any,
-  opts: {
-    bsYear: number;
-    bsMonth: number;
-    paper: string;
-    heroImage?: Buffer | null;
-    monthItems: CalendarItem[];
-  },
-) {
-  const { bsYear, bsMonth, heroImage, monthItems } = opts;
+/**
+ * Calendar page renderer (one month per page)
+ * - Red color is for SATURDAY (Nepal)
+ * - Today highlight (amber border)
+ * - Green notice day shading
+ * - Collage image block right after header (top 1/3)
+ * - Notices block under calendar (bottom), auto-columns on right; empty area used for extra images
+ */
+function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageBuffers: Buffer[]; monthNotices: NoticeItem[] }) {
+  const { bsYear, bsMonth, imageBuffers, monthNotices } = opts;
 
   const pageW = doc.page.width;
   const pageH = doc.page.height;
   const m = doc.page.margins;
+
   const x = m.left;
   const y = m.top;
   const w = pageW - m.left - m.right;
 
-  // Header
-  drawHeader(doc, x, y, w);
+  // Layout ratios (usable height)
+  const usableH = pageH - m.top - m.bottom;
+  const topH = usableH * (1 / 3); // header + images
+  const noticesH = usableH * (0.5 / 3);
+  const footerH = usableH * (0.1 / 3);
+  const calendarH = usableH - topH - noticesH - footerH;
 
-  // Month title bar
-  const titleY = y + 60;
+  const topY = y;
+  const calendarY = y + topH;
+  const noticesY = calendarY + calendarH;
+  const footerY = noticesY + noticesH;
+
+  // ---------- TOP: header + collage ----------
+  drawHeader(doc, x, topY, w);
+
+  const headerH = 50;
+  const collageY = topY + headerH + 6;
+  const collageH = topH - headerH - 6;
+
+  // Collage background
   doc.save();
-  doc.rect(x, titleY, w, 28).fill("#0ea5e9");
-  doc.fillColor("#ffffff").fontSize(14);
-  writeTextWithFallback(doc, `${BS_MONTH_NAMES_NP[bsMonth - 1]} ${bsYear} (BS)`, { x: x + 12, y: titleY + 7, width: w - 24 }, "bold");
+  doc.rect(x, collageY, w, collageH).fill("#f8fafc");
   doc.restore();
 
-  // Image area
-  const imgY = titleY + 36;
-  const imgH = Math.max(140, Math.min(190, pageH * 0.22));
-  if (heroImage) {
+  // 2x2 collage using up to 4 images
+  const gap = 6;
+  const tileW = (w - gap) / 2;
+  const tileH = (collageH - gap) / 2;
+
+  for (let i = 0; i < Math.min(imageBuffers.length, 4); i += 1) {
+    const r = Math.floor(i / 2);
+    const c = i % 2;
+    const ix = x + c * (tileW + gap);
+    const iy = collageY + r * (tileH + gap);
     try {
-      doc.image(heroImage, x, imgY, { fit: [w, imgH], align: "center", valign: "center" });
-    } catch {
-      // ignore bad image
-    }
-  } else {
-    doc.save();
-    doc.rect(x, imgY, w, imgH).fill("#f8fafc");
-    doc.fillColor("#94a3b8").fontSize(10).text("No image", x, imgY + imgH / 2 - 6, { width: w, align: "center" });
-    doc.restore();
+      doc.image(imageBuffers[i], ix, iy, { fit: [tileW, tileH], align: "center", valign: "center" });
+    } catch {}
   }
 
-  // Calendar + sidebar layout
-  const contentTop = imgY + imgH + 14;
-  const footerH = 22;
-  const contentBottom = pageH - m.bottom - footerH - 6;
-  const contentH = contentBottom - contentTop;
-
-  const gap = 12;
-  const sidebarW = Math.max(160, w * 0.30);
-  const gridW = w - sidebarW - gap;
-
-  const gridX = x;
-  const gridY = contentTop;
-  const sidebarX = x + gridW + gap;
-  const sidebarY = contentTop;
-
-  // Grid setup: 7 columns, 6 rows
-  const cols = 7;
-  const rows = 6;
-  const cellW = gridW / cols;
-  const cellH = contentH / rows;
-
-  // Day names row (inside first row top strip)
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Compute which weekday BS-01 lands on (via AD date)
+  // ---------- CALENDAR: title + weekdays + grid ----------
+  // Build month day map by converting BS days until it stops
   const adStart = bsToAd(bsYear, bsMonth, 1);
-  const startWeekday = adStart.getDay(); // 0=Sun
-
-  // Build day map for month length by trying BS days until it throws
-  const dayAd: Array<{ bsDay: number; ad: Date }> = [];
+  const monthDays: Array<{ bsDay: number; ad: Date }> = [];
   for (let d = 1; d <= 40; d += 1) {
     try {
       const ad = bsToAd(bsYear, bsMonth, d);
       const bs = getBsDateParts(ad);
       if (!bs || bs.year !== bsYear || bs.month !== bsMonth || bs.day !== d) break;
-      dayAd.push({ bsDay: d, ad });
+      monthDays.push({ bsDay: d, ad });
     } catch {
       break;
     }
   }
+  const adEnd = monthDays.length ? monthDays[monthDays.length - 1].ad : adStart;
 
-  const itemsByDay = new Map<number, CalendarItem[]>();
-  monthItems.forEach((it) => {
-    const list = itemsByDay.get(it.bsDay) ?? [];
-    list.push(it);
-    itemsByDay.set(it.bsDay, list);
+  const fmtMonth = (dt: Date) => dt.toLocaleString("en-US", { month: "long" });
+  const fmtYear = (dt: Date) => dt.toLocaleString("en-US", { year: "numeric" });
+
+  const adLabel =
+    fmtMonth(adStart) === fmtMonth(adEnd)
+      ? `${fmtMonth(adStart)} ${fmtYear(adStart)}`
+      : `${fmtMonth(adStart)}–${fmtMonth(adEnd)} ${fmtYear(adEnd)}`;
+
+  // Notices map
+  const noticesByDay = new Map<number, NoticeItem[]>();
+  monthNotices.forEach((n) => {
+    const list = noticesByDay.get(n.bsDay) ?? [];
+    list.push(n);
+    noticesByDay.set(n.bsDay, list);
   });
 
-  // Draw grid cells
-  doc.save();
-  doc.strokeColor("#cbd5e1").lineWidth(1);
+  // Today in BS
+  const todayBs = getBsDateParts(new Date());
 
-  // Header row labels above grid
-  doc.fillColor("#0f172a").fontSize(9);
-  for (let c = 0; c < cols; c += 1) {
-    doc.rect(gridX + c * cellW, gridY, cellW, 16).fillAndStroke("#f1f5f9", "#cbd5e1");
-    doc.fillColor("#0f172a").text(dayNames[c], gridX + c * cellW, gridY + 4, { width: cellW, align: "center" });
+  // Title strip (BS + AD)
+  const titleStripH = 28;
+  doc.save();
+  doc.rect(x, calendarY, w, titleStripH).fill("#0ea5e9");
+  doc.fillColor("#ffffff").fontSize(12);
+  writeTextWithFallback(
+    doc,
+    `${BS_MONTH_NAMES_NP[bsMonth - 1]} ${bsYear} ( ${adLabel} )`,
+    { x: x + 10, y: calendarY + 8, width: w - 20 },
+    "bold",
+  );
+  doc.restore();
+
+  const gridTop = calendarY + titleStripH + 6;
+  const gridH = calendarH - titleStripH - 6;
+
+  const dayNamesEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayNamesNP = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"];
+
+  const cols7 = 7;
+  const rows6 = 6;
+
+  const headerRowH = 22;
+  const cellW = w / cols7;
+  const bodyCellH = (gridH - headerRowH) / rows6;
+
+  // Weekday header row (EN top, NP bottom). RED is SATURDAY (index 6)
+  for (let c = 0; c < cols7; c += 1) {
+    const hx = x + c * cellW;
+    const isSaturday = c === 6;
+
+    doc.save();
+    doc.rect(hx, gridTop, cellW, headerRowH).fillAndStroke("#f1f5f9", "#cbd5e1");
+    doc.restore();
+
+    doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(8);
+    doc.text(dayNamesEN[c], hx, gridTop + 3, { width: cellW, align: "center" });
+
+    doc.fillColor(isSaturday ? "#dc2626" : "#334155").fontSize(8);
+    writeTextWithFallback(doc, dayNamesNP[c], { x: hx, y: gridTop + 12, width: cellW, align: "center" }, "bold");
   }
 
-  // Cells below day-name strip
-  const gridBodyY = gridY + 16;
-  const bodyCellH = (contentH - 16) / rows;
+  // Grid body
+  const bodyY = gridTop + headerRowH;
+  const startWeekday = adStart.getDay(); // 0=Sun
 
-  let dayIndex = 0;
-  for (let r = 0; r < rows; r += 1) {
-    for (let c = 0; c < cols; c += 1) {
-      const cx = gridX + c * cellW;
-      const cy = gridBodyY + r * bodyCellH;
+  for (let r = 0; r < rows6; r += 1) {
+    for (let c = 0; c < cols7; c += 1) {
+      const cx = x + c * cellW;
+      const cy = bodyY + r * bodyCellH;
 
+      // border
+      doc.save();
+      doc.strokeColor("#cbd5e1").lineWidth(1);
       doc.rect(cx, cy, cellW, bodyCellH).stroke();
+      doc.restore();
 
-      const slot = r * cols + c;
+      const slot = r * cols7 + c;
       const bsDay = slot - startWeekday + 1;
+      if (bsDay < 1 || bsDay > monthDays.length) continue;
 
-      if (bsDay >= 1 && bsDay <= dayAd.length) {
-        const ad = dayAd[bsDay - 1].ad;
-        const adDay = ad.getDate();
+      const ad = monthDays[bsDay - 1].ad;
+      const adDay = ad.getDate();
+      const prevAd = bsDay > 1 ? monthDays[bsDay - 2]?.ad : null;
+      const isFirstAdOfMonth = !prevAd || prevAd.getMonth() !== ad.getMonth();
 
-        // Highlight if has items
-        const hasItems = (itemsByDay.get(bsDay) ?? []).length > 0;
-        if (hasItems) {
-          doc.save();
-          doc.rect(cx + 1, cy + 1, cellW - 2, bodyCellH - 2).fillOpacity(0.10).fill("#0ea5e9").fillOpacity(1);
-          doc.restore();
-        }
+      const isSaturday = c === 6;
+      const hasNotice = (noticesByDay.get(bsDay) ?? []).length > 0;
+      const isToday = !!todayBs && todayBs.year === bsYear && todayBs.month === bsMonth && todayBs.day === bsDay;
 
-        // BS day (big)
-        doc.fillColor("#0f172a").fontSize(16);
-        writeTextWithFallback(doc, String(bsDay), { x: cx + 6, y: cy + 6, width: cellW - 12 }, "bold");
+      // Notice day shading (green tint)
+      if (hasNotice) {
+        doc.save();
+        // pdfkit supports fillOpacity; if not, it will just ignore
+        if (typeof doc.fillOpacity === "function") doc.fillOpacity(0.08);
+        doc.rect(cx + 1, cy + 1, cellW - 2, bodyCellH - 2).fill("#16a34a");
+        if (typeof doc.fillOpacity === "function") doc.fillOpacity(1);
+        doc.restore();
+      }
 
-        // AD day (small top-right)
-        doc.fillColor("#475569").fontSize(8);
-        doc.text(String(adDay), cx, cy + 8, { width: cellW - 6, align: "right" });
+      // Today highlight (amber border)
+      if (isToday) {
+        doc.save();
+        doc.strokeColor("#f59e0b").lineWidth(2);
+        doc.rect(cx + 2, cy + 2, cellW - 4, bodyCellH - 4).stroke();
+        doc.restore();
+      }
 
-        // Mini markers (optional)
-        const markers = itemsByDay.get(bsDay) ?? [];
-        if (markers.length) {
-          doc.fillColor("#0f172a").fontSize(7);
-          const short = markers.slice(0, 2).map((m) => (m.type === "Event" ? "E" : m.type === "Notice" ? "N" : "•")).join(" ");
-          doc.text(short, cx + 6, cy + 28, { width: cellW - 12, align: "left" });
-        }
+      // AD small top-right
+      doc.fillColor(isSaturday ? "#dc2626" : "#475569").fontSize(8);
+      doc.text(String(adDay), cx, cy + 6, { width: cellW - 6, align: "right" });
+
+      // AD month short name on first AD day
+      if (isFirstAdOfMonth) {
+      doc.fillColor("#2563eb").fontSize(7);
+      doc.text(
+      adMonthShort(ad),
+      cx + 4,
+      cy + 4,
+      { width: cellW - 8, align: "left" }
+    );
+   }
+
+      // BS big centered
+      doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(18);
+      writeTextWithFallback(
+        doc,
+        String(bsDay),
+        { x: cx, y: cy + bodyCellH / 2 - 10, width: cellW, align: "center" },
+        "bold",
+      );
+    }
+  }
+
+  // ---------- NOTICES block (bottom) ----------
+  doc.save();
+  doc.rect(x, noticesY, w, noticesH).fillAndStroke("#ffffff", "#cbd5e1");
+  doc.restore();
+
+  doc.fillColor("#0f172a").fontSize(11);
+  writeTextWithFallback(doc, "Notices", { x: x + 10, y: noticesY + 8, width: w - 20 }, "bold");
+
+  const lines = monthNotices.map((n) => ({ bsDay: n.bsDay, title: n.title }));
+
+  const topPad = 30;
+  const lineH = 14;
+  const availableH = noticesH - topPad - 10;
+  const linesPerCol = Math.max(6, Math.floor(availableH / lineH));
+
+  // Auto columns (up to 3)
+  const colCount = Math.min(3, Math.max(1, Math.ceil(lines.length / linesPerCol)));
+  const colGap = 12;
+
+  // Notices align to RIGHT; left empty area can be used for extra images
+  const maxNoticeWidth = w * 0.65;
+  const colW = Math.min(240, (maxNoticeWidth - colGap * (colCount - 1)) / colCount);
+  const noticesW = colW * colCount + colGap * (colCount - 1);
+  const noticesX = x + (w - noticesW) - 10;
+  const noticesStartY = noticesY + topPad;
+
+  let idx = 0;
+  for (let c = 0; c < colCount; c += 1) {
+    const cx = noticesX + c * (colW + colGap);
+    let cy = noticesStartY;
+
+    for (let i = 0; i < linesPerCol && idx < lines.length; i += 1, idx += 1) {
+      const item = lines[idx];
+
+      // Green "date badge" with border (green shadow 느낌)
+      const badgeW = 30;
+      const badgeH = 12;
+
+      doc.save();
+      doc.rect(cx + 1, cy + 2, badgeW, badgeH).fill("#bbf7d0"); // light green base
+      doc.strokeColor("#16a34a").lineWidth(1).rect(cx + 1, cy + 2, badgeW, badgeH).stroke();
+      doc.restore();
+
+      doc.fillColor("#166534").fontSize(8);
+      doc.text(pad2(item.bsDay), cx + 1, cy + 3, { width: badgeW, align: "center" });
+
+      doc.fillColor("#0f172a").fontSize(9);
+      drawNoticeTitleSingleLine(doc, item.title, cx + badgeW + 8, cy, colW - badgeW - 10);
+
+      cy += lineH;
+    }
+  }
+
+  // Extra images in remaining LEFT area of notices block (after top 4 images)
+  const leftAreaW = (noticesX - x) - 10;
+  if (leftAreaW > 80) {
+    const extraY = noticesY + topPad;
+    const extraH = noticesH - topPad - 10;
+
+    const extras = imageBuffers.slice(4, 8); // remaining images
+    if (extras.length) {
+      const g = 6;
+
+      const cols = extras.length >= 2 ? 2 : 1;
+      const rows = extras.length >= 3 ? 2 : 1;
+
+      const tileW2 = (leftAreaW - g) / cols;
+      const tileH2 = (extraH - g) / rows;
+
+      doc.save();
+      doc.rect(x + 10, extraY, leftAreaW, extraH).fill("#f8fafc");
+      doc.restore();
+
+      for (let i = 0; i < Math.min(extras.length, 4); i += 1) {
+        const rr = Math.floor(i / 2);
+        const cc = i % 2;
+        const ix = x + 10 + cc * (tileW2 + g);
+        const iy = extraY + rr * (tileH2 + g);
+        try {
+          doc.image(extras[i], ix, iy, { fit: [tileW2, tileH2], align: "center", valign: "center" });
+        } catch {}
       }
     }
   }
 
-  doc.restore();
-
-  // Sidebar (events list)
-  doc.save();
-  doc.rect(sidebarX, sidebarY, sidebarW, contentH).fillAndStroke("#ffffff", "#cbd5e1");
-  doc.fillColor("#0f172a").fontSize(11);
-  writeTextWithFallback(doc, "Events / Programs", { x: sidebarX + 10, y: sidebarY + 10, width: sidebarW - 20 }, "bold");
-
-  doc.fillColor("#334155").fontSize(9);
-  let ty = sidebarY + 32;
-
-  const maxLines = Math.floor((contentH - 44) / 14);
-  const lines: string[] = [];
-  monthItems.forEach((it) => {
-    const t = it.time ? ` @ ${it.time}` : "";
-    lines.push(`${pad2(it.bsDay)} - ${it.title}${t}`);
-  });
-
-  if (!lines.length) lines.push("No scheduled programs for this month.");
-
-  for (let i = 0; i < Math.min(lines.length, maxLines); i += 1) {
-    doc.text(lines[i], sidebarX + 10, ty, { width: sidebarW - 20 });
-    ty += 14;
-  }
-
-  doc.restore();
-
-  // Footer
-  drawFooter(doc, x, pageH - m.bottom - footerH, w);
+  // ---------- FOOTER ----------
+  drawFooter(doc, x, footerY + (footerH - 18), w);
 }
 
+/**
+ * -----------------------
+ * Controller: 12 pages (one per month)
+ * No bsMonth param needed
+ * -----------------------
+ */
 export const getCalendarPdf = async (req: Request, res: Response) => {
   const bsYear = Number(String(req.query.bsYear || "").trim());
-  const bsMonthRaw = String(req.query.bsMonth || "").trim();
-  const bsMonth = bsMonthRaw ? Number(bsMonthRaw) : null;
 
   const paper = String(req.query.paperSize || "a4").toLowerCase();
   const allowed = new Set(["a4", "a3", "a2", "a1"]);
   const safePaper = allowed.has(paper) ? paper : "a4";
 
   if (!bsYear || Number.isNaN(bsYear)) return res.status(400).json({ message: "Missing bsYear" });
-  if (bsMonth !== null && (Number.isNaN(bsMonth) || bsMonth < 1 || bsMonth > 12)) {
-    return res.status(400).json({ message: "Invalid bsMonth (1-12)" });
-  }
 
   try {
-    // Pick a nice header image automatically:
-    // - Use first active HomeSlide image (Cloudinary URL) if available.
-    const slide = await prisma.homeslide.findFirst({
+    // Multiple images from HomeSlide
+    const slides = await prisma.homeslide.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
       select: { imageUrl: true },
+      take: 8,
     });
 
-    const heroImage = slide?.imageUrl ? await fetchImageBuffer(slide.imageUrl) : null;
+    const imageBuffers: Buffer[] = [];
+    for (const s of slides) {
+      if (!s.imageUrl) continue;
+      const buf = await fetchImageBuffer(s.imageUrl);
+      if (buf) imageBuffers.push(buf);
+    }
 
-    setPdfHeaders(res, bsMonth ? `BEM_Calendar_${bsYear}_${pad2(bsMonth)}_${safePaper}.pdf` : `BEM_Calendar_${bsYear}_${safePaper}.pdf`);
+    setPdfHeaders(res, `BEM_Calendar_${bsYear}_${safePaper}.pdf`);
     const doc = createDoc(res, safePaper);
 
-    const months = bsMonth ? [bsMonth] : [1,2,3,4,5,6,7,8,9,10,11,12];
-
-    for (let i = 0; i < months.length; i += 1) {
-      const m = months[i];
-      const monthItems = await loadMonthItems(bsYear, m);
+    for (let i = 0; i < 12; i += 1) {
+      const month = i + 1;
+      const monthNotices = await loadMonthNotices(bsYear, month);
 
       if (i > 0) doc.addPage();
-      drawMonthPage(doc, { bsYear, bsMonth: m, paper: safePaper, heroImage, monthItems });
+      drawMonthPage(doc, { bsYear, bsMonth: month, imageBuffers, monthNotices });
     }
 
     doc.end();
   } catch (err) {
     console.error("calendarPdfController getCalendarPdf error:", err);
     if (!res.headersSent) return res.status(500).json({ message: "Failed to generate calendar PDF" });
-    try { res.end(); } catch {}
+    try {
+      res.end();
+    } catch {}
   }
 };

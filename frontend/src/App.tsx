@@ -96,6 +96,54 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const pauseAllMedia = (currentElement?: HTMLElement | null) => {
+      document.querySelectorAll<HTMLMediaElement>("video, audio").forEach((media) => {
+        if (media !== currentElement) {
+          media.pause();
+        }
+      });
+
+      document.querySelectorAll<HTMLIFrameElement>("iframe").forEach((iframe) => {
+        if (iframe === currentElement) return;
+        const src = iframe.src || "";
+        if (!iframe.contentWindow) return;
+
+        if (src.includes("youtube.com") || src.includes("youtu.be")) {
+          iframe.contentWindow.postMessage(
+            JSON.stringify({ event: "command", func: "pauseVideo", args: [] }),
+            "*"
+          );
+        }
+
+        if (src.includes("vimeo.com")) {
+          iframe.contentWindow.postMessage(JSON.stringify({ method: "pause" }), "*");
+        }
+      });
+    };
+
+    const handleMediaPlay = (event: Event) => {
+      pauseAllMedia(event.target as HTMLElement);
+    };
+
+    const handleIframeInteraction = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "IFRAME") {
+        pauseAllMedia(target);
+      }
+    };
+
+    document.addEventListener("play", handleMediaPlay, true);
+    document.addEventListener("pointerdown", handleIframeInteraction, true);
+    document.addEventListener("focusin", handleIframeInteraction, true);
+
+    return () => {
+      document.removeEventListener("play", handleMediaPlay, true);
+      document.removeEventListener("pointerdown", handleIframeInteraction, true);
+      document.removeEventListener("focusin", handleIframeInteraction, true);
+    };
+  }, []);
+
   const handleInstallClick = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
