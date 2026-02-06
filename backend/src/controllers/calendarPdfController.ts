@@ -101,7 +101,11 @@ function createDoc(res: Response, paper: string) {
   if (!fs.existsSync(FONT_EMOJI_REGULAR)) console.warn("Emoji font missing:", FONT_EMOJI_REGULAR);
 
   const size = paper.toUpperCase(); // A4, A3...
-  const doc = new PDFDocument({ size, margin: 24 }); // smaller margins to "full cover" paper
+  const doc = new PDFDocument({
+  size,
+  margin: paper === "a2" ? 36 : paper === "a3" ? 30 : 24,
+});  //This gives A2 breathing room.
+
   doc.pipe(res);
   doc.font(FONT_LATIN_REGULAR);
   return doc;
@@ -224,27 +228,27 @@ async function loadMonthNotices(bsYear: number, bsMonth: number): Promise<Notice
  * Drawing helpers
  * -----------------------
  */
-function drawHeader(doc: any, x: number, y: number, w: number) {
+function drawHeader(doc: any, x: number, y: number, w: number, scale: number) {
   doc.save();
-  doc.rect(x, y, w, 50).fill("#f1f5f9");
-  doc.fillColor("#0f172a").fontSize(18);
-  writeTextWithFallback(doc, "Bishram Ekata Mandali", { x: x + 10, y: y + 9, width: w - 20 }, "bold");
-  doc.fillColor("#334155").fontSize(9);
+  doc.rect(x, y, w, 50 * scale).fill("#f1f5f9");
+  doc.fillColor("#0f172a").fontSize(18 * scale);
+  writeTextWithFallback(doc, "Bishram Ekata Mandali", { x: x + 10, y: y + 9 * scale, width: w - 20 }, "bold");
+  doc.fillColor("#334155").fontSize(9 * scale);
   writeTextWithFallback(
     doc,
     "Gauri Marg, Sinamangal, Kathmandu | www.bekatam.org",
-    { x: x + 10, y: y + 32, width: w - 20 },
+    { x: x + 10, y: y + 32 * scale, width: w - 20 },
     "normal",
   );
   doc.restore();
 }
 
-function drawFooter(doc: any, x: number, y: number, w: number) {
+function drawFooter(doc: any, x: number, y: number, w: number, scale: number) {
   doc.save();
-  doc.rect(x, y, w, 18).fill("#f1f5f9");
-  doc.fillColor("#334155").fontSize(8);
-  doc.text(`Generated at: ${new Date().toLocaleString()}`, x + 8, y + 5, { width: w - 16, align: "left" });
-  doc.text("Calendar by: Bishram Ekata Mandali", x + 8, y + 5, { width: w - 16, align: "right" });
+  doc.rect(x, y, w, 18 * scale).fill("#f1f5f9");
+  doc.fillColor("#334155").fontSize(8 * scale);
+  doc.text(`Generated at: ${new Date().toLocaleString()}`, x + 8, y + 5 * scale, { width: w - 16, align: "left" });
+  doc.text("Calendar by: Bishram Ekata Mandali", x + 8, y + 5 * scale, { width: w - 16, align: "right" });
   doc.restore();
 }
 
@@ -256,8 +260,19 @@ function drawFooter(doc: any, x: number, y: number, w: number) {
  * - Collage image block right after header (top 1/3)
  * - Notices block under calendar (bottom), auto-columns on right; empty area used for extra images
  */
-function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageBuffers: Buffer[]; monthNotices: NoticeItem[] }) {
-  const { bsYear, bsMonth, imageBuffers, monthNotices } = opts;
+function drawMonthPage(
+  doc: any,
+  opts: {
+    bsYear: number;
+    bsMonth: number;
+    imageBuffers: Buffer[];
+    monthNotices: NoticeItem[];
+    scale: number;
+  }
+) {
+
+  const { bsYear, bsMonth, imageBuffers, monthNotices, scale } = opts;
+
 
   const pageW = doc.page.width;
   const pageH = doc.page.height;
@@ -268,11 +283,19 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   const w = pageW - m.left - m.right;
 
   // Layout ratios (usable height)
-  const usableH = pageH - m.top - m.bottom;
-  const topH = usableH * (1 / 3); // header + images
-  const noticesH = usableH * (0.5 / 3);
-  const footerH = usableH * (0.1 / 3);
+    const usableH = pageH - m.top - m.bottom;
+
+  // For A2/A3: reduce top block so calendar fills the page better
+  const isLargePaper = scale >= 1.5; // A2 = 1.6 in your SCALE
+  const topRatio = isLargePaper ? 0.22 : (1 / 3);
+  const noticesRatio = isLargePaper ? 0.18 : (0.5 / 3);
+  const footerRatio = isLargePaper ? 0.04 : (0.1 / 3);
+
+  const topH = usableH * topRatio;
+  const noticesH = usableH * noticesRatio;
+  const footerH = usableH * footerRatio;
   const calendarH = usableH - topH - noticesH - footerH;
+
 
   const topY = y;
   const calendarY = y + topH;
@@ -280,11 +303,11 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   const footerY = noticesY + noticesH;
 
   // ---------- TOP: header + collage ----------
-  drawHeader(doc, x, topY, w);
+  drawHeader(doc, x, topY, w, scale);
 
-  const headerH = 50;
-  const collageY = topY + headerH + 6;
-  const collageH = topH - headerH - 6;
+  const headerH = 50 * scale;
+  const collageY = topY + headerH + 6 * scale;
+  const collageH = topH - headerH - 6 * scale;
 
   // Collage background
   doc.save();
@@ -292,7 +315,7 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   doc.restore();
 
   // 2x2 collage using up to 4 images
-  const gap = 6;
+  const gap = 6 * scale;
   const tileW = (w - gap) / 2;
   const tileH = (collageH - gap) / 2;
 
@@ -342,20 +365,20 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   const todayBs = getBsDateParts(new Date());
 
   // Title strip (BS + AD)
-  const titleStripH = 28;
+  const titleStripH = 28 * scale;
   doc.save();
   doc.rect(x, calendarY, w, titleStripH).fill("#0ea5e9");
-  doc.fillColor("#ffffff").fontSize(12);
+  doc.fillColor("#ffffff").fontSize(12 * scale);
   writeTextWithFallback(
     doc,
     `${BS_MONTH_NAMES_NP[bsMonth - 1]} ${bsYear} ( ${adLabel} )`,
-    { x: x + 10, y: calendarY + 8, width: w - 20 },
+    { x: x + 10, y: calendarY + 8 * scale, width: w - 20 },
     "bold",
   );
   doc.restore();
 
-  const gridTop = calendarY + titleStripH + 6;
-  const gridH = calendarH - titleStripH - 6;
+  const gridTop = calendarY + titleStripH + 6 * scale;
+  const gridH = calendarH - titleStripH - 6 * scale;
 
   const dayNamesEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const dayNamesNP = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"];
@@ -363,7 +386,7 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   const cols7 = 7;
   const rows6 = 6;
 
-  const headerRowH = 22;
+  const headerRowH = 22 * scale;
   const cellW = w / cols7;
   const bodyCellH = (gridH - headerRowH) / rows6;
 
@@ -376,11 +399,11 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
     doc.rect(hx, gridTop, cellW, headerRowH).fillAndStroke("#f1f5f9", "#cbd5e1");
     doc.restore();
 
-    doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(8);
-    doc.text(dayNamesEN[c], hx, gridTop + 3, { width: cellW, align: "center" });
+    doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(8 * scale);
+    doc.text(dayNamesEN[c], hx, gridTop + 3 * scale, { width: cellW, align: "center" });
 
-    doc.fillColor(isSaturday ? "#dc2626" : "#334155").fontSize(8);
-    writeTextWithFallback(doc, dayNamesNP[c], { x: hx, y: gridTop + 12, width: cellW, align: "center" }, "bold");
+    doc.fillColor(isSaturday ? "#dc2626" : "#334155").fontSize(8 * scale);
+    writeTextWithFallback(doc, dayNamesNP[c], { x: hx, y: gridTop + 12 * scale, width: cellW, align: "center" }, "bold");
   }
 
   // Grid body
@@ -394,7 +417,7 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
 
       // border
       doc.save();
-      doc.strokeColor("#cbd5e1").lineWidth(1);
+      doc.strokeColor("#cbd5e1").lineWidth(1 * scale);
       doc.rect(cx, cy, cellW, bodyCellH).stroke();
       doc.restore();
 
@@ -424,32 +447,32 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
       // Today highlight (amber border)
       if (isToday) {
         doc.save();
-        doc.strokeColor("#f59e0b").lineWidth(2);
+        doc.strokeColor("#f59e0b").lineWidth(2 * scale);
         doc.rect(cx + 2, cy + 2, cellW - 4, bodyCellH - 4).stroke();
         doc.restore();
       }
 
       // AD small top-right
-      doc.fillColor(isSaturday ? "#dc2626" : "#475569").fontSize(8);
-      doc.text(String(adDay), cx, cy + 6, { width: cellW - 6, align: "right" });
+      doc.fillColor(isSaturday ? "#dc2626" : "#475569").fontSize(8 * scale);
+      doc.text(String(adDay), cx, cy + 6 * scale, { width: cellW - 6, align: "right" });
 
       // AD month short name on first AD day
       if (isFirstAdOfMonth) {
-      doc.fillColor("#2563eb").fontSize(7);
+      doc.fillColor("#2563eb").fontSize(7 * scale);
       doc.text(
       adMonthShort(ad),
       cx + 4,
-      cy + 4,
+      cy + 4 * scale,
       { width: cellW - 8, align: "left" }
     );
    }
 
       // BS big centered
-      doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(18);
+      doc.fillColor(isSaturday ? "#dc2626" : "#0f172a").fontSize(18 * scale);
       writeTextWithFallback(
         doc,
         String(bsDay),
-        { x: cx, y: cy + bodyCellH / 2 - 10, width: cellW, align: "center" },
+        { x: cx, y: cy + bodyCellH / 2 - 10 * scale, width: cellW, align: "center" },
         "bold",
       );
     }
@@ -460,13 +483,13 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   doc.rect(x, noticesY, w, noticesH).fillAndStroke("#ffffff", "#cbd5e1");
   doc.restore();
 
-  doc.fillColor("#0f172a").fontSize(11);
+  doc.fillColor("#0f172a").fontSize(11 * scale);
   writeTextWithFallback(doc, "Notices", { x: x + 10, y: noticesY + 8, width: w - 20 }, "bold");
 
   const lines = monthNotices.map((n) => ({ bsDay: n.bsDay, title: n.title }));
 
-  const topPad = 30;
-  const lineH = 14;
+  const topPad = 30 * scale;
+  const lineH = 14 * scale;
   const availableH = noticesH - topPad - 10;
   const linesPerCol = Math.max(6, Math.floor(availableH / lineH));
 
@@ -475,7 +498,7 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   const colGap = 12;
 
   // Notices align to RIGHT; left empty area can be used for extra images
-  const maxNoticeWidth = w * 0.65;
+  const maxNoticeWidth = scale >= 1.5 ? (w * 0.85) : (w * 0.65);
   const colW = Math.min(240, (maxNoticeWidth - colGap * (colCount - 1)) / colCount);
   const noticesW = colW * colCount + colGap * (colCount - 1);
   const noticesX = x + (w - noticesW) - 10;
@@ -498,10 +521,10 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
       doc.strokeColor("#16a34a").lineWidth(1).rect(cx + 1, cy + 2, badgeW, badgeH).stroke();
       doc.restore();
 
-      doc.fillColor("#166534").fontSize(8);
+      doc.fillColor("#166534").fontSize(8 * scale);
       doc.text(pad2(item.bsDay), cx + 1, cy + 3, { width: badgeW, align: "center" });
 
-      doc.fillColor("#0f172a").fontSize(9);
+      doc.fillColor("#0f172a").fontSize(9 * scale);
       drawNoticeTitleSingleLine(doc, item.title, cx + badgeW + 8, cy, colW - badgeW - 10);
 
       cy += lineH;
@@ -541,7 +564,7 @@ function drawMonthPage(doc: any, opts: { bsYear: number; bsMonth: number; imageB
   }
 
   // ---------- FOOTER ----------
-  drawFooter(doc, x, footerY + (footerH - 18), w);
+  drawFooter(doc, x, footerY + (footerH - 18 * scale), w, scale);
 }
 
 /**
@@ -556,6 +579,11 @@ export const getCalendarPdf = async (req: Request, res: Response) => {
   const paper = String(req.query.paperSize || "a4").toLowerCase();
   const allowed = new Set(["a4", "a3", "a2", "a1"]);
   const safePaper = allowed.has(paper) ? paper : "a4";
+  const SCALE =
+  safePaper === "a2" ? 1.6 :
+  safePaper === "a3" ? 1.25 :
+  1.0;
+
 
   if (!bsYear || Number.isNaN(bsYear)) return res.status(400).json({ message: "Missing bsYear" });
 
@@ -583,7 +611,14 @@ export const getCalendarPdf = async (req: Request, res: Response) => {
       const monthNotices = await loadMonthNotices(bsYear, month);
 
       if (i > 0) doc.addPage();
-      drawMonthPage(doc, { bsYear, bsMonth: month, imageBuffers, monthNotices });
+      drawMonthPage(doc, {
+  bsYear,
+  bsMonth: month,
+  imageBuffers,
+  monthNotices,
+  scale: SCALE,
+});
+
     }
 
     doc.end();
