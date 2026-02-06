@@ -1,9 +1,9 @@
 import express from 'express';
-import crypto from 'crypto';
 import { prisma } from '../db';
 import { Prisma, prayerrequest_visibility, prayerrequest_status, prayerrequest_category } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
+import { generateId } from '../utils/generateId';
 
 const router = express.Router();
 
@@ -14,6 +14,36 @@ const ensureAdmin = (req: express.Request, res: express.Response): boolean => {
         return false;
     }
     return true;
+};
+
+const normalizeMediaUrls = (value: unknown): any | undefined => {
+    // Prisma field is Json? (can be array or string), but FE expects array.
+    if (Array.isArray(value)) {
+        const urls = value
+            .map((v) => (typeof v === 'string' ? v.trim() : ''))
+            .filter(Boolean);
+        return urls.length ? urls : undefined;
+    }
+    if (typeof value === 'string') {
+        const url = value.trim();
+        return url ? [url] : undefined;
+    }
+    return undefined;
+};
+
+const normalizeLocation = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+        const loc = value.trim();
+        return loc || undefined;
+    }
+    if (value && typeof value === 'object') {
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return undefined;
+        }
+    }
+    return undefined;
 };
 
 const shapePrayerRequestForFrontend = (item: any): any => {
@@ -48,22 +78,22 @@ const shapePrayerRequestForFrontend = (item: any): any => {
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
         moderatedAt: rest.moderatedAt ? new Date(rest.moderatedAt).toISOString() : null,
+        // keep FE stable
+        mediaUrls: rest.mediaUrls || [],
     };
 };
-
 
 // GET all prayer requests
 router.get('/', async (req, res) => {
     try {
         const requests = await prisma.prayerrequest.findMany({
-   where: { isDeleted: false },
-   include: {
-    comment: true,
-    prayer: true,
-  },
-  orderBy: { submittedAt: 'desc' },
-});
-
+            where: { isDeleted: false },
+            include: {
+                comment: true,
+                prayer: true,
+            },
+            orderBy: { submittedAt: 'desc' },
+        });
 
         res.json(requests.map(shapePrayerRequestForFrontend));
     } catch (error) {
@@ -80,16 +110,23 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!requestUser?.id) {
         return res.status(401).json({ error: 'Authentication required to submit a prayer request.' });
     }
+
     const { title, requestText, visibility, category, mediaUrls, location } = req.body;
+
     const trimmedTitle = String(title || '').trim();
     const trimmedRequestText = String(requestText || '').trim();
-    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+
+    const normalizedMediaUrls = normalizeMediaUrls(mediaUrls);
+    const hasMedia = Boolean(normalizedMediaUrls && Array.isArray(normalizedMediaUrls) && normalizedMediaUrls.length);
+
     if (!trimmedRequestText && !hasMedia) {
         return res.status(400).json({ error: 'Prayer request text or media is required.' });
     }
+
     const resolvedVisibility = Object.values(prayerrequest_visibility).includes(visibility as prayerrequest_visibility)
         ? (visibility as prayerrequest_visibility)
         : prayerrequest_visibility.public;
+
     const resolvedCategory = Object.values(prayerrequest_category).includes(category as prayerrequest_category)
         ? (category as prayerrequest_category)
         : prayerrequest_category.Other;
@@ -99,18 +136,20 @@ router.post('/', authMiddleware, async (req, res) => {
         if (!user) {
             return res.status(401).json({ error: 'User account not found.' });
         }
+
         const isAdmin = requestUser.role === 'admin';
+
         const newRequest = await prisma.prayerrequest.create({
             data: {
-                id: crypto.randomUUID(), // REQUIRED in your schema
-    updatedAt: new Date(),   // REQUIRED
+                id: generateId(),
+                updatedAt: new Date(), // required (no default)
                 title: trimmedTitle || trimmedRequestText.split(' ').slice(0, 7).join(' ') || 'Prayer Request',
                 requestText: trimmedRequestText,
                 visibility: resolvedVisibility,
                 category: resolvedCategory,
-                status: 'active',
-                mediaUrls: mediaUrls || undefined,
-                location,
+                status: prayerrequest_status.active,
+                mediaUrls: normalizedMediaUrls,
+                location: normalizeLocation(location),
                 postedByAdminId: isAdmin ? requestUser.id : undefined,
                 postedByAdminName: isAdmin ? requestUser.fullName : undefined,
                 userProfileImageUrl: user.profileImageUrl || undefined,
@@ -118,8 +157,10 @@ router.post('/', authMiddleware, async (req, res) => {
                 userId: user.id,
             }
         });
+
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
     } catch (error) {
+        console.error('Failed to create prayer request:', error);
         res.status(500).json({ error: 'Failed to create prayer request' });
     }
 });
@@ -144,23 +185,23 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
             data: {
                 status: status as prayerrequest_status,
                 adminNotes: adminNotes || undefined,
-                 moderationReason: String(moderationReason).trim(),
+                moderationReason: String(moderationReason).trim(),
                 moderatedAt: new Date(),
                 moderatedByAdminId: adminUser?.id,
                 moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
-            include: { prayer: true }
+            include: { prayer: true, comment: true }
         });
         res.json(shapePrayerRequestForFrontend(updatedRequest));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Prayer request not found.' });
         }
+        console.error('Failed to update prayer request status:', error);
         res.status(500).json({ error: 'Failed to update prayer request status.' });
     }
 });
-
 
 // POST to toggle a prayer on a request
 router.post('/:id/toggle-prayer', async (req, res) => {
@@ -179,7 +220,7 @@ router.post('/:id/toggle-prayer', async (req, res) => {
     }
 
     try {
-         const existingPrayer = isLoggedIn
+        const existingPrayer = isLoggedIn
             ? await prisma.prayer.findUnique({
                 where: {
                     userId_prayerRequestId: {
@@ -194,12 +235,12 @@ router.post('/:id/toggle-prayer', async (req, res) => {
                     ...(guestEmail ? { guestEmail } : {}),
                     ...(guestPhone ? { guestPhone } : {}),
                 },
-            }); 
+            });
 
         if (!existingPrayer) {
             await prisma.prayer.create({
                 data: {
-                    id: crypto.randomUUID(),
+                    id: generateId(),
                     userId: isLoggedIn ? userId : null,
                     userName: isLoggedIn ? userName : 'Guest',
                     guestEmail: isGuest ? (guestEmail || null) : null,
@@ -209,23 +250,16 @@ router.post('/:id/toggle-prayer', async (req, res) => {
                 },
             });
         }
-        
-        // Update the lastPrayedAt timestamp on the parent request
+
         await prisma.prayerrequest.update({
             where: { id: prayerRequestId },
-            data: { lastPrayedAt: new Date() }
+            data: { lastPrayedAt: new Date(), updatedAt: new Date() }
         });
 
-        // Fetch the updated prayer request with the new prayer list
         const updatedRequest = await prisma.prayerrequest.findUnique({
-  where: { id: prayerRequestId },
-  include: {
-    comment: true,
-    prayer: true,
-  },
-});
-
-
+            where: { id: prayerRequestId },
+            include: { comment: true, prayer: true },
+        });
 
         if (!updatedRequest) {
             return res.status(404).json({ error: "Prayer request not found after toggling prayer." });
@@ -237,7 +271,6 @@ router.post('/:id/toggle-prayer', async (req, res) => {
         res.status(500).json({ error: 'Failed to toggle prayer.' });
     }
 });
-
 
 // DELETE a prayer request (admin only)
 router.delete('/:id', authMiddleware, async (req, res) => {
@@ -259,16 +292,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
                 moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
-            include: { prayer: true }
         });
         res.json(shapePrayerRequestForFrontend(updated));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Prayer request not found.' });
         }
-        res.status(500).json({ error: 'Failed to delete prayer request' });
+        console.error('Failed to delete prayer request:', error);
+        res.status(500).json({ error: 'Failed to delete prayer request.' });
     }
 });
 
-
-export default router; 
+export default router;

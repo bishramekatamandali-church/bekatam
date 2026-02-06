@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
+const generateId_1 = require("../utils/generateId");
 const router = express_1.default.Router();
 const ensureAdmin = (req, res) => {
     const user = req.user;
@@ -17,6 +17,35 @@ const ensureAdmin = (req, res) => {
         return false;
     }
     return true;
+};
+const normalizeMediaUrls = (value) => {
+    // Prisma field is Json? (can be array or string), but FE expects array.
+    if (Array.isArray(value)) {
+        const urls = value
+            .map((v) => (typeof v === 'string' ? v.trim() : ''))
+            .filter(Boolean);
+        return urls.length ? urls : undefined;
+    }
+    if (typeof value === 'string') {
+        const url = value.trim();
+        return url ? [url] : undefined;
+    }
+    return undefined;
+};
+const normalizeLocation = (value) => {
+    if (typeof value === 'string') {
+        const loc = value.trim();
+        return loc || undefined;
+    }
+    if (value && typeof value === 'object') {
+        try {
+            return JSON.stringify(value);
+        }
+        catch {
+            return undefined;
+        }
+    }
+    return undefined;
 };
 const shapePrayerRequestForFrontend = (item) => {
     const { comment, prayer, ...rest } = item;
@@ -50,6 +79,8 @@ const shapePrayerRequestForFrontend = (item) => {
         createdAt: rest.createdAt ? new Date(rest.createdAt).toISOString() : null,
         updatedAt: rest.updatedAt ? new Date(rest.updatedAt).toISOString() : null,
         moderatedAt: rest.moderatedAt ? new Date(rest.moderatedAt).toISOString() : null,
+        // keep FE stable
+        mediaUrls: rest.mediaUrls || [],
     };
 };
 // GET all prayer requests
@@ -81,7 +112,8 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
     const { title, requestText, visibility, category, mediaUrls, location } = req.body;
     const trimmedTitle = String(title || '').trim();
     const trimmedRequestText = String(requestText || '').trim();
-    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    const normalizedMediaUrls = normalizeMediaUrls(mediaUrls);
+    const hasMedia = Boolean(normalizedMediaUrls && Array.isArray(normalizedMediaUrls) && normalizedMediaUrls.length);
     if (!trimmedRequestText && !hasMedia) {
         return res.status(400).json({ error: 'Prayer request text or media is required.' });
     }
@@ -99,15 +131,15 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         const isAdmin = requestUser.role === 'admin';
         const newRequest = await db_1.prisma.prayerrequest.create({
             data: {
-                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
-                updatedAt: new Date(), // REQUIRED
+                id: (0, generateId_1.generateId)(),
+                updatedAt: new Date(), // required (no default)
                 title: trimmedTitle || trimmedRequestText.split(' ').slice(0, 7).join(' ') || 'Prayer Request',
                 requestText: trimmedRequestText,
                 visibility: resolvedVisibility,
                 category: resolvedCategory,
-                status: 'active',
-                mediaUrls: mediaUrls || undefined,
-                location,
+                status: client_1.prayerrequest_status.active,
+                mediaUrls: normalizedMediaUrls,
+                location: normalizeLocation(location),
                 postedByAdminId: isAdmin ? requestUser.id : undefined,
                 postedByAdminName: isAdmin ? requestUser.fullName : undefined,
                 userProfileImageUrl: user.profileImageUrl || undefined,
@@ -118,6 +150,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
     }
     catch (error) {
+        console.error('Failed to create prayer request:', error);
         res.status(500).json({ error: 'Failed to create prayer request' });
     }
 });
@@ -146,7 +179,7 @@ router.put('/:id/status', auth_1.authMiddleware, async (req, res) => {
                 moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
-            include: { prayer: true }
+            include: { prayer: true, comment: true }
         });
         res.json(shapePrayerRequestForFrontend(updatedRequest));
     }
@@ -154,6 +187,7 @@ router.put('/:id/status', auth_1.authMiddleware, async (req, res) => {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Prayer request not found.' });
         }
+        console.error('Failed to update prayer request status:', error);
         res.status(500).json({ error: 'Failed to update prayer request status.' });
     }
 });
@@ -189,7 +223,7 @@ router.post('/:id/toggle-prayer', async (req, res) => {
         if (!existingPrayer) {
             await db_1.prisma.prayer.create({
                 data: {
-                    id: crypto_1.default.randomUUID(),
+                    id: (0, generateId_1.generateId)(),
                     userId: isLoggedIn ? userId : null,
                     userName: isLoggedIn ? userName : 'Guest',
                     guestEmail: isGuest ? (guestEmail || null) : null,
@@ -199,18 +233,13 @@ router.post('/:id/toggle-prayer', async (req, res) => {
                 },
             });
         }
-        // Update the lastPrayedAt timestamp on the parent request
         await db_1.prisma.prayerrequest.update({
             where: { id: prayerRequestId },
-            data: { lastPrayedAt: new Date() }
+            data: { lastPrayedAt: new Date(), updatedAt: new Date() }
         });
-        // Fetch the updated prayer request with the new prayer list
         const updatedRequest = await db_1.prisma.prayerrequest.findUnique({
             where: { id: prayerRequestId },
-            include: {
-                comment: true,
-                prayer: true,
-            },
+            include: { comment: true, prayer: true },
         });
         if (!updatedRequest) {
             return res.status(404).json({ error: "Prayer request not found after toggling prayer." });
@@ -243,7 +272,6 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
                 moderatedByAdminName: adminUser?.fullName,
                 updatedAt: new Date(),
             },
-            include: { prayer: true }
         });
         res.json(shapePrayerRequestForFrontend(updated));
     }
@@ -251,7 +279,8 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Prayer request not found.' });
         }
-        res.status(500).json({ error: 'Failed to delete prayer request' });
+        console.error('Failed to delete prayer request:', error);
+        res.status(500).json({ error: 'Failed to delete prayer request.' });
     }
 });
 exports.default = router;

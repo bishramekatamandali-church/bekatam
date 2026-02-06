@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
+const generateId_1 = require("../utils/generateId");
 const router = express_1.default.Router();
 const ensureAdmin = (req, res) => {
     const user = req.user;
@@ -17,6 +17,34 @@ const ensureAdmin = (req, res) => {
         return false;
     }
     return true;
+};
+const normalizeMediaUrls = (value) => {
+    if (Array.isArray(value)) {
+        const urls = value
+            .map((v) => (typeof v === 'string' ? v.trim() : ''))
+            .filter(Boolean);
+        return urls.length ? urls : undefined;
+    }
+    if (typeof value === 'string') {
+        const url = value.trim();
+        return url ? [url] : undefined;
+    }
+    return undefined;
+};
+const normalizeLocation = (value) => {
+    if (typeof value === 'string') {
+        const loc = value.trim();
+        return loc || undefined;
+    }
+    if (value && typeof value === 'object') {
+        try {
+            return JSON.stringify(value);
+        }
+        catch {
+            return undefined;
+        }
+    }
+    return undefined;
 };
 const shapeTestimonialForFrontend = (item) => {
     const { comment, ...rest } = item;
@@ -72,7 +100,8 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
     const { title, contentText, visibility, mediaUrls, location } = req.body;
     const trimmedTitle = String(title || '').trim();
     const trimmedContentText = String(contentText || '').trim();
-    const hasMedia = Array.isArray(mediaUrls) && mediaUrls.length > 0;
+    const normalizedMediaUrls = normalizeMediaUrls(mediaUrls);
+    const hasMedia = Boolean(normalizedMediaUrls && Array.isArray(normalizedMediaUrls) && normalizedMediaUrls.length);
     if (!trimmedTitle) {
         return res.status(400).json({ error: 'A title is required to submit a testimonial.' });
     }
@@ -90,13 +119,13 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         const isAdmin = requestUser.role === 'admin';
         const newTestimonial = await db_1.prisma.testimonial.create({
             data: {
-                id: crypto_1.default.randomUUID(), // REQUIRED in your schema
-                updatedAt: new Date(), // REQUIRED
+                id: (0, generateId_1.generateId)(),
+                updatedAt: new Date(), // required (no default)
                 title: trimmedTitle,
                 contentText: trimmedContentText,
                 visibility: resolvedVisibility,
-                mediaUrls: mediaUrls || undefined,
-                location,
+                mediaUrls: normalizedMediaUrls,
+                location: normalizeLocation(location),
                 postedByAdminId: isAdmin ? requestUser.id : undefined,
                 postedByAdminName: isAdmin ? requestUser.fullName : undefined,
                 userId: user.id,
@@ -107,6 +136,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         res.status(201).json(shapeTestimonialForFrontend(newTestimonial));
     }
     catch (error) {
+        console.error('Failed to create testimonial:', error);
         res.status(500).json({ error: 'Failed to create testimonial' });
     }
 });
@@ -140,6 +170,7 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Testimonial not found.' });
         }
+        console.error('Failed to update testimonial:', error);
         res.status(500).json({ error: 'Failed to update testimonial' });
     }
 });
@@ -171,6 +202,7 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ error: 'Testimonial not found.' });
         }
+        console.error('Failed to delete testimonial:', error);
         res.status(500).json({ error: 'Failed to delete testimonial' });
     }
 });
