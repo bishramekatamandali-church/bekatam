@@ -379,28 +379,29 @@ router.post("/forgot-password", async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: "Email is required." });
         }
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = String(email).toLowerCase().trim();
         const user = await db_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (user) {
-            const token = jsonwebtoken_1.default.sign({ id: user.id, email: user.email, type: "password_reset" }, process.env.JWT_SECRET, { expiresIn: "1h" });
-            const resetLink = `${getFrontendUrl()}/reset-password/${token}`;
-            await sendUserNotification({
-                to: user.email,
-                subject: "Reset your Bishram Ekata Mandali password",
-                text: `Hello ${user.fullName},\n\nWe received a request to reset your password. Use the link below to reset it:\n${resetLink}\n\nIf you did not request a reset, you can ignore this email.\n\n— Bishram Ekata Mandali`,
-                html: `
+        if (!user) {
+            return res.status(404).json({ error: "The email doesn't exist." });
+        }
+        const token = jsonwebtoken_1.default.sign({ id: user.id, email: user.email, type: "password_reset" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        const resetLink = `${getFrontendUrl()}/reset-password/${token}`;
+        await sendUserNotification({
+            to: user.email,
+            subject: "Reset your Bishram Ekata Mandali password",
+            text: `Hello ${user.fullName},\n\nWe received a request to reset your password. Use the link below to reset it:\n${resetLink}\n\nIf you did not request a reset, you can ignore this email.\n\n— Bishram Ekata Mandali`,
+            html: `
           <p>Hello ${user.fullName},</p>
           <p>We received a request to reset your password. Use the link below to reset it:</p>
           <p><a href="${resetLink}">${resetLink}</a></p>
           <p>If you did not request a reset, you can ignore this email.</p>
           <p>— Bishram Ekata Mandali</p>
         `,
-            });
-            if (process.env.NODE_ENV !== "production") {
-                return res.json({ success: true, message: "Password reset email sent.", token });
-            }
+        });
+        if (process.env.NODE_ENV !== "production") {
+            return res.json({ success: true, message: "Password reset email sent.", token });
         }
-        res.json({ success: true, message: "If an account exists for that email, a reset link has been sent." });
+        return res.json({ success: true, message: "Password reset email sent." });
     }
     catch (error) {
         console.error("FORGOT PASSWORD ERROR:", error);

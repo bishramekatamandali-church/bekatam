@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { EyeIcon, EyeSlashIcon } from "../icons/GenericIcons";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface RegisterFormProps {
@@ -142,6 +143,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [profileImageDataUrl, setProfileImageDataUrl] = useState<string | null>(null);
@@ -188,7 +191,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     }
     if (!password) return "Please enter a password.";
     if (password.length < 6) return "Password must be at least 6 characters.";
-    if (password !== confirmPassword) return "Passwords do not match.";
+    if (password !== confirmPassword) return "Password did not match.";
     return null;
   };
 
@@ -348,26 +351,48 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            placeholder="Minimum 6 characters"
-            autoComplete="new-password"
-          />
+          <div className="relative mt-1">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="register-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm"
+              placeholder="Minimum 6 characters"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            placeholder="Re-type password"
-            autoComplete="new-password"
-          />
+          <div className="relative mt-1">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              id="register-confirm-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm"
+              placeholder="Re-type password"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            >
+              {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         <button
