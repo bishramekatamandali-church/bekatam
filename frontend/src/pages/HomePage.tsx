@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../contexts/ContentContext';
@@ -26,9 +26,6 @@ const getContentUpdatedAt = (item: any): Date => {
   return dateStr ? new Date(dateStr) : new Date(0);
 };
 
-const buildContentKey = (typeKey: string, id: string | number) => `home:${typeKey}:${id}`;
-const guestSeenStorageKey = 'homepage_seen_content_v1:guest';
-const userSeenStorageKey = (userId: string) => `homepage_seen_content_v1:user:${userId}`;
 
 const getIncidentAt = (item: any): Date | null => {
   const dateStr = item.incidentAt || item.date;
@@ -103,8 +100,6 @@ const HomePage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<'prayer' | 'testimonial'>('prayer');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [seenContentMap, setSeenContentMap] = useState<Record<string, number>>({});
-  const seenStorageKey = currentUser ? userSeenStorageKey(currentUser.id) : guestSeenStorageKey;
   const currentADDate = getLocalToday();
   const initialBsDate = useMemo(() => adToBs(currentADDate), [currentADDate]);
   const [currentCalendarBsMonth, setCurrentCalendarBsMonth] = useState<number>(initialBsDate.month);
@@ -143,41 +138,6 @@ const HomePage: React.FC = () => {
     pauseHomepageHtmlVideos(currentElement);
     pauseHomepageEmbeds(currentElement);
   };
-
-  useEffect(() => {
-    try {
-      if (currentUser) {
-        const storedUser = window.localStorage.getItem(seenStorageKey);
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser) as Record<string, number>;
-          if (parsedUser && typeof parsedUser === 'object') {
-            setSeenContentMap(parsedUser);
-            return;
-          }
-        }
-        const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
-        if (storedGuest) {
-          const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
-          if (parsedGuest && typeof parsedGuest === 'object') {
-            setSeenContentMap(parsedGuest);
-            window.localStorage.setItem(seenStorageKey, JSON.stringify(parsedGuest));
-            return;
-          }
-        }
-      }
-      const storedGuest = window.localStorage.getItem(guestSeenStorageKey);
-      if (storedGuest) {
-        const parsedGuest = JSON.parse(storedGuest) as Record<string, number>;
-        if (parsedGuest && typeof parsedGuest === 'object') {
-          setSeenContentMap(parsedGuest);
-          return;
-        }
-      }
-      setSeenContentMap({});
-    } catch (error) {
-      console.warn('Failed to load homepage seen content state.', error);
-    }
-  }, [currentUser, seenStorageKey]);
 
   const handleCalendarMonthChange = useCallback((month: number, year: number) => {
     setCurrentCalendarBsMonth(month);
@@ -359,37 +319,6 @@ const HomePage: React.FC = () => {
     return combined.sort((a, b) => getPublishedAt(b.item).getTime() - getPublishedAt(a.item).getTime());
   }, [sortedPrayerRequests, sortedTestimonials]);
 
-  const markContentSeen = (item: ContentItem, typeKey: string) => {
-    const id = (item as any).id;
-    if (!id) return;
-    const key = buildContentKey(typeKey, id);
-    const updatedAt = getContentUpdatedAt(item).getTime();
-    setSeenContentMap((prev) => {
-      if (prev[key] && prev[key] >= updatedAt) {
-        return prev;
-      }
-      const next = {
-        ...prev,
-        [key]: updatedAt,
-      };
-      try {
-        window.localStorage.setItem(seenStorageKey, JSON.stringify(next));
-      } catch (error) {
-        console.warn('Failed to persist homepage seen content state.', error);
-      }
-      return next;
-    });
-  };
-
-  const isContentNew = (item: ContentItem, typeKey: string) => {
-    const id = (item as any).id;
-    if (!id) return false;
-    const key = buildContentKey(typeKey, id);
-    const updatedAt = getContentUpdatedAt(item).getTime();
-    const seenAt = seenContentMap[key] || 0;
-    return updatedAt > seenAt;
-  };
-
   const renderMediaCard = (
     item: ContentItem,
     typeKey: string,
@@ -400,7 +329,6 @@ const HomePage: React.FC = () => {
     const incidentAt = info.incidentAt || getIncidentAt(item)?.toISOString();
     const incidentLabel = incidentLabels[typeKey] || 'Happened on';
     const showIncident = Boolean(incidentAt) && !['blog', 'news'].includes(typeKey);
-    const showNewBadge = isContentNew(item, typeKey);
     const mediaUrls = Array.isArray((item as any).mediaUrls) ? (item as any).mediaUrls : [];
     const candidateVideoUrl =
       (item as any).videoUrl ||
@@ -428,7 +356,6 @@ const HomePage: React.FC = () => {
       <Link
         to={info.linkPath}
         key={`${typeKey}-${info.id}`}
-        onClick={() => markContentSeen(item, typeKey)}
         className={`group flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${options.containerClass}`}
       >
         <div className={`relative bg-slate-100 rounded-xl overflow-hidden ${options.imageClass}`}>
@@ -469,11 +396,6 @@ const HomePage: React.FC = () => {
             <img src={info.imageUrl} alt={info.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
-          )}
-          {showNewBadge && (
-            <span className="absolute left-2 top-2 rounded-full bg-rose-500 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white shadow">
-              New
-            </span>
           )}
         </div>
         <div className="mt-2 px-1 space-y-1">
