@@ -20,12 +20,6 @@ const GiftIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className || "w-5 h-5"}><path d="M10 1a1.5 1.5 0 011.446 1.254l1.085 4.606a.5.5 0 00.475.39h4.606a1.5 1.5 0 011.254 1.446L18.75 10l-.116.116A1.5 1.5 0 0117.25 10h-1.01a3.501 3.501 0 00-2.475-2.475V6.52a1.5 1.5 0 01-1.116-1.446L12.544 1A1.5 1.5 0 0110 1zM3.25 10a1.5 1.5 0 011.116-.616L4.48 9.27v1.254a3.501 3.501 0 002.475 2.475h1.01a1.5 1.5 0 011.384 1.384L10 15.894l-.116.116a1.5 1.5 0 01-1.446-1.254L7.352 10.15A3.5 3.5 0 005.48 8.766l-.22-.006H3.25z" /><path d="M6.204 11.32A3.511 3.511 0 016.5 12.5c0 .347.053.682.151 1H3.375a.75.75 0 010-1.5h2.829zM10 17a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM14.849 11a3.511 3.511 0 01-.296 1.18h2.821a.75.75 0 000-1.5H14.85z" /></svg>
 );
 
-const sidebarSocialLinks = [
-    { platform: 'facebook', url: 'https://facebook.com/yourchurchpage', label: 'BEM Church on Facebook' },
-    { platform: 'youtube', url: 'https://youtube.com/yourchurchchannel', label: 'BEM Church on YouTube' },
-    { platform: 'instagram', url: 'https://instagram.com/yourchurchprofile', label: 'BEM Church on Instagram' },
-];
-
 interface SidebarCyclingItem {
   id: string;
   title: string;
@@ -124,17 +118,7 @@ const Sidebar: React.FC = () => {
             <li><Link to="/branches" className="hover:text-purple-600 transition-colors">Branches</Link></li>
             <li><Link to="/media" className="hover:text-purple-600 transition-colors">Media Library</Link></li>
           </ul>
-        </section>
-
-        <section>
-          <h3 className="text-md font-semibold text-slate-800 mb-2 border-b pb-1.5 border-slate-300">Connect With Us</h3>
-          <div className="text-xs space-y-1">
-            <p>Gauri Marg, Sinamangal, Kathmandu</p>
-            <p><a href="mailto:shahidsingh1432@gmail.com" className="hover:text-purple-600 transition-colors">shahidsingh1432@gmail.com</a></p>
-            <p><a href="tel:+9779865272258" className="hover:text-purple-600 transition-colors">+977-9865272258</a></p>
-          </div>
-           <SocialIcons links={sidebarSocialLinks} iconClassName="text-slate-400 hover:text-purple-500 transition-colors w-5 h-5" className="flex space-x-3 mt-3" />
-        </section>
+        </section>      
         
         <div className="pt-3 border-t border-slate-300 text-center text-xs">
           <p>© {currentYear} Bishram Ekata Mandali. All rights reserved.</p>
