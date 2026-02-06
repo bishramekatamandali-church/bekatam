@@ -21,7 +21,6 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "nepali-date-converter": "^3.4.0",
     "react": "^18.3.1",
