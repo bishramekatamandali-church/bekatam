@@ -4,6 +4,7 @@ import { Prisma, testimonial_visibility } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 import { generateId } from '../utils/generateId';
+import { createAdminNotifications, createUserNotification } from '../utils/notificationHelpers';
 
 const router = express.Router();
 
@@ -141,6 +142,21 @@ router.post('/', authMiddleware, async (req, res) => {
             }
         });
 
+        // Bell notification to the submitting user (success)
+        await createUserNotification({
+            targetUserId: user.id,
+            message: `Your testimonial was submitted successfully: "${trimmedTitle}".`,
+            link: `/prayer-requests#testimonial-${newTestimonial.id}`,
+            type: 'generic',
+        });
+
+        // Optional: notify admins about the new testimonial
+        await createAdminNotifications({
+            message: `New testimonial from ${user.fullName}: "${trimmedTitle}".`,
+            link: `/admin/manage-testimonials`,
+            type: 'admin_action',
+        });
+
         res.status(201).json(shapeTestimonialForFrontend(newTestimonial));
     } catch (error) {
         console.error('Failed to create testimonial:', error);
@@ -172,6 +188,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+
+        // Notify original submitter (if any)
+        if (updatedTestimonial.userId) {
+            await createUserNotification({
+                targetUserId: updatedTestimonial.userId,
+                message: `Your testimonial "${updatedTestimonial.title}" was edited by admin. Reason: ${String(moderationReason).trim()}.`,
+                link: `/prayer-requests#testimonial-${updatedTestimonial.id}`,
+                type: 'admin_action',
+            });
+        }
         res.json(shapeTestimonialForFrontend(updatedTestimonial));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -203,6 +229,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+
+        // Notify original submitter (if any)
+        if (updatedTestimonial.userId) {
+            await createUserNotification({
+                targetUserId: updatedTestimonial.userId,
+                message: `Your testimonial "${updatedTestimonial.title}" was deleted by admin. Reason: ${String(reason).trim()}.`,
+                link: `/prayer-requests#testimonial-${updatedTestimonial.id}`,
+                type: 'admin_action',
+            });
+        }
         res.json(shapeTestimonialForFrontend(updatedTestimonial));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

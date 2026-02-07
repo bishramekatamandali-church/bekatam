@@ -7,6 +7,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const express_1 = __importDefault(require("express"));
 const db_1 = require("../db");
 const client_1 = require("@prisma/client");
+const notificationHelpers_1 = require("../utils/notificationHelpers");
 const router = express_1.default.Router();
 // POST a new comment
 router.post('/', async (req, res) => {
@@ -85,6 +86,40 @@ router.post('/', async (req, res) => {
     }
     try {
         const newComment = await db_1.prisma.comment.create({ data });
+        // Bell notifications: notify the content owner (registered users only)
+        try {
+            const actorUserId = isGuestComment ? null : (userId || null);
+            const actorName = userName || 'Someone';
+            const notifyOwner = async (ownerUserId, link, what) => {
+                if (!ownerUserId)
+                    return;
+                if (actorUserId && actorUserId === ownerUserId)
+                    return; // don't notify self
+                await (0, notificationHelpers_1.createUserNotification)({
+                    targetUserId: ownerUserId,
+                    message: `${actorName} commented on your ${what}.`,
+                    link,
+                    type: 'comment',
+                });
+            };
+            if (itemType === 'prayerRequest') {
+                const pr = await db_1.prisma.prayerrequest.findUnique({
+                    where: { id: itemId },
+                    select: { userId: true },
+                });
+                await notifyOwner(pr?.userId, `/prayer-requests#prayer-${itemId}`, 'prayer request');
+            }
+            if (itemType === 'testimonial') {
+                const t = await db_1.prisma.testimonial.findUnique({
+                    where: { id: itemId },
+                    select: { userId: true },
+                });
+                await notifyOwner(t?.userId, `/prayer-requests#testimonial-${itemId}`, 'testimonial');
+            }
+        }
+        catch (notifyError) {
+            console.error('Comment owner notification failed:', notifyError);
+        }
         // Shape response to match frontend Comment type
         res.status(201).json({
             id: newComment.id,

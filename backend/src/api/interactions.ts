@@ -1,5 +1,6 @@
 import express from 'express';
 import { prisma } from '../db';
+import { createUserNotification } from '../utils/notificationHelpers';
 
 const router = express.Router();
 
@@ -104,4 +105,46 @@ router.post('/toggle-like/:itemType/:itemId', async (req, res) => {
   }
 });
 
+// Track a share and notify the owner (prayer requests + testimonials)
+router.post('/share/:itemType/:itemId', async (req, res) => {
+  const { itemType, itemId } = req.params;
+  const { userId, userName } = req.body || {};
+
+  if (!userId || !userName) {
+    return res.status(400).json({ error: 'userId and userName are required.' });
+  }
+
+  try {
+    if (itemType === 'prayerRequest') {
+      const pr = await prisma.prayerrequest.findUnique({ where: { id: itemId }, select: { userId: true } });
+      if (pr?.userId && pr.userId !== userId) {
+        await createUserNotification({
+          targetUserId: pr.userId,
+          message: `${userName} shared your prayer request.`,
+          link: `/prayer-requests#prayer-${itemId}`,
+          type: 'generic',
+        });
+      }
+    }
+
+    if (itemType === 'testimonial') {
+      const t = await prisma.testimonial.findUnique({ where: { id: itemId }, select: { userId: true } });
+      if (t?.userId && t.userId !== userId) {
+        await createUserNotification({
+          targetUserId: t.userId,
+          message: `${userName} shared your testimonial.`,
+          link: `/prayer-requests#testimonial-${itemId}`,
+          type: 'generic',
+        });
+      }
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(`share notification error ${itemType}/${itemId}`, error);
+    return res.status(500).json({ error: 'Failed to record share.' });
+  }
+});
+
 export default router;
+

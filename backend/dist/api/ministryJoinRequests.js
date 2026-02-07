@@ -9,6 +9,7 @@ const db_1 = require("../db");
 const client_1 = require("@prisma/client");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const emailService_1 = require("../services/emailService");
+const notificationHelpers_1 = require("../utils/notificationHelpers");
 const router = express_1.default.Router();
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
 const notifyAdminsOfJoinRequest = async (params) => {
@@ -153,6 +154,13 @@ router.post('/', async (req, res) => {
             userEmail: newRequest.userEmail,
             ministryName: newRequest.ministryName,
         });
+        // Bell notification to the submitting user
+        await (0, notificationHelpers_1.createUserNotification)({
+            targetUserId: newRequest.userId,
+            message: `Your request to join ${newRequest.ministryName} was submitted successfully.`,
+            link: `/ministries`,
+            type: 'ministry_request_update',
+        });
         res.status(201).json(newRequest);
     }
     catch (error) {
@@ -269,6 +277,18 @@ router.put('/:id', async (req, res) => {
             }
             return updated;
         });
+        // Bell notification to the requesting user (approved/rejected/pending)
+        try {
+            await (0, notificationHelpers_1.createUserNotification)({
+                targetUserId: updatedRequest.userId,
+                message: `Your ministry join request for ${updatedRequest.ministryName} is now "${updatedRequest.status}"${adminNotes ? `: ${adminNotes}` : ''}.`,
+                link: `/ministries`,
+                type: 'ministry_request_update',
+            });
+        }
+        catch (error) {
+            console.error('Failed to create ministry join request user notification:', error);
+        }
         res.json(updatedRequest);
     }
     catch (error) {

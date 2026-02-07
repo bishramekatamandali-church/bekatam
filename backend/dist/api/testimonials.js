@@ -9,6 +9,7 @@ const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const generateId_1 = require("../utils/generateId");
+const notificationHelpers_1 = require("../utils/notificationHelpers");
 const router = express_1.default.Router();
 const ensureAdmin = (req, res) => {
     const user = req.user;
@@ -133,6 +134,19 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 userProfileImageUrl: user.profileImageUrl || undefined,
             }
         });
+        // Bell notification to the submitting user (success)
+        await (0, notificationHelpers_1.createUserNotification)({
+            targetUserId: user.id,
+            message: `Your testimonial was submitted successfully: "${trimmedTitle}".`,
+            link: `/prayer-requests#testimonial-${newTestimonial.id}`,
+            type: 'generic',
+        });
+        // Optional: notify admins about the new testimonial
+        await (0, notificationHelpers_1.createAdminNotifications)({
+            message: `New testimonial from ${user.fullName}: "${trimmedTitle}".`,
+            link: `/admin/manage-testimonials`,
+            type: 'admin_action',
+        });
         res.status(201).json(shapeTestimonialForFrontend(newTestimonial));
     }
     catch (error) {
@@ -164,6 +178,15 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+        // Notify original submitter (if any)
+        if (updatedTestimonial.userId) {
+            await (0, notificationHelpers_1.createUserNotification)({
+                targetUserId: updatedTestimonial.userId,
+                message: `Your testimonial "${updatedTestimonial.title}" was edited by admin. Reason: ${String(moderationReason).trim()}.`,
+                link: `/prayer-requests#testimonial-${updatedTestimonial.id}`,
+                type: 'admin_action',
+            });
+        }
         res.json(shapeTestimonialForFrontend(updatedTestimonial));
     }
     catch (error) {
@@ -196,6 +219,15 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             }
         });
+        // Notify original submitter (if any)
+        if (updatedTestimonial.userId) {
+            await (0, notificationHelpers_1.createUserNotification)({
+                targetUserId: updatedTestimonial.userId,
+                message: `Your testimonial "${updatedTestimonial.title}" was deleted by admin. Reason: ${String(reason).trim()}.`,
+                link: `/prayer-requests#testimonial-${updatedTestimonial.id}`,
+                type: 'admin_action',
+            });
+        }
         res.json(shapeTestimonialForFrontend(updatedTestimonial));
     }
     catch (error) {

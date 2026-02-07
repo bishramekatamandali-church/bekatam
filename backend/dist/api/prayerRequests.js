@@ -9,6 +9,7 @@ const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const databaseFallback_1 = require("../utils/databaseFallback");
 const generateId_1 = require("../utils/generateId");
+const notificationHelpers_1 = require("../utils/notificationHelpers");
 const router = express_1.default.Router();
 const ensureAdmin = (req, res) => {
     const user = req.user;
@@ -147,6 +148,20 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 userId: user.id,
             }
         });
+        // Bell notifications
+        // 1) to the submitting user (success)
+        await (0, notificationHelpers_1.createUserNotification)({
+            targetUserId: user.id,
+            message: `Your prayer request was submitted successfully${trimmedTitle ? `: "${trimmedTitle}"` : ''}.`,
+            link: `/prayer-requests#prayer-${newRequest.id}`,
+            type: 'generic',
+        });
+        // 2) to admins (new submission)
+        await (0, notificationHelpers_1.createAdminNotifications)({
+            message: `New prayer request from ${user.fullName}${trimmedTitle ? `: "${trimmedTitle}"` : ''}.`,
+            link: `/admin/manage-prayer-requests`,
+            type: 'prayer_request_submitted_admin',
+        });
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
     }
     catch (error) {
@@ -181,6 +196,15 @@ router.put('/:id/status', auth_1.authMiddleware, async (req, res) => {
             },
             include: { prayer: true, comment: true }
         });
+        // Notify the original submitter (if any)
+        if (updatedRequest.userId) {
+            await (0, notificationHelpers_1.createUserNotification)({
+                targetUserId: updatedRequest.userId,
+                message: `Your prayer request "${updatedRequest.title}" was updated to "${updatedRequest.status}". Reason: ${updatedRequest.moderationReason || 'Not specified.'}`,
+                link: `/prayer-requests#prayer-${updatedRequest.id}`,
+                type: 'prayer_request_status_user',
+            });
+        }
         res.json(shapePrayerRequestForFrontend(updatedRequest));
     }
     catch (error) {
@@ -220,7 +244,8 @@ router.post('/:id/toggle-prayer', async (req, res) => {
                     ...(guestPhone ? { guestPhone } : {}),
                 },
             });
-        if (!existingPrayer) {
+        const prayerWasCreated = !existingPrayer;
+        if (prayerWasCreated) {
             await db_1.prisma.prayer.create({
                 data: {
                     id: (0, generateId_1.generateId)(),
@@ -243,6 +268,20 @@ router.post('/:id/toggle-prayer', async (req, res) => {
         });
         if (!updatedRequest) {
             return res.status(404).json({ error: "Prayer request not found after toggling prayer." });
+        }
+        // Notify the owner only when a new prayer entry is created (avoid spamming on repeated clicks)
+        if (prayerWasCreated && updatedRequest.userId) {
+            const actorName = isLoggedIn ? (userName || 'Someone') : 'Someone';
+            const actorId = isLoggedIn ? userId : null;
+            // Don't notify if you prayed on your own request
+            if (!actorId || actorId !== updatedRequest.userId) {
+                await (0, notificationHelpers_1.createUserNotification)({
+                    targetUserId: updatedRequest.userId,
+                    message: `${actorName} prayed for your prayer request "${updatedRequest.title}".`,
+                    link: `/prayer-requests#prayer-${updatedRequest.id}`,
+                    type: 'prayer_request_prayed_for',
+                });
+            }
         }
         res.json(shapePrayerRequestForFrontend(updatedRequest));
     }
@@ -273,6 +312,15 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             },
         });
+        // Notify the original submitter (if any)
+        if (updated.userId) {
+            await (0, notificationHelpers_1.createUserNotification)({
+                targetUserId: updated.userId,
+                message: `Your prayer request "${updated.title}" was deleted by admin. Reason: ${updated.moderationReason || String(reason).trim()}.`,
+                link: `/prayer-requests#prayer-${updated.id}`,
+                type: 'prayer_request_status_user',
+            });
+        }
         res.json(shapePrayerRequestForFrontend(updated));
     }
     catch (error) {

@@ -41,6 +41,7 @@ import crypto from 'crypto';
 import express from 'express';
 import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
+import { createUserNotification } from '../utils/notificationHelpers';
 
 const router = express.Router();
 
@@ -124,6 +125,41 @@ router.post('/', async (req, res) => {
 
     try {
         const newComment = await prisma.comment.create({ data });
+
+        // Bell notifications: notify the content owner (registered users only)
+        try {
+            const actorUserId: string | null = isGuestComment ? null : (userId || null);
+            const actorName: string = userName || 'Someone';
+
+            const notifyOwner = async (ownerUserId: string | null | undefined, link: string, what: string) => {
+                if (!ownerUserId) return;
+                if (actorUserId && actorUserId === ownerUserId) return; // don't notify self
+                await createUserNotification({
+                    targetUserId: ownerUserId,
+                    message: `${actorName} commented on your ${what}.`,
+                    link,
+                    type: 'comment',
+                });
+            };
+
+            if (itemType === 'prayerRequest') {
+                const pr = await prisma.prayerrequest.findUnique({
+                    where: { id: itemId },
+                    select: { userId: true },
+                });
+                await notifyOwner(pr?.userId, `/prayer-requests#prayer-${itemId}`, 'prayer request');
+            }
+
+            if (itemType === 'testimonial') {
+                const t = await prisma.testimonial.findUnique({
+                    where: { id: itemId },
+                    select: { userId: true },
+                });
+                await notifyOwner(t?.userId, `/prayer-requests#testimonial-${itemId}`, 'testimonial');
+            }
+        } catch (notifyError) {
+            console.error('Comment owner notification failed:', notifyError);
+        }
         // Shape response to match frontend Comment type
         res.status(201).json({
             id: newComment.id,

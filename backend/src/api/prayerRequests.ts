@@ -4,6 +4,7 @@ import { Prisma, prayerrequest_visibility, prayerrequest_status, prayerrequest_c
 import { authMiddleware } from '../middleware/auth';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 import { generateId } from '../utils/generateId';
+import { createAdminNotifications, createUserNotification } from '../utils/notificationHelpers';
 
 const router = express.Router();
 
@@ -158,6 +159,22 @@ router.post('/', authMiddleware, async (req, res) => {
             }
         });
 
+        // Bell notifications
+        // 1) to the submitting user (success)
+        await createUserNotification({
+            targetUserId: user.id,
+            message: `Your prayer request was submitted successfully${trimmedTitle ? `: "${trimmedTitle}"` : ''}.`,
+            link: `/prayer-requests#prayer-${newRequest.id}`,
+            type: 'generic',
+        });
+
+        // 2) to admins (new submission)
+        await createAdminNotifications({
+            message: `New prayer request from ${user.fullName}${trimmedTitle ? `: "${trimmedTitle}"` : ''}.`,
+            link: `/admin/manage-prayer-requests`,
+            type: 'prayer_request_submitted_admin',
+        });
+
         res.status(201).json(shapePrayerRequestForFrontend(newRequest));
     } catch (error) {
         console.error('Failed to create prayer request:', error);
@@ -193,6 +210,16 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
             },
             include: { prayer: true, comment: true }
         });
+
+        // Notify the original submitter (if any)
+        if (updatedRequest.userId) {
+            await createUserNotification({
+                targetUserId: updatedRequest.userId,
+                message: `Your prayer request "${updatedRequest.title}" was updated to "${updatedRequest.status}". Reason: ${updatedRequest.moderationReason || 'Not specified.'}`,
+                link: `/prayer-requests#prayer-${updatedRequest.id}`,
+                type: 'prayer_request_status_user',
+            });
+        }
         res.json(shapePrayerRequestForFrontend(updatedRequest));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -237,7 +264,8 @@ router.post('/:id/toggle-prayer', async (req, res) => {
                 },
             });
 
-        if (!existingPrayer) {
+        const prayerWasCreated = !existingPrayer;
+        if (prayerWasCreated) {
             await prisma.prayer.create({
                 data: {
                     id: generateId(),
@@ -263,6 +291,21 @@ router.post('/:id/toggle-prayer', async (req, res) => {
 
         if (!updatedRequest) {
             return res.status(404).json({ error: "Prayer request not found after toggling prayer." });
+        }
+
+        // Notify the owner only when a new prayer entry is created (avoid spamming on repeated clicks)
+        if (prayerWasCreated && updatedRequest.userId) {
+            const actorName = isLoggedIn ? (userName || 'Someone') : 'Someone';
+            const actorId = isLoggedIn ? userId : null;
+            // Don't notify if you prayed on your own request
+            if (!actorId || actorId !== updatedRequest.userId) {
+                await createUserNotification({
+                    targetUserId: updatedRequest.userId,
+                    message: `${actorName} prayed for your prayer request "${updatedRequest.title}".`,
+                    link: `/prayer-requests#prayer-${updatedRequest.id}`,
+                    type: 'prayer_request_prayed_for',
+                });
+            }
         }
 
         res.json(shapePrayerRequestForFrontend(updatedRequest));
@@ -293,6 +336,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
                 updatedAt: new Date(),
             },
         });
+
+        // Notify the original submitter (if any)
+        if (updated.userId) {
+            await createUserNotification({
+                targetUserId: updated.userId,
+                message: `Your prayer request "${updated.title}" was deleted by admin. Reason: ${updated.moderationReason || String(reason).trim()}.`,
+                link: `/prayer-requests#prayer-${updated.id}`,
+                type: 'prayer_request_status_user',
+            });
+        }
         res.json(shapePrayerRequestForFrontend(updated));
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

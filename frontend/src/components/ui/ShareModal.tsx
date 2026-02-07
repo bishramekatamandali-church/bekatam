@@ -8,6 +8,7 @@ interface ShareModalProps {
   title: string;
   url: string; // URL of the event page to share
   eventTitle: string;
+  onShared?: () => void; // optional hook for backend notifications/analytics
 }
 
 const FacebookIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -65,7 +66,7 @@ const YouTubeIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, eventTitle }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, eventTitle, onShared }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const fullUrl = useMemo(() => new URL(url, window.location.origin).toString(), [url]);
   const shareText = `Check out "${eventTitle}"`;
@@ -78,6 +79,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, ev
       action: async () => {
         if (navigator.share) {
           await navigator.share({ title: eventTitle, text: shareText, url: fullUrl }).catch(() => undefined);
+          onShared?.();
         }
       },
       isNativeShare: true,
@@ -85,38 +87,59 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, ev
     {
       name: 'WhatsApp',
       icon: <WhatsAppIcon className="w-6 h-6 mr-2" />,
-      action: () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareDescription)}`, '_blank'),
+      action: () => {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareDescription)}`, '_blank');
+        onShared?.();
+      },
     },
     {
       name: 'Messenger',
       icon: <MessengerIcon className="w-6 h-6 mr-2" />,
-      action: () => window.open(`https://www.messenger.com/share?link=${encodeURIComponent(fullUrl)}`, '_blank'),
+      action: () => {
+        window.open(`https://www.messenger.com/share?link=${encodeURIComponent(fullUrl)}`, '_blank');
+        onShared?.();
+      },
     },
     {
       name: 'X',
       icon: <XIcon className="w-6 h-6 mr-2" />,
-      action: () => window.open(`https://x.com/intent/post?text=${encodeURIComponent(shareDescription)}`, '_blank'),
+      action: () => {
+        window.open(`https://x.com/intent/post?text=${encodeURIComponent(shareDescription)}`, '_blank');
+        onShared?.();
+      },
     },
     {
       name: 'TikTok',
       icon: <TikTokIcon className="w-6 h-6 mr-2" />,
-      action: () => window.open(`https://www.tiktok.com/share?url=${encodeURIComponent(fullUrl)}&title=${encodeURIComponent(eventTitle)}`, '_blank'),
+      action: () => {
+        window.open(`https://www.tiktok.com/share?url=${encodeURIComponent(fullUrl)}&title=${encodeURIComponent(eventTitle)}`, '_blank');
+        onShared?.();
+      },
     },
     {
       name: 'Facebook',
       icon: <FacebookIcon className="w-6 h-6 mr-2" />,
-      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`, '_blank'),
+      action: () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`, '_blank');
+        onShared?.();
+      },
     },
     {
       name: 'Gmail',
       icon: <GmailIcon className="w-6 h-6 mr-2" />,
-      action: () => window.location.href = `mailto:?subject=${encodeURIComponent(`Check this out: ${eventTitle}`)}&body=${encodeURIComponent(`Hi,\n\n${shareText}\n\nYou can view it here: ${fullUrl}\n\nBest regards,`)}`,
+      action: () => {
+        window.location.href = `mailto:?subject=${encodeURIComponent(`Check this out: ${eventTitle}`)}&body=${encodeURIComponent(`Hi,\n\n${shareText}\n\nYou can view it here: ${fullUrl}\n\nBest regards,`)}`;
+        onShared?.();
+      },
     },
     {
       name: 'Instagram',
       icon: <InstagramIcon className="w-6 h-6 mr-2" />,
       action: () => {
-        navigator.clipboard.writeText(fullUrl).then(() => setCopyStatus('Link copied for Instagram.'));
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          setCopyStatus('Link copied for Instagram.');
+          onShared?.();
+        });
         // window.open(`https://www.instagram.com`, '_blank'); // Or link to profile
       }
     },
@@ -125,6 +148,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, ev
       icon: <YouTubeIcon className="w-6 h-6 mr-2" />,
       action: () => {
         window.open('https://youtube.com/yourchurchchannel', '_blank'); // Replace with actual channel
+        onShared?.();
       }
     },
   ];
@@ -157,7 +181,10 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, title, url, ev
                 onFocus={(e) => e.target.select()}
             />
              <Button
-                onClick={() => navigator.clipboard.writeText(fullUrl).then(() => setCopyStatus('Link copied.'))}
+                onClick={() => navigator.clipboard.writeText(fullUrl).then(() => {
+                  setCopyStatus('Link copied.');
+                  onShared?.();
+                })}
                 variant="ghost"
                 size="sm"
                 className="mt-2"

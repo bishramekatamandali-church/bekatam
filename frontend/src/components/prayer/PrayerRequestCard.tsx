@@ -8,6 +8,7 @@ import { UserCircleIcon as HeroUserCircleIcon, HandRaisedIcon, ChatBubbleBottomC
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
 import ShareModal from '../ui/ShareModal';
+import { API_BASE_URL } from '../../utils/apiConfig';
 import { Link } from "react-router-dom";
 import CommentItem from '../comments/CommentItem';
 import PostMediaDisplay from '../post/PostMediaDisplay';
@@ -73,6 +74,19 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
         : request.audioUrl
           ? [request.audioUrl]
           : [];
+
+  const handleShared = async () => {
+    if (!currentUser?.id) return;
+    try {
+      await fetch(`${API_BASE_URL}/interactions/share/prayerRequest/${request.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, userName: currentUser.fullName }),
+      });
+    } catch {
+      // no-op
+    }
+  };
 
   const TEXT_TRUNCATE_LENGTH = 120;
   const isTruncated = request.requestText.length > TEXT_TRUNCATE_LENGTH;
@@ -261,6 +275,7 @@ const PrayerRequestCard: React.FC<PrayerRequestCardProps> = ({ request, onPrayed
         title={`Share Prayer: "${request.title}"`}
         url={`/prayer-requests#prayer-${request.id}`}
         eventTitle={request.title}
+        onShared={handleShared}
       />
       {isDeleteModalOpen && (
         <AdminDeleteModal

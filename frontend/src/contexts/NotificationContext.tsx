@@ -174,7 +174,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     };
 
     fetchServerNotifications();
-    const intervalId = window.setInterval(fetchServerNotifications, 60000);
+    // Poll a bit faster so action-based notifications (comments/prayers/shares) feel immediate.
+    const intervalId = window.setInterval(fetchServerNotifications, 15000);
 
     return () => {
       isActive = false;

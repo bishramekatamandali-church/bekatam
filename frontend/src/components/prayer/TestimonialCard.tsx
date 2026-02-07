@@ -13,6 +13,7 @@ import { HeartIcon, ShareIcon, TestimonyIcon } from '../icons/GenericIcons';
 import AdminDeleteModal from '../admin/AdminDeleteModal';
 import ShareModal from '../ui/ShareModal';
 import CommentItem from '../comments/CommentItem';
+import { API_BASE_URL } from '../../utils/apiConfig';
 
 interface TestimonialCardProps {
   testimonial: Testimonial;
@@ -20,12 +21,25 @@ interface TestimonialCardProps {
 }
 
 const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, onComment }) => {
-  const { isAdmin, logAdminAction, isAuthenticated } = useAuth();
+  const { isAdmin, logAdminAction, isAuthenticated, currentUser } = useAuth();
   const { deleteContent, toggleLikeOnItem } = useContent();
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  const handleShared = async () => {
+    if (!currentUser?.id) return;
+    try {
+      await fetch(`${API_BASE_URL}/interactions/share/testimonial/${testimonial.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, userName: currentUser.fullName }),
+      });
+    } catch {
+      // no-op
+    }
+  };
   const [showComments, setShowComments] = useState(false);
   const [isLiked, setIsLiked] = useState(testimonial.likedByMe ?? false);
   const [likeCount, setLikeCount] = useState(testimonial.likes ?? 0);
@@ -202,6 +216,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, onCommen
         title={`Share Testimony: "${testimonial.title}"`}
         url={`/prayer-requests#testimonial-${testimonial.id}`}
         eventTitle={testimonial.title}
+        onShared={handleShared}
       />
     </>
   );

@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
 import { handleDatabaseFallback } from '../utils/databaseFallback';
 import { sendEmail } from '../services/emailService';
+import { createUserNotification } from '../utils/notificationHelpers';
 
 const router = express.Router();
 
@@ -174,6 +175,13 @@ router.post('/', async (req, res) => {
             userEmail: newRequest.userEmail,
             ministryName: newRequest.ministryName,
         });
+        // Bell notification to the submitting user
+        await createUserNotification({
+            targetUserId: newRequest.userId,
+            message: `Your request to join ${newRequest.ministryName} was submitted successfully.`,
+            link: `/ministries`,
+            type: 'ministry_request_update',
+        });
         res.status(201).json(newRequest);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create ministry join request.' });
@@ -298,6 +306,18 @@ router.put('/:id', async (req, res) => {
 
             return updated;
         });
+        // Bell notification to the requesting user (approved/rejected/pending)
+        try {
+            await createUserNotification({
+                targetUserId: updatedRequest.userId,
+                message: `Your ministry join request for ${updatedRequest.ministryName} is now "${updatedRequest.status}"${adminNotes ? `: ${adminNotes}` : ''}.`,
+                link: `/ministries`,
+                type: 'ministry_request_update',
+            });
+        } catch (error) {
+            console.error('Failed to create ministry join request user notification:', error);
+        }
+
         res.json(updatedRequest);
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
