@@ -8,6 +8,8 @@ import '../prayer/prayer_requests_screen.dart';
 import '../events/events_list_screen.dart';
 import '../blog/blog_list_screen.dart';
 import '../news/news_list_screen.dart';
+import '../ministries/ministries_list_screen.dart';
+import '../donate/donate_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -68,8 +70,20 @@ class HomeScreen extends ConsumerWidget {
             subtitle: 'Announcements and updates',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewsListScreen())),
           ),
+          _NavCard(
+            icon: Icons.groups,
+            title: 'Ministries',
+            subtitle: 'Find a ministry and request to join',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MinistriesListScreen())),
+          ),
+          _NavCard(
+            icon: Icons.volunteer_activism,
+            title: 'Donate',
+            subtitle: 'Support the church locally or internationally',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DonateScreen())),
+          ),
           const SizedBox(height: 24),
-          Text('More sections (History, Ministries, Donate, Branches, Media, Notices, Admin) are still being ported.',
+          Text('More sections (History, Branches, Media, Notices, Admin) are still being ported.',
               style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
         ],
       ),

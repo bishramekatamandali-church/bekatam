@@ -23,13 +23,18 @@ Supabase project and its deployed Edge Functions:
 - `CommentSheet` widget (real comment thread — reads `public.comment`,
   posts via the real `create-comment` Edge Function) wired into the
   comment button on Sermons/Events/Blog/News list cards.
+- Ministries: list from `public.ministry`, with a real "Request to Join"
+  dialog that inserts into `public.ministryjoinrequest` (status defaults
+  to `pending`, matching the enum default — an admin processes it later).
+- Donate: reads the singleton `public.donatepagecontent` row and displays
+  bank/eSewa/international donation details + QR images.
 
-**Not yet ported** (still React-only): Church History, Ministries, Donate
-page, Branches, Media, Notices, Community/social feed, Profile pages,
-Admin dashboard and all its sub-sections, notifications UI, PDF report
-downloads, detail screens for any of the list screens above (tapping a
-card doesn't navigate anywhere yet — only the like/comment/pray actions
-on the card itself are wired). These are the next pieces to port.
+**Not yet ported** (still React-only): Church History, Branches, Media,
+Notices, Community/social feed, Profile pages, Admin dashboard and all
+its sub-sections, notifications UI, PDF report downloads, detail screens
+for any of the list screens above (tapping a card doesn't navigate yet —
+only the like/comment/pray/join actions on the card itself are wired).
+These are the next pieces to port.
 
 ## Setup
 
