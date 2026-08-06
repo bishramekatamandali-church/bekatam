@@ -5,6 +5,9 @@ import '../../services/supabase_service.dart';
 import '../auth/login_screen.dart';
 import '../sermons/sermons_list_screen.dart';
 import '../prayer/prayer_requests_screen.dart';
+import '../events/events_list_screen.dart';
+import '../blog/blog_list_screen.dart';
+import '../news/news_list_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -47,8 +50,26 @@ class HomeScreen extends ConsumerWidget {
             subtitle: 'Share and pray for one another',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrayerRequestsScreen())),
           ),
+          _NavCard(
+            icon: Icons.event,
+            title: 'Events',
+            subtitle: 'Upcoming gatherings and programs',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EventsListScreen())),
+          ),
+          _NavCard(
+            icon: Icons.article,
+            title: 'Blog',
+            subtitle: 'Devotionals and church life',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BlogListScreen())),
+          ),
+          _NavCard(
+            icon: Icons.campaign,
+            title: 'News',
+            subtitle: 'Announcements and updates',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewsListScreen())),
+          ),
           const SizedBox(height: 24),
-          Text('More sections (Events, Blog, News, Donate, Ministries) are still being ported.',
+          Text('More sections (History, Ministries, Donate, Branches, Media, Notices, Admin) are still being ported.',
               style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
         ],
       ),

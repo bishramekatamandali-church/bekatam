@@ -12,20 +12,24 @@ Supabase project and its deployed Edge Functions:
 - Auth: sign in, register (creates both the `auth.users` row via Supabase
   Auth and the matching `profiles` row), sign out.
 - Home screen with navigation.
-- Sermons list, reading from `public.sermon`.
+- Sermons, Events, Blog, News — list screens reading from `public.sermon`,
+  `public.eventitem`, `public.blogpost`, `public.newsitem`.
 - Prayer Requests: list from `public.prayerrequest`, submit new request,
   and "Pray for this" wired to the real `toggle-prayer` Edge Function.
 - `SocialInteractionBar` / `PrayerActionBar` widgets wired to the real
   `content-interactions` (toggle-like) and `toggle-prayer` Edge Functions,
   matching their actual deployed request/response shape exactly (verified
   against the live function source, not reconstructed from memory).
+- `CommentSheet` widget (real comment thread — reads `public.comment`,
+  posts via the real `create-comment` Edge Function) wired into the
+  comment button on Sermons/Events/Blog/News list cards.
 
-**Not yet ported** (still React-only): Events, Blog, News, Church History,
-Ministries, Donate page, Branches, Media, Notices, Community/social feed,
-Profile pages, Admin dashboard and all its sub-sections, comments UI
-(the `create-comment` Edge Function is wired in `social_service.dart` but
-no comment-thread screen consumes it yet), notifications UI, PDF
-report downloads. These are the next pieces to port.
+**Not yet ported** (still React-only): Church History, Ministries, Donate
+page, Branches, Media, Notices, Community/social feed, Profile pages,
+Admin dashboard and all its sub-sections, notifications UI, PDF report
+downloads, detail screens for any of the list screens above (tapping a
+card doesn't navigate anywhere yet — only the like/comment/pray actions
+on the card itself are wired). These are the next pieces to port.
 
 ## Setup
 
