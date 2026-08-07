@@ -107,7 +107,17 @@ listed on the Admin Dashboard's "Coming next" section.
     `financial-summary` Edge Function with an optional date range and
     renders its income/expense/net totals plus per-purpose/category
     breakdowns — response shape verified against live deployed source.
-  - Remaining ~18 sections are plain-CRUD-under-RLS (per the earlier
+  - `admin_expenses_screen.dart` — `expenserecord` CRUD with real category/
+    payment-method/status enums (paid/pending/overdue/cancelled shown with
+    a status dot).
+  - `admin_meetings_screen.dart` — tabbed Meetings / Decisions.
+    `meetinglog` CRUD (type, attendees, agenda, minutes, action items,
+    status) and `decisionlog` CRUD (made-by, status, follow-up actions),
+    both with real enum values pulled from the Prisma schema (live SQL
+    connector was down this session, so enum/column names came from
+    `backend/prisma/schema.prisma` in the cloned repo instead — same
+    ground truth, different source).
+  - Remaining ~15 sections are plain-CRUD-under-RLS (per the earlier
     33-resource audit) and listed as "Coming next" tiles — same pattern.
 
 ## Setup
