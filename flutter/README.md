@@ -28,13 +28,24 @@ Supabase project and its deployed Edge Functions:
   to `pending`, matching the enum default — an admin processes it later).
 - Donate: reads the singleton `public.donatepagecontent` row and displays
   bank/eSewa/international donation details + QR images.
+- Church History: published chapters from `public.historychapter` (draft
+  status filtered out — draft is an admin-only editing state), with the
+  like/comment bar wired the same as Sermons/Events/Blog/News.
+- Branch Churches: list from `public.branchchurch` with tap-to-call/email.
+- Media: photo/video grid from `public.directmediaitem` (video playback
+  itself isn't wired yet — tapping a video item shows its URL for now).
+- Notices: reads `public.generatedscheduleitem` — there's no dedicated
+  "notice" table in the schema; this ports the real NoticesPage.tsx's
+  actual data source.
+- My Profile: view/edit the signed-in user's own `profiles` row
+  (full name, bio).
 
-**Not yet ported** (still React-only): Church History, Branches, Media,
-Notices, Community/social feed, Profile pages, Admin dashboard and all
+**Not yet ported** (still React-only): Community/social feed, Public
+profile pages (viewing *other* users' profiles), Admin dashboard and all
 its sub-sections, notifications UI, PDF report downloads, detail screens
 for any of the list screens above (tapping a card doesn't navigate yet —
-only the like/comment/pray/join actions on the card itself are wired).
-These are the next pieces to port.
+only the like/comment/pray/join actions on the card itself are wired),
+video playback in Media. These are the next pieces to port.
 
 ## Setup
 

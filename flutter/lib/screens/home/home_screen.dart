@@ -10,6 +10,11 @@ import '../blog/blog_list_screen.dart';
 import '../news/news_list_screen.dart';
 import '../ministries/ministries_list_screen.dart';
 import '../donate/donate_screen.dart';
+import '../history/church_history_screen.dart';
+import '../branches/branches_list_screen.dart';
+import '../media/media_gallery_screen.dart';
+import '../notices/notices_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -82,8 +87,38 @@ class HomeScreen extends ConsumerWidget {
             subtitle: 'Support the church locally or internationally',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DonateScreen())),
           ),
+          _NavCard(
+            icon: Icons.menu_book,
+            title: 'Our History',
+            subtitle: 'The story of the church, chapter by chapter',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChurchHistoryScreen())),
+          ),
+          _NavCard(
+            icon: Icons.map,
+            title: 'Branch Churches',
+            subtitle: 'Find a branch near you',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BranchesListScreen())),
+          ),
+          _NavCard(
+            icon: Icons.photo_library,
+            title: 'Media',
+            subtitle: 'Photos and videos from church life',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MediaGalleryScreen())),
+          ),
+          _NavCard(
+            icon: Icons.notifications,
+            title: 'Notices',
+            subtitle: 'Fellowship schedule and announcements',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NoticesScreen())),
+          ),
+          _NavCard(
+            icon: Icons.person,
+            title: 'My Profile',
+            subtitle: 'View and edit your profile',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+          ),
           const SizedBox(height: 24),
-          Text('More sections (History, Branches, Media, Notices, Admin) are still being ported.',
+          Text('Still being ported: Community feed, notifications UI, PDF downloads, and the full Admin dashboard.',
               style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
         ],
       ),
