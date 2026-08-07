@@ -16,6 +16,7 @@ import '../media/media_gallery_screen.dart';
 import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -134,8 +135,15 @@ class HomeScreen extends ConsumerWidget {
             subtitle: 'View and edit your profile',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
           ),
+          if (profileAsync.value?.isAdmin ?? false)
+            _NavCard(
+              icon: Icons.admin_panel_settings,
+              title: 'Admin Dashboard',
+              subtitle: 'Reports, user management, and content moderation',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen())),
+            ),
           const SizedBox(height: 24),
-          Text('Still being ported: Community feed, notifications UI, PDF downloads, and the full Admin dashboard.',
+          Text('Still being ported: Community feed (redirects to Home in the original app — no separate screen needed).',
               style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
         ],
       ),

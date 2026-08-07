@@ -7,6 +7,8 @@ class PrayerRequest {
   final String requestText;
   final String? category;
   final String status; // active | prayed_for | answered | archived
+  final String visibility; // public | anonymous
+  final String? postedByAdminId;
   final DateTime submittedAt;
   final DateTime? lastPrayedAt;
 
@@ -19,6 +21,8 @@ class PrayerRequest {
     required this.requestText,
     this.category,
     this.status = 'active',
+    this.visibility = 'public',
+    this.postedByAdminId,
     required this.submittedAt,
     this.lastPrayedAt,
   });
@@ -33,6 +37,8 @@ class PrayerRequest {
       requestText: map['request_text'] as String? ?? '',
       category: map['category'] as String?,
       status: map['status'] as String? ?? 'active',
+      visibility: map['visibility'] as String? ?? 'public',
+      postedByAdminId: map['posted_by_admin_id'] as String?,
       submittedAt: DateTime.tryParse(map['submitted_at'] as String? ?? '') ?? DateTime.now(),
       lastPrayedAt: map['last_prayed_at'] != null ? DateTime.tryParse(map['last_prayed_at'] as String) : null,
     );

@@ -5,6 +5,7 @@ import '../../models/prayer_request.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
+import '../profile/public_profile_screen.dart';
 
 // visibility is 'public' only (see the public_visibility enum on
 // prayerrequest) — the source app's other visibility option was
@@ -60,7 +61,21 @@ class PrayerRequestsScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text('${r.userName ?? "Anonymous"} · ${timeago.format(r.submittedAt)}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        GestureDetector(
+                          onTap: r.userId == null
+                              ? null
+                              : () => Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => PublicProfileScreen(userId: r.userId!)),
+                                  ),
+                          child: Text(
+                            '${r.userName ?? "Anonymous"} · ${timeago.format(r.submittedAt)}',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                              decoration: r.userId == null ? null : TextDecoration.underline,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Text(r.requestText),
                         const SizedBox(height: 8),

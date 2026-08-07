@@ -7,6 +7,7 @@ class Profile {
   final String accountStatus; // active | blocked | deleted
   final String? profileImageUrl;
   final String? bio;
+  final String? phone;
 
   Profile({
     required this.id,
@@ -17,6 +18,7 @@ class Profile {
     this.accountStatus = 'active',
     this.profileImageUrl,
     this.bio,
+    this.phone,
   });
 
   bool get isAdmin => role == 'admin';
@@ -31,6 +33,7 @@ class Profile {
       accountStatus: map['account_status'] as String? ?? 'active',
       profileImageUrl: map['profile_image_url'] as String?,
       bio: map['bio'] as String?,
+      phone: map['phone'] as String?,
     );
   }
 }

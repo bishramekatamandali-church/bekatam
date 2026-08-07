@@ -4,6 +4,7 @@ import '../models/comment.dart';
 import '../models/profile.dart';
 import '../services/supabase_service.dart';
 import '../services/social_service.dart';
+import '../screens/profile/public_profile_screen.dart';
 
 /// Opens a modal bottom sheet with the real comment thread for one content
 /// item, backed by the `comment` table (read) and the `create-comment` Edge
@@ -120,6 +121,13 @@ class _CommentSheetState extends State<CommentSheet> {
                                 title: Text(c.userName),
                                 subtitle: Text(c.text),
                                 trailing: Text(timeago.format(c.timestamp), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                onTap: (c.isGuest || c.userId == null)
+                                    ? null
+                                    : () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (_) => PublicProfileScreen(userId: c.userId!)),
+                                        );
+                                      },
                               );
                             },
                           ),

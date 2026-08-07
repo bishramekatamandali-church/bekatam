@@ -52,10 +52,45 @@ Supabase project and its deployed Edge Functions:
   dashboard), so real download buttons for it belong on the Admin
   dashboard screens, not here. The service is ready for that pass.
 
-**Not yet ported** (still React-only): Community/social feed, Public
-profile pages (viewing *other* users' profiles), Admin dashboard and all
-its sub-sections (including the actual PDF download buttons — see above),
-video playback in Media. These are the next pieces to port.
+**Not yet ported** (still React-only, next pass): the remaining ~25 admin
+CRUD sections (sermons, events, blog, news, ministries, donations,
+financial, meetings, decisions, church members, expenses, testimonials,
+prayer request moderation, contact messages, advertisements, about
+sections, branch churches, key persons, direct media, fellowship
+schedules, ministry join requests, activity log) — plain CRUD under RLS,
+listed on the Admin Dashboard's "Coming next" section.
+
+## This session's additions
+
+- **Public Profile** (`lib/screens/profile/public_profile_screen.dart`,
+  ports `PublicProfilePage.tsx`): view another user's basic info and their
+  public/anonymous prayer requests. Reachable by tapping a commenter's name
+  in `CommentSheet` or a prayer request author's name in
+  `PrayerRequestsScreen`. Carries over a real quirk from the source app:
+  the prayer-request filter matches `posted_by_admin_id`, not `user_id` —
+  kept as-is for parity rather than "fixed".
+- **Community feed**: confirmed (again) that `CommunityPage.tsx` in the
+  real app is just an 11-line redirect to `/`. No Flutter screen needed —
+  documented on the Home screen instead of silently missing.
+- **Video playback in Media** (`media_gallery_screen.dart`): video items now
+  play inline via `video_player` (play/pause, scrub bar) instead of just
+  showing the raw URL.
+- **Admin Dashboard** (`lib/screens/admin/`): new section, gated behind
+  `profile.isAdmin` with a Home screen tile. First pass wires:
+  - `admin_reports_screen.dart` — **the PDF download buttons**, the one
+    thing explicitly missing before. Financial Summary (date range picker),
+    BS Calendar (year input), Donor List Report (JSON/XML), and all 7
+    single-record reports (meeting, decision, collection record, history
+    chapter, church member, fellowship schedule, donation receipt) via a
+    record picker pulling the 30 most recent rows from the source table.
+    Downloads generate via `PdfService` then open the OS share sheet.
+  - `admin_users_screen.dart` — the real multi-admin consensus workflow:
+    request block/delete with a required reason, approve pending requests;
+    body shapes verified against the live deployed `user-action-consensus`
+    function source, not reconstructed from memory.
+  - Remaining ~25 sections are plain-CRUD-under-RLS (per the earlier
+    33-resource audit) and listed as "Coming next" tiles — same list+edit
+    pattern as the member-facing screens, just admin-gated.
 
 ## Setup
 
