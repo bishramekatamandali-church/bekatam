@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'admin_reports_screen.dart';
 import 'admin_users_screen.dart';
+import 'admin_content_crud_screen.dart';
+import 'admin_events_screen.dart';
 
-/// Ports admin/AdminDashboardPage.tsx's section navigation. First pass:
-/// Reports (all 9 PDF report types + donor list) and Manage Users (the
-/// multi-admin consensus workflow) are fully wired to the real Edge
-/// Functions. The remaining ~25 admin CRUD pages (sermons, events, blog,
-/// news, ministries, donations, financial, meetings, decisions, church
-/// members, expenses, testimonials, prayer requests moderation, contact
-/// messages, advertisements, about sections, branch churches, key persons,
-/// direct media, fellowship schedules, ministry join requests, activity
-/// log) are plain-CRUD-under-RLS per the earlier 33-resource audit and are
-/// the next pass — each follows the same list+edit pattern as the member-
-/// facing screens already built, just gated to admin-only writes.
+/// Ports admin/AdminDashboardPage.tsx's section navigation. Wired so far:
+/// Reports (all 9 PDF report types + donor list), Manage Users (multi-admin
+/// consensus workflow), and Sermons/Events/Blog Posts/News (content CRUD —
+/// Sermons/Blog/News share one generic screen since they're near-identical
+/// in schema; Events gets its own screen for its extra fields). The
+/// remaining ~21 admin CRUD pages are plain-CRUD-under-RLS per the earlier
+/// 33-resource audit and are the next pass, listed below as "Coming next".
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
@@ -35,11 +33,50 @@ class AdminDashboardScreen extends StatelessWidget {
             subtitle: 'Block/delete requests with multi-admin approval',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
           ),
+          _AdminTile(
+            icon: Icons.church,
+            title: 'Sermons',
+            subtitle: 'Add, edit, and remove sermons',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AdminContentCrudScreen(
+                    config: AdminContentConfig(
+                        table: 'sermon',
+                        displayName: 'Sermons',
+                        categories: ['Sermon_Series', 'Guest_Speaker', 'Topical_Sermon', 'Special_Event_Sermon', 'Bible_Study'],
+                        hasSermonFields: true)))),
+          ),
+          _AdminTile(
+            icon: Icons.event,
+            title: 'Events',
+            subtitle: 'Add, edit, and remove events',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminEventsScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.article,
+            title: 'Blog Posts',
+            subtitle: 'Add, edit, and remove devotionals and blog posts',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AdminContentCrudScreen(
+                    config: AdminContentConfig(
+                        table: 'blogpost',
+                        displayName: 'Blog Posts',
+                        categories: ['Church_Life', 'Biblical_Study', 'Devotionals', 'Community_News', 'Testimonies'])))),
+          ),
+          _AdminTile(
+            icon: Icons.campaign,
+            title: 'News',
+            subtitle: 'Add, edit, and remove announcements',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AdminContentCrudScreen(
+                    config: AdminContentConfig(
+                        table: 'newsitem',
+                        displayName: 'News',
+                        categories: ['Church_Announcements', 'Community_Updates', 'Special_Reports', 'Mission_News', 'Youth_Activities', 'Pastoral_Messages'])))),
+          ),
           const SizedBox(height: 24),
           Text('Coming next', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700])),
           const SizedBox(height: 8),
           for (final label in const [
-            'Sermons, Events, Blog & News (content CRUD)',
             'Ministries & Join Requests',
             'Donations, Collections & Financial Summary',
             'Expenses',

@@ -88,9 +88,18 @@ listed on the Admin Dashboard's "Coming next" section.
     request block/delete with a required reason, approve pending requests;
     body shapes verified against the live deployed `user-action-consensus`
     function source, not reconstructed from memory.
-  - Remaining ~25 sections are plain-CRUD-under-RLS (per the earlier
-    33-resource audit) and listed as "Coming next" tiles — same list+edit
-    pattern as the member-facing screens, just admin-gated.
+  - `admin_content_crud_screen.dart` — generic list+form CRUD, config-driven,
+    reused for Sermons, Blog Posts, and News (near-identical schema:
+    title/description/image_url/link_path/category/date/video_url/audio_url,
+    plus speaker/scripture/full_content for Sermons only).
+  - `admin_events_screen.dart` — Events gets its own screen for its larger
+    field set (event_type, schedule_type, location, time, contact info,
+    registration link, capacity, fee). Known simplification: `locations`,
+    `conducted_by`, and `speakers` are jsonb array columns in the real
+    schema for multi-location/multi-speaker events — this pass edits the
+    single `location` text field only; the array editors are a follow-up.
+  - Remaining ~21 sections are plain-CRUD-under-RLS (per the earlier
+    33-resource audit) and listed as "Coming next" tiles — same pattern.
 
 ## Setup
 
