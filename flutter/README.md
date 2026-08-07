@@ -98,7 +98,16 @@ listed on the Admin Dashboard's "Coming next" section.
     `conducted_by`, and `speakers` are jsonb array columns in the real
     schema for multi-location/multi-speaker events — this pass edits the
     single `location` text field only; the array editors are a follow-up.
-  - Remaining ~21 sections are plain-CRUD-under-RLS (per the earlier
+  - `admin_church_members_screen.dart` — membership record CRUD (contact
+    info, member-since date, active/inactive toggle).
+  - `admin_finance_screen.dart` — tabbed Donations / Collections /
+    Financial Summary. Donations and Collections are full CRUD against
+    `donationrecord`/`collectionrecord` with their real purpose and
+    payment-method enums. Financial Summary calls the deployed
+    `financial-summary` Edge Function with an optional date range and
+    renders its income/expense/net totals plus per-purpose/category
+    breakdowns — response shape verified against live deployed source.
+  - Remaining ~18 sections are plain-CRUD-under-RLS (per the earlier
     33-resource audit) and listed as "Coming next" tiles — same pattern.
 
 ## Setup
