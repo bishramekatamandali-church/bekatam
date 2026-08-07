@@ -7,6 +7,7 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import 'event_detail_screen.dart';
 
 final eventsProvider = FutureProvider<List<EventItem>>((ref) async {
   final rows = await SupabaseService.client.from('eventitem').select().order('date', ascending: true);
@@ -46,7 +47,9 @@ class EventsListScreen extends ConsumerWidget {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => EventDetailScreen(event: e))),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(e.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
@@ -59,6 +62,7 @@ class EventsListScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(e.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                           ],
+                          ),
                         ),
                       ),
                       SocialInteractionBar(

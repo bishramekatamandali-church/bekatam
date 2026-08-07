@@ -6,6 +6,7 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import 'history_chapter_detail_screen.dart';
 
 // Only published chapters are shown to regular members — draft is an
 // admin-only editing state (status enum: draft | published).
@@ -51,7 +52,9 @@ class ChurchHistoryScreen extends ConsumerWidget {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HistoryChapterDetailScreen(chapter: c))),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Chapter ${c.chapterNumber}: ${c.title}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -59,6 +62,7 @@ class ChurchHistoryScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(c.summary ?? c.content, maxLines: 3, overflow: TextOverflow.ellipsis),
                           ],
+                          ),
                         ),
                       ),
                       SocialInteractionBar(

@@ -39,12 +39,22 @@ Supabase project and its deployed Edge Functions:
   actual data source.
 - My Profile: view/edit the signed-in user's own `profiles` row
   (full name, bio).
+- Detail screens for Sermons, Events, Blog, News, Church History — list
+  cards now navigate to a full detail view (video/audio links, event
+  contact/registration info, etc.) with the like/comment bar carried over.
+- Notifications: reads the real `public.notification` table (filtered by
+  `target_user_id`), mark-one-read on tap, mark-all-read button, unread
+  count badge on the home screen's bell icon.
+- `PdfService` (`lib/services/pdf_service.dart`): wraps the `generate-pdf`
+  and `donor-list-report` Edge Functions. **No UI screen calls it yet** —
+  `generate-pdf` is admin-only server-side (same as the original app's PDF
+  report controllers, which were only ever reachable from the admin
+  dashboard), so real download buttons for it belong on the Admin
+  dashboard screens, not here. The service is ready for that pass.
 
 **Not yet ported** (still React-only): Community/social feed, Public
 profile pages (viewing *other* users' profiles), Admin dashboard and all
-its sub-sections, notifications UI, PDF report downloads, detail screens
-for any of the list screens above (tapping a card doesn't navigate yet —
-only the like/comment/pray/join actions on the card itself are wired),
+its sub-sections (including the actual PDF download buttons — see above),
 video playback in Media. These are the next pieces to port.
 
 ## Setup

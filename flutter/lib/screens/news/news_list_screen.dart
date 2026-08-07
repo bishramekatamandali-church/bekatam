@@ -7,6 +7,7 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import 'news_detail_screen.dart';
 
 final newsItemsProvider = FutureProvider<List<NewsItem>>((ref) async {
   final rows = await SupabaseService.client.from('newsitem').select().order('date', ascending: false);
@@ -46,7 +47,9 @@ class NewsListScreen extends ConsumerWidget {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => NewsDetailScreen(newsItem: n))),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(n.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
@@ -54,6 +57,7 @@ class NewsListScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(n.description, maxLines: 3, overflow: TextOverflow.ellipsis),
                           ],
+                          ),
                         ),
                       ),
                       SocialInteractionBar(

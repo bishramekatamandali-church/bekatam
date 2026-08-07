@@ -15,6 +15,7 @@ import '../branches/branches_list_screen.dart';
 import '../media/media_gallery_screen.dart';
 import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
+import '../notifications/notifications_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,22 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Bishram Ekata Mandali'),
         actions: [
+          profileAsync.maybeWhen(
+            data: (profile) => profile == null
+                ? const SizedBox()
+                : Builder(builder: (context) {
+                    final unread = ref.watch(unreadNotificationCountProvider);
+                    return IconButton(
+                      icon: Badge(
+                        isLabelVisible: unread > 0,
+                        label: Text('$unread'),
+                        child: const Icon(Icons.notifications_outlined),
+                      ),
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                    );
+                  }),
+            orElse: () => const SizedBox(),
+          ),
           profileAsync.when(
             data: (profile) => profile == null
                 ? TextButton(

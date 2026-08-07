@@ -7,6 +7,7 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import 'blog_detail_screen.dart';
 
 final blogPostsProvider = FutureProvider<List<BlogPost>>((ref) async {
   final rows = await SupabaseService.client.from('blogpost').select().order('date', ascending: false);
@@ -46,7 +47,9 @@ class BlogListScreen extends ConsumerWidget {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BlogDetailScreen(post: p))),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(p.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
@@ -54,6 +57,7 @@ class BlogListScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(p.description, maxLines: 3, overflow: TextOverflow.ellipsis),
                           ],
+                          ),
                         ),
                       ),
                       SocialInteractionBar(

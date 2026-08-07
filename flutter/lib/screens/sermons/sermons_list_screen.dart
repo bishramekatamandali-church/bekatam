@@ -7,6 +7,7 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import 'sermon_detail_screen.dart';
 
 final sermonsProvider = FutureProvider<List<Sermon>>((ref) async {
   final rows = await SupabaseService.client.from('sermon').select().order('date', ascending: false);
@@ -46,7 +47,9 @@ class SermonsListScreen extends ConsumerWidget {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SermonDetailScreen(sermon: s))),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(s.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
@@ -55,6 +58,7 @@ class SermonsListScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(s.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                           ],
+                          ),
                         ),
                       ),
                       SocialInteractionBar(
