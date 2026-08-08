@@ -9,14 +9,22 @@ import 'admin_meetings_screen.dart';
 import 'admin_expenses_screen.dart';
 import 'admin_ministries_screen.dart';
 import 'admin_moderation_screen.dart';
+import 'admin_fellowship_screen.dart';
+import 'admin_contact_messages_screen.dart';
+import 'admin_advertisements_screen.dart';
+import 'admin_site_content_screen.dart';
+import 'admin_activity_log_screen.dart';
 
-/// Ports admin/AdminDashboardPage.tsx's section navigation. Wired so far:
-/// Reports (all 9 PDF report types + donor list), Manage Users (multi-admin
-/// consensus workflow), and Sermons/Events/Blog Posts/News (content CRUD —
-/// Sermons/Blog/News share one generic screen since they're near-identical
-/// in schema; Events gets its own screen for its extra fields). The
-/// remaining ~21 admin CRUD pages are plain-CRUD-under-RLS per the earlier
-/// 33-resource audit and are the next pass, listed below as "Coming next".
+/// Ports admin/AdminDashboardPage.tsx's section navigation. All sections
+/// from the real 33-resource audit are now wired: Reports, Manage Users,
+/// Sermons/Blog Posts/News, Events, Church Members, Finance
+/// (Donations/Collections/Summary), Meetings & Decisions, Expenses,
+/// Ministries & Join Requests, Content Moderation, Fellowship Rosters &
+/// Schedules, Contact Messages, Advertisements, Site Content (About/
+/// Branches/Key Persons/Media), and the Activity Log. Known simplifications
+/// are documented in each screen's file comment (Events' jsonb array
+/// fields, moderation working through hide/restore instead of a
+/// visibility toggle since the live enum only has one value, etc.).
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
@@ -115,25 +123,36 @@ class AdminDashboardScreen extends StatelessWidget {
             subtitle: 'Review and hide prayer requests and testimonials',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
           ),
-          const SizedBox(height: 24),
-          Text('Coming next', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700])),
-          const SizedBox(height: 8),
-          for (final label in const [
-            'Fellowship Rosters & Schedules',
-            'Contact Messages',
-            'Advertisements (incl. AI-generated ad copy)',
-            'About Sections, Branch Churches, Key Persons, Direct Media',
-            'Activity Log',
-          ])
-            Card(
-              color: Colors.grey[100],
-              child: ListTile(
-                dense: true,
-                leading: const Icon(Icons.construction, color: Colors.grey),
-                title: Text(label, style: TextStyle(color: Colors.grey[700])),
-                trailing: const Text('Not yet built', style: TextStyle(color: Colors.grey, fontSize: 12)),
-              ),
-            ),
+          _AdminTile(
+            icon: Icons.event_repeat,
+            title: 'Fellowship Rosters & Schedules',
+            subtitle: 'Recurring fellowship rosters and scheduled dates',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminFellowshipScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.mail_outline,
+            title: 'Contact Messages',
+            subtitle: 'Inbox from the public contact form',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminContactMessagesScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.ads_click,
+            title: 'Advertisements',
+            subtitle: 'Banner ads, with AI-generated name and alt text',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminAdvertisementsScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.web,
+            title: 'Site Content',
+            subtitle: 'About sections, branch churches, key persons, media library',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSiteContentScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.receipt_long_outlined,
+            title: 'Activity Log',
+            subtitle: 'Audit trail of admin actions',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminActivityLogScreen())),
+          ),
         ],
       ),
     );
