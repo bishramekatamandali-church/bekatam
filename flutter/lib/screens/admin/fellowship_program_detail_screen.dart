@@ -61,7 +61,7 @@ class _FellowshipProgramDetailScreenState extends State<FellowshipProgramDetailS
         padding: const EdgeInsets.all(16),
         children: [
           Text(item['group_name_or_event_title'] as String? ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          Text((item['roster_type'] as String? ?? '').replaceAll('_', ' '), style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.w600)),
+          Text((item['roster_type'] as String? ?? '').replaceAll('_', ' '), style: const TextStyle(color: Color(0xFF14B8A6), fontWeight: FontWeight.w600)),
           Text('ID: ${item['id']}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
           const Divider(height: 28),
           _row('Scheduled', dateStr, icon: Icons.calendar_today),

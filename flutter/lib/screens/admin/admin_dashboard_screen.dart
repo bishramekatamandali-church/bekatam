@@ -168,12 +168,18 @@ class _AdminTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: Icon(icon, size: 32),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: CircleAvatar(
+          radius: 22,
+          backgroundColor: primary.withOpacity(0.1),
+          child: Icon(icon, color: primary),
+        ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
+        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),

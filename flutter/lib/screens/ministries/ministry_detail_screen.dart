@@ -68,7 +68,7 @@ class MinistryDetailScreen extends ConsumerWidget {
           if (ministry.category != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(ministry.category!.replaceAll('_', ' '), style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.w600)),
+              child: Text(ministry.category!.replaceAll('_', ' '), style: const TextStyle(color: Color(0xFF14B8A6), fontWeight: FontWeight.w600)),
             ),
           const SizedBox(height: 8),
           if (ministry.leader != null) Text('Leader: ${ministry.leader}', style: const TextStyle(color: Colors.grey)),
