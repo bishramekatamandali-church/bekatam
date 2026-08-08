@@ -7,6 +7,8 @@ import 'admin_church_members_screen.dart';
 import 'admin_finance_screen.dart';
 import 'admin_meetings_screen.dart';
 import 'admin_expenses_screen.dart';
+import 'admin_ministries_screen.dart';
+import 'admin_moderation_screen.dart';
 
 /// Ports admin/AdminDashboardPage.tsx's section navigation. Wired so far:
 /// Reports (all 9 PDF report types + donor list), Manage Users (multi-admin
@@ -101,13 +103,23 @@ class AdminDashboardScreen extends StatelessWidget {
             subtitle: 'Meeting logs, agendas, minutes, and decisions',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminMeetingsScreen())),
           ),
+          _AdminTile(
+            icon: Icons.diversity_3,
+            title: 'Ministries',
+            subtitle: 'Manage ministries and review join requests',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminMinistriesScreen())),
+          ),
+          _AdminTile(
+            icon: Icons.shield_moon,
+            title: 'Content Moderation',
+            subtitle: 'Review and hide prayer requests and testimonials',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
+          ),
           const SizedBox(height: 24),
           Text('Coming next', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700])),
           const SizedBox(height: 8),
           for (final label in const [
-            'Ministries & Join Requests',
             'Fellowship Rosters & Schedules',
-            'Prayer Request & Testimonial Moderation',
             'Contact Messages',
             'Advertisements (incl. AI-generated ad copy)',
             'About Sections, Branch Churches, Key Persons, Direct Media',

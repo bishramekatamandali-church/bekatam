@@ -117,7 +117,19 @@ listed on the Admin Dashboard's "Coming next" section.
     connector was down this session, so enum/column names came from
     `backend/prisma/schema.prisma` in the cloned repo instead — same
     ground truth, different source).
-  - Remaining ~15 sections are plain-CRUD-under-RLS (per the earlier
+  - `admin_ministries_screen.dart` — tabbed Ministries / Join Requests.
+    Ministries tab is plain `ministry` CRUD. Join Requests tab lists
+    pending `ministryjoinrequest` rows with Approve/Reject; approving
+    mirrors the real app by also calling `ministry-member-transaction`
+    (op: create) to add the person to `ministrymember`, matching the real
+    backend's audit-trailed roster write.
+  - `admin_moderation_screen.dart` — tabbed Prayer Requests / Testimonials.
+    Hide/Restore (via `is_deleted` + `moderation_reason` + moderator
+    fields) and, for prayer requests, a status dropdown. Note: the live
+    `public_visibility` enum only has one value (`public`) — there's no
+    real 'anonymous' visibility toggle to moderate, so this works through
+    hide/restore rather than a visibility switch.
+  - Remaining ~10 sections are plain-CRUD-under-RLS (per the earlier
     33-resource audit) and listed as "Coming next" tiles — same pattern.
 
 ## Setup
