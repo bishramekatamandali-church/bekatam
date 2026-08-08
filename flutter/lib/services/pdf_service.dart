@@ -41,7 +41,9 @@ class PdfService {
     required Map<String, dynamic> body,
   }) async {
     final file = await generateAndSave(reportType: reportType, body: body);
-    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+    // share_plus 10.x API (pinned in pubspec.yaml). If share_plus is later
+    // upgraded to 11.x+, switch this to SharePlus.instance.share(ShareParams(...)).
+    await Share.shareXFiles([XFile(file.path)]);
   }
 
   /// donor-list-report is a separate Edge Function (not part of generate-pdf)
