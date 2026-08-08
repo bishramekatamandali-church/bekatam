@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/supabase_service.dart';
+import 'widgets/responsive_shell.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -48,6 +49,7 @@ class BekatamApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
       },
+      builder: (context, child) => ResponsiveShell(child: child ?? const SizedBox()),
     );
   }
 }
