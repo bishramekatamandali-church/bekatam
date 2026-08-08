@@ -1,0 +1,11 @@
+{
+  "name": "bekatam-media-migration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node migrate-media-to-storage.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
