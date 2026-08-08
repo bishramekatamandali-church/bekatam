@@ -8,6 +8,7 @@ import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
 import 'event_detail_screen.dart';
+import 'event_calendar_screen.dart';
 
 final eventsProvider = FutureProvider<List<EventItem>>((ref) async {
   final rows = await SupabaseService.client.from('eventitem').select().order('date', ascending: true);
@@ -23,7 +24,16 @@ class EventsListScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Events')),
+      appBar: AppBar(
+        title: const Text('Events'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Calendar view',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EventCalendarScreen())),
+          ),
+        ],
+      ),
       body: eventsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load events: $e')),

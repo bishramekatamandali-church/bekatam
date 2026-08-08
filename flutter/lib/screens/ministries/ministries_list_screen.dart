@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/ministry.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
+import 'ministry_detail_screen.dart';
 
 final ministriesProvider = FutureProvider<List<Ministry>>((ref) async {
   final rows = await SupabaseService.client.from('ministry').select().order('title', ascending: true);
@@ -33,36 +34,39 @@ class MinistriesListScreen extends ConsumerWidget {
                 final m = ministries[i];
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (m.imageUrl != null)
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                          child: CachedNetworkImage(imageUrl: m.imageUrl!, height: 140, fit: BoxFit.cover),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(m.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                            if (m.leader != null) Text('Leader: ${m.leader}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            if (m.meetingTime != null) Text(m.meetingTime!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            Text(m.description, maxLines: 3, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: FilledButton.tonal(
-                                onPressed: () => _requestToJoin(context, ref, m, profileAsync.value),
-                                child: const Text('Request to Join'),
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MinistryDetailScreen(ministry: m))),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (m.imageUrl != null)
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                            child: CachedNetworkImage(imageUrl: m.imageUrl!, height: 140, fit: BoxFit.cover),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                              if (m.leader != null) Text('Leader: ${m.leader}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                              if (m.meetingTime != null) Text(m.meetingTime!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                              const SizedBox(height: 6),
+                              Text(m.description, maxLines: 3, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: FilledButton.tonal(
+                                  onPressed: () => _requestToJoin(context, ref, m, profileAsync.value),
+                                  child: const Text('Request to Join'),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

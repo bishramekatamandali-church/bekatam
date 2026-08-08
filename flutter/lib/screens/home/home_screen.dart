@@ -17,6 +17,8 @@ import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../about/about_screen.dart';
+import '../contact/contact_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -110,6 +112,18 @@ class HomeScreen extends ConsumerWidget {
             title: 'Our History',
             subtitle: 'The story of the church, chapter by chapter',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChurchHistoryScreen())),
+          ),
+          _NavCard(
+            icon: Icons.info_outline,
+            title: 'About Us',
+            subtitle: 'Our story, mission, and leadership',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
+          ),
+          _NavCard(
+            icon: Icons.contact_mail_outlined,
+            title: 'Contact Us',
+            subtitle: 'Send us a message',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ContactScreen())),
           ),
           _NavCard(
             icon: Icons.map,

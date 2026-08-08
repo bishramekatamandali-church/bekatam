@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'fellowship_program_detail_screen.dart';
 
 const _rosterTypes = [
   'Saturday_Main_Fellowship', 'Saturday_Children_Fellowship', 'Saturday_Youth_Fellowship',
@@ -106,7 +107,18 @@ class _RostersTabState extends ConsumerState<_RostersTab> {
                             title: Text(r['group_name_or_event_title'] ?? ''),
                             subtitle: Text('${(r['roster_type'] as String? ?? '').replaceAll('_', ' ')}${r['is_template'] == true ? ' · Template' : ''}'),
                             onTap: () => _openForm(existing: r),
-                            trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _delete(r)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'View details',
+                                  onPressed: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => FellowshipProgramDetailScreen(item: r, isRoster: true))),
+                                ),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _delete(r)),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -299,7 +311,18 @@ class _ScheduleTabState extends ConsumerState<_ScheduleTab> {
                             title: Text(r['group_name_or_event_title'] ?? ''),
                             subtitle: Text('$dateStr · ${(r['roster_type'] as String? ?? '').replaceAll('_', ' ')}'),
                             onTap: () => _openForm(existing: r),
-                            trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _delete(r)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'View details',
+                                  onPressed: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => FellowshipProgramDetailScreen(item: r, isRoster: false))),
+                                ),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _delete(r)),
+                              ],
+                            ),
                           ),
                         );
                       },
