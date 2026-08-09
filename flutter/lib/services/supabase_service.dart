@@ -11,7 +11,16 @@ class SupabaseService {
         'SUPABASE_URL',
         defaultValue: 'https://asnmqrwshsupnlawjjqq.supabase.co',
       ),
-      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+      anonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        // Legacy anon (JWT) key for asnmqrwshsupnlawjjqq — public by design,
+        // access is enforced by RLS, same pattern as the SUPABASE_URL default
+        // above. Was previously missing a defaultValue, so anonKey silently
+        // resolved to an empty string on any run without --dart-define,
+        // causing every request to fail with PostgrestException 401 "No API
+        // key found in request".
+        defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzbm1xcndzaHN1cG5sYXdqanFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjY1MzIsImV4cCI6MjEwMDU0MjUzMn0.fCTVJdruJyhaNAb6rMFqnk0QKFpWDA0_gtIPTzSZxHk',
+      ),
     );
   }
 
