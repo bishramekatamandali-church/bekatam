@@ -5,7 +5,10 @@ import '../../services/supabase_service.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../widgets/home_left_sidebar.dart';
 import '../../widgets/home_right_sidebar.dart';
-import '../auth/login_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_footer.dart';
 import '../sermons/sermons_list_screen.dart';
 import '../prayer/prayer_requests_screen.dart';
 import '../events/events_list_screen.dart';
@@ -18,7 +21,6 @@ import '../branches/branches_list_screen.dart';
 import '../media/media_gallery_screen.dart';
 import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
-import '../notifications/notifications_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../about/about_screen.dart';
 import '../contact/contact_screen.dart';
@@ -31,40 +33,9 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bishram Ekata Mandali'),
-        actions: [
-          profileAsync.maybeWhen(
-            data: (profile) => profile == null
-                ? const SizedBox()
-                : Builder(builder: (context) {
-                    final unread = ref.watch(unreadNotificationCountProvider);
-                    return IconButton(
-                      icon: Badge(
-                        isLabelVisible: unread > 0,
-                        label: Text('$unread'),
-                        child: const Icon(Icons.notifications_outlined),
-                      ),
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-                    );
-                  }),
-            orElse: () => const SizedBox(),
-          ),
-          profileAsync.when(
-            data: (profile) => profile == null
-                ? TextButton(
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
-                    child: const Text('Sign In', style: TextStyle(color: Colors.white)),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.logout),
-                    onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                  ),
-            loading: () => const SizedBox(),
-            error: (_, __) => const SizedBox(),
-          ),
-        ],
-      ),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
           // Use the real device/window width (not `constraints`, which is
@@ -214,6 +185,7 @@ class HomeScreen extends ConsumerWidget {
                 style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
           ),
           const SizedBox(height: 24),
+          const AppFooter(),
             ],
           );
 
