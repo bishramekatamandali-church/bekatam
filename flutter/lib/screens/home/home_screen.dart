@@ -70,8 +70,9 @@ class HomeScreen extends ConsumerWidget {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
+              // Matches HomePage.tsx's real hero: bg-gradient-to-br from-cyan-600 via-teal-600 to-blue-700
               gradient: const LinearGradient(
-                colors: [Color(0xFF3730A3), Color(0xFF4F46E5)],
+                colors: [Color(0xFF0891B2), Color(0xFF0D9488), Color(0xFF1D4ED8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
