@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_provider.dart';
 import '../../services/supabase_service.dart';
+import '../../theme/app_breakpoints.dart';
+import '../../widgets/home_left_sidebar.dart';
+import '../../widgets/home_right_sidebar.dart';
 import '../auth/login_screen.dart';
 import '../sermons/sermons_list_screen.dart';
 import '../prayer/prayer_requests_screen.dart';
@@ -62,7 +65,14 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Use the real device/window width (not `constraints`, which is
+          // narrowed by ResponsiveShell's outer cap) so sidebar visibility
+          // tracks true breakpoints the same way React's `hidden md:block`
+          // does, regardless of how much the shell has capped content to.
+          final width = MediaQuery.sizeOf(context).width;
+          final content = ListView(
         padding: EdgeInsets.zero,
         children: [
           Container(
@@ -204,7 +214,23 @@ class HomeScreen extends ConsumerWidget {
                 style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center),
           ),
           const SizedBox(height: 24),
-        ],
+            ],
+          );
+
+          // Ports App.tsx's `hidden md:block` / `hidden lg:block` sidebar
+          // breakpoints: left rail from md (768) up, right rail from lg
+          // (1024) up — same widths the real React shell uses.
+          if (width < AppBreakpoints.md) return content;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const HomeLeftSidebar(),
+              Expanded(child: content),
+              if (width >= AppBreakpoints.lg) const HomeRightSidebar(),
+            ],
+          );
+        },
       ),
     );
   }

@@ -36,8 +36,8 @@ class ResponsiveShell extends StatelessWidget {
         }
 
         final double maxContentWidth = AppBreakpoints.isTablet(width)
-            ? 640 // sm-lg: tablets in portrait/landscape
-            : (width >= AppBreakpoints.xl ? 1120 : 900); // lg-xl vs xl+: laptop/desktop windows
+            ? 760 // sm-lg: tablets — a bit wider than before so Home's left sidebar (768+) has room to appear
+            : (width >= AppBreakpoints.xl ? 1280 : 1040); // lg-xl vs xl+: wide enough for content + one or two sidebars
 
         return ColoredBox(
           color: AppColors.slate200,
