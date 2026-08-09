@@ -68,7 +68,7 @@ class _MinistriesTabState extends ConsumerState<_MinistriesTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -242,7 +242,7 @@ class _JoinRequestsTabState extends ConsumerState<_JoinRequestsTab> {
   }
 
   Future<void> _decide(Map<String, dynamic> req, bool approve) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final notesController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,

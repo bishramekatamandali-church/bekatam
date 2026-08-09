@@ -43,10 +43,15 @@ class EventDetailScreen extends ConsumerWidget {
                       Expanded(child: Text(event.location!)),
                     ]),
                   ),
-                if (event.isFeeRequired && event.feeAmount != null)
+                if (event.isFeeRequired)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('Fee: NPR ${event.feeAmount!.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    // Matches SingleEventPage.tsx: raw text, not a formatted currency amount
+                    // (fee_amount is a free-form text field, e.g. "Rs 500" or "Details in link").
+                    child: Text(
+                      'Fee: ${(event.feeAmount?.trim().isNotEmpty ?? false) ? event.feeAmount : "Details in link"}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 if (event.capacity != null)
                   Padding(padding: const EdgeInsets.only(top: 4), child: Text('Capacity: ${event.capacity}')),
@@ -88,12 +93,12 @@ class EventDetailScreen extends ConsumerWidget {
               itemId: event.id,
               initialLikes: event.likes,
               commentCount: 0,
-              currentProfile: profileAsync.value,
+              currentProfile: profileAsync.valueOrNull,
               onCommentTap: () => showCommentSheet(
                 context: context,
                 itemType: 'event',
                 itemId: event.id,
-                currentProfile: profileAsync.value,
+                currentProfile: profileAsync.valueOrNull,
               ),
             ),
           ),

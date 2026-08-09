@@ -62,7 +62,7 @@ class NotificationsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () async {
-              final notifications = notificationsAsync.value ?? [];
+              final notifications = notificationsAsync.valueOrNull ?? [];
               final unreadIds = notifications.where((n) => !n.read).map((n) => n.id).toList();
               if (unreadIds.isEmpty) return;
               await SupabaseService.client.from('notification').update({'read': true}).inFilter('id', unreadIds);

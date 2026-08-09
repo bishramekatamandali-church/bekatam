@@ -66,10 +66,10 @@ class _HomeLeftSidebarState extends ConsumerState<HomeLeftSidebar> {
     final loading = sermonsAsync.isLoading || eventsAsync.isLoading || newsAsync.isLoading || blogAsync.isLoading;
 
     final items = <_CyclingItem>[];
-    List<EventItem> events = eventsAsync.value ?? [];
-    List<Sermon> sermons = sermonsAsync.value ?? [];
-    List<NewsItem> news = newsAsync.value ?? [];
-    List<BlogPost> blog = blogAsync.value ?? [];
+    List<EventItem> events = eventsAsync.valueOrNull ?? [];
+    List<Sermon> sermons = sermonsAsync.valueOrNull ?? [];
+    List<NewsItem> news = newsAsync.valueOrNull ?? [];
+    List<BlogPost> blog = blogAsync.valueOrNull ?? [];
 
     events = [...events]..sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
     sermons = [...sermons]..sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));

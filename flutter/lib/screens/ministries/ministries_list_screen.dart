@@ -58,7 +58,7 @@ class MinistriesListScreen extends ConsumerWidget {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: FilledButton.tonal(
-                                  onPressed: () => _requestToJoin(context, ref, m, profileAsync.value),
+                                  onPressed: () => _requestToJoin(context, ref, m, profileAsync.valueOrNull),
                                   child: const Text('Request to Join'),
                                 ),
                               ),

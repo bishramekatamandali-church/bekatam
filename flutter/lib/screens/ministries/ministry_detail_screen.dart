@@ -48,7 +48,7 @@ class MinistryDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final profile = profileAsync.value;
+    final profile = profileAsync.valueOrNull;
     final existingRequestAsync = profile == null
         ? null
         : ref.watch(_latestJoinRequestProvider((ministryId: ministry.id, userId: profile.id)));

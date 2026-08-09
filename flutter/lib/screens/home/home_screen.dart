@@ -197,7 +197,7 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'View and edit your profile',
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
               ),
-              if (profileAsync.value?.isAdmin ?? false)
+              if (profileAsync.valueOrNull?.isAdmin ?? false)
                 _NavCard(
                   icon: Icons.admin_panel_settings,
                   title: 'Admin Dashboard',

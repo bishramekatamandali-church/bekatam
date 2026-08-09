@@ -98,7 +98,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> with Single
   }
 
   Widget _buildUsersList() {
-    final myProfile = ref.watch(currentProfileProvider).value;
+    final myProfile = ref.watch(currentProfileProvider).valueOrNull;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(

@@ -79,7 +79,7 @@ class _MeetingsTabState extends ConsumerState<_MeetingsTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -281,7 +281,7 @@ class _DecisionsTabState extends ConsumerState<_DecisionsTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,

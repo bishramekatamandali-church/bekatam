@@ -63,7 +63,7 @@ class _PrayerModerationTabState extends ConsumerState<_PrayerModerationTab> {
   }
 
   Future<void> _toggleHide(Map<String, dynamic> r) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final hiding = r['is_deleted'] != true;
     String? reason;
     if (hiding) {
@@ -176,7 +176,7 @@ class _TestimonialModerationTabState extends ConsumerState<_TestimonialModeratio
   }
 
   Future<void> _toggleHide(Map<String, dynamic> r) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final hiding = r['is_deleted'] != true;
     String? reason;
     if (hiding) {

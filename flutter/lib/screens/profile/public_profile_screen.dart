@@ -72,7 +72,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   Widget build(BuildContext context) {
     // If this happens to be the signed-in user's own id, the original
     // redirects to /profile instead of showing the public view.
-    final myProfile = ref.watch(currentProfileProvider).value;
+    final myProfile = ref.watch(currentProfileProvider).valueOrNull;
     if (myProfile != null && myProfile.id == widget.userId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();

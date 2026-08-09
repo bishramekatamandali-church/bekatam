@@ -21,7 +21,7 @@ class HomeRightSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final isSignedIn = profileAsync.value != null;
+    final isSignedIn = profileAsync.valueOrNull != null;
 
     return Container(
       width: 320,
@@ -122,7 +122,7 @@ class _UpcomingEventsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final eventsAsync = ref.watch(eventsProvider);
     final now = DateTime.now();
-    final upcoming = (eventsAsync.value ?? [])
+    final upcoming = (eventsAsync.valueOrNull ?? [])
         .where((e) => e.date != null && e.date!.isAfter(now))
         .toList()
       ..sort((a, b) => a.date!.compareTo(b.date!));
@@ -184,7 +184,7 @@ class _LatestPrayersCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prayersAsync = ref.watch(prayerRequestsProvider);
-    final recent = (prayersAsync.value ?? [])
+    final recent = (prayersAsync.valueOrNull ?? [])
         .where((p) => p.visibility == 'public' || p.visibility == 'anonymous')
         .toList()
       ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));

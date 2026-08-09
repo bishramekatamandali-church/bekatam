@@ -78,7 +78,7 @@ class _AboutSectionsTabState extends ConsumerState<_AboutSectionsTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final titleC = TextEditingController(text: existing?['title'] ?? '');
     final contentC = TextEditingController(text: existing?['content'] ?? '');
     final imageC = TextEditingController(text: existing?['image_url'] ?? '');
@@ -194,7 +194,7 @@ class _BranchChurchesTabState extends ConsumerState<_BranchChurchesTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final addressC = TextEditingController(text: existing?['address'] ?? '');
     final pastorC = TextEditingController(text: existing?['pastor_name'] ?? '');
@@ -325,7 +325,7 @@ class _KeyPersonsTabState extends ConsumerState<_KeyPersonsTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final nameC = TextEditingController(text: existing?['name'] ?? '');
     final roleC = TextEditingController(text: existing?['role'] ?? '');
     final imageC = TextEditingController(text: existing?['image_url'] ?? '');
@@ -436,7 +436,7 @@ class _DirectMediaTabState extends ConsumerState<_DirectMediaTab> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     final titleC = TextEditingController(text: existing?['title'] ?? '');
     final descC = TextEditingController(text: existing?['description'] ?? '');
     final urlC = TextEditingController(text: existing?['url'] ?? '');

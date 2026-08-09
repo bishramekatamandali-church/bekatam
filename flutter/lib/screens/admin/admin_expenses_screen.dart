@@ -43,7 +43,7 @@ class _AdminExpensesScreenState extends ConsumerState<AdminExpensesScreen> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,

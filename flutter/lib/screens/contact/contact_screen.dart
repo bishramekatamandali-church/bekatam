@@ -25,7 +25,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     if (profile != null) {
       _name.text = profile.fullName;
       _email.text = profile.email;

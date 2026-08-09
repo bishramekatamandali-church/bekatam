@@ -13,7 +13,7 @@ class EventItem {
   final String? registrationLink;
   final int? capacity;
   final bool isFeeRequired;
-  final double? feeAmount;
+  final String? feeAmount;
   final String? videoUrl;
   final String? audioUrl;
   final int likes;
@@ -55,7 +55,12 @@ class EventItem {
       registrationLink: map['registration_link'] as String?,
       capacity: map['capacity'] as int?,
       isFeeRequired: map['is_fee_required'] as bool? ?? false,
-      feeAmount: (map['fee_amount'] as num?)?.toDouble(),
+      // fee_amount is a free-form `text` column in the real schema (matches
+      // SingleEventPage.tsx rendering it as raw text, e.g. "Rs 500" or
+      // "Details in link") — not numeric. Was previously cast as `num?`,
+      // which threw on any non-empty/non-null value including the common
+      // "" case.
+      feeAmount: map['fee_amount'] as String?,
       videoUrl: map['video_url'] as String?,
       audioUrl: map['audio_url'] as String?,
       likes: (map['likes'] as int?) ?? 0,

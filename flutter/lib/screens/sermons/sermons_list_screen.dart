@@ -66,12 +66,12 @@ class SermonsListScreen extends ConsumerWidget {
                         itemId: s.id,
                         initialLikes: s.likes,
                         commentCount: 0, // real comment count needs a join; wired up when detail screen loads comment(*).
-                        currentProfile: profileAsync.value,
+                        currentProfile: profileAsync.valueOrNull,
                         onCommentTap: () => showCommentSheet(
                           context: context,
                           itemType: 'sermon',
                           itemId: s.id,
-                          currentProfile: profileAsync.value,
+                          currentProfile: profileAsync.valueOrNull,
                         ),
                       ),
                     ],

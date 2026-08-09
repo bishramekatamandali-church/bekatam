@@ -31,7 +31,7 @@ class PrayerRequestsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Prayer Requests')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showSubmitSheet(context, ref, profileAsync.value),
+        onPressed: () => _showSubmitSheet(context, ref, profileAsync.valueOrNull),
         icon: const Icon(Icons.add),
         label: const Text('Share a request'),
       ),
@@ -81,7 +81,7 @@ class PrayerRequestsScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         PrayerActionBar(
                           prayerRequestId: r.id,
-                          currentProfile: profileAsync.value,
+                          currentProfile: profileAsync.valueOrNull,
                           prayerCount: 0, // real count comes from the nested prayer(*) array; see toggle-prayer's response for a live count after praying.
                         ),
                       ],
