@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_provider.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports ContactPage.tsx: a public form that inserts into `contactmessage`
 /// (RLS: contactmessage_insert_public allows anyone to insert; only admins
@@ -56,7 +60,9 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact Us')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: _sent

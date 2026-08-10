@@ -8,6 +8,10 @@ import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
 import 'news_detail_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 final newsItemsProvider = FutureProvider<List<NewsItem>>((ref) async {
   final rows = await SupabaseService.client.from('newsitem').select().order('date', ascending: false);
@@ -23,7 +27,9 @@ class NewsListScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('News')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: newsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load news: $e')),

@@ -9,6 +9,10 @@ import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
 import 'event_detail_screen.dart';
 import 'event_calendar_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 final eventsProvider = FutureProvider<List<EventItem>>((ref) async {
   final rows = await SupabaseService.client.from('eventitem').select().order('date', ascending: true);
@@ -24,15 +28,14 @@ class EventsListScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Events'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            tooltip: 'Calendar view',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EventCalendarScreen())),
-          ),
-        ],
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
+      floatingActionButton: FloatingActionButton.small(
+        heroTag: 'events-calendar-view',
+        tooltip: 'Calendar view',
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EventCalendarScreen())),
+        child: const Icon(Icons.calendar_month),
       ),
       body: eventsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

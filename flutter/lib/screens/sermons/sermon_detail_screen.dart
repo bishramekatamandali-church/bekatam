@@ -7,6 +7,10 @@ import '../../models/sermon.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 class SermonDetailScreen extends ConsumerWidget {
   final Sermon sermon;
@@ -17,7 +21,9 @@ class SermonDetailScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(sermon.title, overflow: TextOverflow.ellipsis)),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         children: [
           if (sermon.imageUrl != null) CachedNetworkImage(imageUrl: sermon.imageUrl!, height: 220, width: double.infinity, fit: BoxFit.cover),

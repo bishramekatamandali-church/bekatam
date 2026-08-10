@@ -5,6 +5,10 @@ import '../../models/ministry.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../auth/login_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports SingleMinistryPage.tsx: full ministry guidelines + a join-request
 /// flow that tracks the member's latest request status (pending / approved
@@ -54,7 +58,9 @@ class MinistryDetailScreen extends ConsumerWidget {
         : ref.watch(_latestJoinRequestProvider((ministryId: ministry.id, userId: profile.id)));
 
     return Scaffold(
-      appBar: AppBar(title: Text(ministry.title)),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

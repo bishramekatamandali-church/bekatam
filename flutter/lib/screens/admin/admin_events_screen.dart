@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 const _eventCategories = [
   'Community_Outreach', 'Conference', 'Workshop', 'Holiday_Service',
@@ -75,7 +79,9 @@ class _AdminEventsScreenState extends ConsumerState<AdminEventsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Events')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(),
         icon: const Icon(Icons.add),

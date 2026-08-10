@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/donate_page_content.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 // donatepagecontent is a singleton row (id defaults to 'singleton') edited
 // by admins elsewhere — this screen just reads and displays it.
@@ -20,7 +24,9 @@ class DonateScreen extends ConsumerWidget {
     final contentAsync = ref.watch(donatePageProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Donate')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: contentAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load donation info: $e')),

@@ -6,6 +6,10 @@ import '../../models/blog_post.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 class BlogDetailScreen extends ConsumerWidget {
   final BlogPost post;
@@ -16,7 +20,9 @@ class BlogDetailScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(post.title, overflow: TextOverflow.ellipsis)),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         children: [
           if (post.imageUrl != null) CachedNetworkImage(imageUrl: post.imageUrl!, height: 220, width: double.infinity, fit: BoxFit.cover),

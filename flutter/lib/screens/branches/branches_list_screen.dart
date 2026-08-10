@@ -4,6 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/branch_church.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 final branchesProvider = FutureProvider<List<BranchChurch>>((ref) async {
   final rows = await SupabaseService.client.from('branchchurch').select().order('name', ascending: true);
@@ -18,7 +22,9 @@ class BranchesListScreen extends ConsumerWidget {
     final branchesAsync = ref.watch(branchesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Branch Churches')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: branchesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load branches: $e')),

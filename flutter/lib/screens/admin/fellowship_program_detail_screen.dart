@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports FellowshipProgramDetailPage.tsx: a read-only detail view for a
 /// `fellowshiprosteritem` (isRoster=true) or `generatedscheduleitem` row,
@@ -56,7 +60,9 @@ class _FellowshipProgramDetailScreenState extends State<FellowshipProgramDetailS
     final dateStr = dateField != null ? DateFormat.yMMMd().add_jm().format(DateTime.parse(dateField)) : null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(item['group_name_or_event_title'] as String? ?? 'Program Details')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

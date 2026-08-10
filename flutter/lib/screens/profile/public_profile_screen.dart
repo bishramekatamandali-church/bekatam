@@ -6,6 +6,10 @@ import '../../models/prayer_request.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports PublicProfilePage.tsx: shows another user's basic profile info
 /// plus their public/anonymous prayer requests.
@@ -80,7 +84,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

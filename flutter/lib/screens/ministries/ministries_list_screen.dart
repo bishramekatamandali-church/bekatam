@@ -5,6 +5,10 @@ import '../../models/ministry.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import 'ministry_detail_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 final ministriesProvider = FutureProvider<List<Ministry>>((ref) async {
   final rows = await SupabaseService.client.from('ministry').select().order('title', ascending: true);
@@ -20,7 +24,9 @@ class MinistriesListScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ministries')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ministriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load ministries: $e')),

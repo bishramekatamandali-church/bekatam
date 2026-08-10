@@ -4,6 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import '../../models/media_item.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 final mediaItemsProvider = FutureProvider<List<MediaItem>>((ref) async {
   final rows = await SupabaseService.client.from('directmediaitem').select().order('upload_date', ascending: false);
@@ -18,7 +22,9 @@ class MediaGalleryScreen extends ConsumerWidget {
     final mediaAsync = ref.watch(mediaItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Media')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: mediaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load media: $e')),

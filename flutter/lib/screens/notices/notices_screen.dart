@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 // Ported from the real NoticesPage.tsx, which reads generatedscheduleitem
 // (fellowship roster schedule notices) rather than a dedicated "notice"
@@ -22,7 +26,9 @@ class NoticesScreen extends ConsumerWidget {
     final noticesAsync = ref.watch(noticesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notices')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: noticesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load notices: $e')),

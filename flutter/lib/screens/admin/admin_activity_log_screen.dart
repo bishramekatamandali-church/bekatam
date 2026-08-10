@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 class AdminActivityLogScreen extends StatefulWidget {
   const AdminActivityLogScreen({super.key});
@@ -30,7 +34,9 @@ class _AdminActivityLogScreenState extends State<AdminActivityLogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity Log')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _rows.isEmpty

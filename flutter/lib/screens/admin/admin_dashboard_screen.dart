@@ -14,6 +14,10 @@ import 'admin_contact_messages_screen.dart';
 import 'admin_advertisements_screen.dart';
 import 'admin_site_content_screen.dart';
 import 'admin_activity_log_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports admin/AdminDashboardPage.tsx's section navigation. All sections
 /// from the real 33-resource audit are now wired: Reports, Manage Users,
@@ -31,7 +35,9 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Dashboard')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

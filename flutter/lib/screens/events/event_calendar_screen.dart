@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 import '../../models/event_item.dart';
 import 'events_list_screen.dart';
 import 'event_detail_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports EventCalendarPage.tsx: a month-grid view of `eventitem` grouped by
 /// day, as an alternative to the plain list in EventsListScreen. Reuses
@@ -30,7 +34,9 @@ class _EventCalendarScreenState extends ConsumerState<EventCalendarScreen> {
     final eventsAsync = ref.watch(eventsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Event Calendar')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: eventsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load events: $e')),

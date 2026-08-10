@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 class AdminContactMessagesScreen extends StatefulWidget {
   const AdminContactMessagesScreen({super.key});
@@ -54,7 +58,9 @@ class _AdminContactMessagesScreenState extends State<AdminContactMessagesScreen>
     final pending = _rows.where((r) => r['status'] == 'pending').toList();
     final replied = _rows.where((r) => r['status'] != 'pending').toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact Messages')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

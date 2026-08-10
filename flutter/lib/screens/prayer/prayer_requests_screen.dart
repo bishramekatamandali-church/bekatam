@@ -6,6 +6,10 @@ import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../profile/public_profile_screen.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 // visibility is 'public' only (see the public_visibility enum on
 // prayerrequest) — the source app's other visibility option was
@@ -29,7 +33,9 @@ class PrayerRequestsScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Prayer Requests')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showSubmitSheet(context, ref, profileAsync.valueOrNull),
         icon: const Icon(Icons.add),

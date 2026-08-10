@@ -7,6 +7,10 @@ import '../../models/event_item.dart';
 import '../../services/auth_provider.dart';
 import '../../widgets/social_interaction_bar.dart';
 import '../../widgets/comment_sheet.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 class EventDetailScreen extends ConsumerWidget {
   final EventItem event;
@@ -17,7 +21,9 @@ class EventDetailScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(event.title, overflow: TextOverflow.ellipsis)),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: ListView(
         children: [
           if (event.imageUrl != null) CachedNetworkImage(imageUrl: event.imageUrl!, height: 220, width: double.infinity, fit: BoxFit.cover),

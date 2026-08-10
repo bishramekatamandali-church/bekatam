@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/app_header.dart';
+import '../../widgets/app_nav_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../../theme/app_breakpoints.dart';
 
 /// Ports AboutPage.tsx: the public-facing rendering of `aboutsection`
 /// (ordered by display_order) plus the `keyperson` leadership list. The
@@ -27,7 +31,9 @@ class AboutScreen extends ConsumerWidget {
     final peopleAsync = ref.watch(_keyPeopleProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('About Us')),
+      appBar: const AppHeader(),
+      endDrawer: const AppNavDrawer(),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_aboutSectionsProvider);
