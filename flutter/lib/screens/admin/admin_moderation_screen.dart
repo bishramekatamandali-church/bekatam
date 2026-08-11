@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
+import '../../services/admin_log_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const _prayerStatuses = ['active', 'prayed_for', 'answered', 'archived'];
@@ -89,6 +90,11 @@ class _PrayerModerationTabState extends ConsumerState<_PrayerModerationTab> {
       'moderated_by_admin_id': profile?.id,
       'moderated_by_admin_name': profile?.fullName,
     }).eq('id', r['id']);
+    await AdminLogService.log(
+      action: hiding ? 'Hid Prayer Request' : 'Restored Prayer Request',
+      targetId: r['id'] as String?,
+      details: reason,
+    );
     _load();
   }
 
@@ -202,6 +208,11 @@ class _TestimonialModerationTabState extends ConsumerState<_TestimonialModeratio
       'moderated_by_admin_id': profile?.id,
       'moderated_by_admin_name': profile?.fullName,
     }).eq('id', r['id']);
+    await AdminLogService.log(
+      action: hiding ? 'Hid Testimonial' : 'Restored Testimonial',
+      targetId: r['id'] as String?,
+      details: reason,
+    );
     _load();
   }
 

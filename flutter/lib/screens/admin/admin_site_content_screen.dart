@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/image_upload_field.dart';
 
 class AdminSiteContentScreen extends StatefulWidget {
   const AdminSiteContentScreen({super.key});
@@ -100,7 +101,7 @@ class _AboutSectionsTabState extends ConsumerState<_AboutSectionsTab> {
                 const SizedBox(height: 8),
                 TextField(controller: contentC, decoration: const InputDecoration(labelText: 'Content'), maxLines: 5),
                 const SizedBox(height: 8),
-                TextField(controller: imageC, decoration: const InputDecoration(labelText: 'Image URL')),
+                ImageUploadField(controller: imageC, bucket: 'content-media', label: 'Image'),
                 const SizedBox(height: 8),
                 TextField(controller: orderC, decoration: const InputDecoration(labelText: 'Display Order'), keyboardType: TextInputType.number),
                 SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Core section'), value: isCore, onChanged: (v) => setSheetState(() => isCore = v)),
@@ -229,7 +230,7 @@ class _BranchChurchesTabState extends ConsumerState<_BranchChurchesTab> {
               const SizedBox(height: 8),
               TextField(controller: mapC, decoration: const InputDecoration(labelText: 'Map Embed URL')),
               const SizedBox(height: 8),
-              TextField(controller: imageC, decoration: const InputDecoration(labelText: 'Image URL')),
+              ImageUploadField(controller: imageC, bucket: 'content-media', label: 'Image'),
               const SizedBox(height: 8),
               TextField(controller: descC, decoration: const InputDecoration(labelText: 'Description'), maxLines: 3),
               const SizedBox(height: 12),
@@ -345,7 +346,7 @@ class _KeyPersonsTabState extends ConsumerState<_KeyPersonsTab> {
               const SizedBox(height: 8),
               TextField(controller: roleC, decoration: const InputDecoration(labelText: 'Role')),
               const SizedBox(height: 8),
-              TextField(controller: imageC, decoration: const InputDecoration(labelText: 'Image URL')),
+              ImageUploadField(controller: imageC, bucket: 'content-media', label: 'Image'),
               const SizedBox(height: 8),
               TextField(controller: bioC, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 4),
               const SizedBox(height: 12),

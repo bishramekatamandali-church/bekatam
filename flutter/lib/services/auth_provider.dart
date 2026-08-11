@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile.dart';
 import 'supabase_service.dart';
+import 'admin_log_service.dart';
 
 /// Streams Supabase auth state changes so the UI reacts to sign-in/out.
 final authStateProvider = StreamProvider<AuthState>((ref) {
@@ -23,7 +24,16 @@ class AuthRepository {
   const AuthRepository();
 
   Future<void> signIn({required String email, required String password}) async {
-    await SupabaseService.auth.signInWithPassword(email: email, password: password);
+    final res = await SupabaseService.auth.signInWithPassword(email: email, password: password);
+    // Mirrors AuthContext.tsx's logAdminAction("Admin Logged In", ...) —
+    // only log for admins so member sign-ins don't flood the admin log.
+    final userId = res.user?.id;
+    if (userId != null) {
+      final profile = await SupabaseService.client.from('profiles').select('role').eq('id', userId).maybeSingle();
+      if (profile != null && profile['role'] == 'admin') {
+        await AdminLogService.log(action: 'Admin Logged In', targetId: userId);
+      }
+    }
   }
 
   /// Registration: creates the auth.users row via Supabase Auth, then the

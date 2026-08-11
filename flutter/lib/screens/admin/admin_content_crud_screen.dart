@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/image_upload_field.dart';
 import '../../theme/app_breakpoints.dart';
 
 /// Describes one content table's admin CRUD shape. Sermon, BlogPost, and
@@ -260,7 +261,7 @@ class _ContentFormSheetState extends State<_ContentFormSheet> {
                 if (picked != null) setState(() => _date = picked);
               },
             ),
-            TextField(controller: _imageUrl, decoration: const InputDecoration(labelText: 'Image URL')),
+            ImageUploadField(controller: _imageUrl, bucket: 'content-media', label: 'Image'),
             const SizedBox(height: 8),
             TextField(controller: _linkPath, decoration: const InputDecoration(labelText: 'Link path')),
             const SizedBox(height: 8),

@@ -6,6 +6,7 @@ import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../theme/app_breakpoints.dart';
+import '../../services/storage_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +19,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _bioController = TextEditingController();
   bool _saving = false;
   bool _initialized = false;
+  bool _uploadingAvatar = false;
+
+  Future<void> _changeAvatar(String profileId) async {
+    setState(() => _uploadingAvatar = true);
+    try {
+      final url = await StorageService.pickAndUploadImage(bucket: 'profile-images', pathPrefix: profileId);
+      if (url != null) {
+        await SupabaseService.client.from('profiles').update({'profile_image_url': url}).eq('id', profileId);
+        ref.invalidate(currentProfileProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not update photo: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +61,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: profile.profileImageUrl != null ? NetworkImage(profile.profileImageUrl!) : null,
-                child: profile.profileImageUrl == null ? Text(profile.fullName.isNotEmpty ? profile.fullName[0] : '?', style: const TextStyle(fontSize: 28)) : null,
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: profile.profileImageUrl != null ? NetworkImage(profile.profileImageUrl!) : null,
+                      child: profile.profileImageUrl == null ? Text(profile.fullName.isNotEmpty ? profile.fullName[0] : '?', style: const TextStyle(fontSize: 28)) : null,
+                    ),
+                    Positioned(
+                      right: -4,
+                      bottom: -4,
+                      child: IconButton.filled(
+                        iconSize: 16,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        onPressed: _uploadingAvatar ? null : () => _changeAvatar(profile.id),
+                        icon: _uploadingAvatar
+                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.camera_alt),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               Center(child: Text('@${profile.username}', style: const TextStyle(color: Colors.grey))),

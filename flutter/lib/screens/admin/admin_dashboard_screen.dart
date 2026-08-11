@@ -14,10 +14,13 @@ import 'admin_contact_messages_screen.dart';
 import 'admin_advertisements_screen.dart';
 import 'admin_site_content_screen.dart';
 import 'admin_activity_log_screen.dart';
+import 'admin_donate_content_screen.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../theme/app_breakpoints.dart';
+import '../../services/supabase_service.dart';
+import '../../services/admin_log_service.dart';
 
 /// Ports admin/AdminDashboardPage.tsx's section navigation. All sections
 /// from the real 33-resource audit are now wired: Reports, Manage Users,
@@ -41,6 +44,8 @@ class AdminDashboardScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _OverviewCard(),
+          const SizedBox(height: 16),
           _AdminTile(
             icon: Icons.picture_as_pdf,
             title: 'Reports',
@@ -154,12 +159,132 @@ class AdminDashboardScreen extends StatelessWidget {
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSiteContentScreen())),
           ),
           _AdminTile(
+            icon: Icons.volunteer_activism,
+            title: 'Donate Page Content',
+            subtitle: 'eSewa/bank details, QR codes, and donation instructions',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDonateContentScreen())),
+          ),
+          _AdminTile(
             icon: Icons.receipt_long_outlined,
             title: 'Activity Log',
             subtitle: 'Audit trail of admin actions',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminActivityLogScreen())),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Ports the two live features of AdminDashboardOverview.tsx that had no
+/// Flutter equivalent: the registered-user count, and "Broadcast Feature
+/// Update" (fans a notification out to every user). The "Jumbo Report"
+/// (combined PDF of expenses/collections/donations/members/meetings/
+/// rosters/schedules) is deliberately not included here — it needs its own
+/// merge step and is tracked separately rather than half-built.
+class _OverviewCard extends StatefulWidget {
+  const _OverviewCard();
+
+  @override
+  State<_OverviewCard> createState() => _OverviewCardState();
+}
+
+class _OverviewCardState extends State<_OverviewCard> {
+  int? _userCount;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCount();
+  }
+
+  Future<void> _loadCount() async {
+    try {
+      final res = await SupabaseService.client.from('profiles').select('id');
+      if (mounted) setState(() => _userCount = (res as List).length);
+    } catch (_) {
+      // Non-critical — leave the count blank rather than blocking the hub.
+    }
+  }
+
+  Future<void> _broadcast() async {
+    final controller = TextEditingController();
+    final message = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Broadcast Feature Update'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Message', hintText: 'e.g. New: Prayer request notifications!'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (message == null || message.isEmpty) return;
+
+    setState(() => _sending = true);
+    try {
+      final users = await SupabaseService.client.from('profiles').select('id');
+      final rows = (users as List)
+          .map((u) => {
+                'target_user_id': u['id'],
+                'message': '✨ New Feature Update: $message',
+                'link': '/',
+                'type': 'feature_update',
+                'read': false,
+              })
+          .toList();
+      if (rows.isNotEmpty) {
+        await SupabaseService.client.from('notification').insert(rows);
+      }
+      await AdminLogService.log(action: 'Broadcasted Feature Update', details: 'Message: $message');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Feature update sent to ${rows.length} users.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Broadcast failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.people_outline),
+                const SizedBox(width: 8),
+                Text(
+                  _userCount == null ? 'Registered users: —' : 'Registered users: $_userCount',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _sending ? null : _broadcast,
+              icon: _sending
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.campaign_outlined),
+              label: const Text('Broadcast Feature Update'),
+            ),
+          ],
+        ),
       ),
     );
   }

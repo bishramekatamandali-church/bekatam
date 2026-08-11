@@ -6,6 +6,7 @@ import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../theme/app_breakpoints.dart';
+import '../../widgets/image_upload_field.dart';
 
 const _adTypes = ['image_banner', 'video_banner'];
 
@@ -211,7 +212,7 @@ class _AdFormSheetState extends State<_AdFormSheet> {
             const SizedBox(height: 8),
             TextField(controller: _altText, decoration: const InputDecoration(labelText: 'Alt Text')),
             const SizedBox(height: 8),
-            if (_adType == 'image_banner') TextField(controller: _imageUrl, decoration: const InputDecoration(labelText: 'Image URL')),
+            if (_adType == 'image_banner') ImageUploadField(controller: _imageUrl, bucket: 'content-media', label: 'Image'),
             if (_adType == 'video_banner') TextField(controller: _videoUrl, decoration: const InputDecoration(labelText: 'Video URL')),
             const SizedBox(height: 8),
             TextField(controller: _adSizeKey, decoration: const InputDecoration(labelText: 'Ad Size Key (e.g. 300x250)')),
