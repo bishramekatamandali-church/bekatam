@@ -1,26 +1,17 @@
-# NEVER COMMIT ENV FILES
-<<<<<<< HEAD
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
 backend/node_modules/
 frontend/node_modules/
 node_modules/
 
-=======
-
-backend/node_modules/
-frontend/node_modules/
-node_modules/
->>>>>>> d8856ea (Sync VPS project with repository)
-
-# ENV Files
-
-
-
-# Build Output
+# Build output
 backend/dist/
 frontend/dist/
 
-
-# Temp / Backup Files
+# Temp / backup files
 *.save
 *.save.*
-
