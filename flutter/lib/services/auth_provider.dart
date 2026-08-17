@@ -25,8 +25,6 @@ class AuthRepository {
 
   Future<void> signIn({required String email, required String password}) async {
     final res = await SupabaseService.auth.signInWithPassword(email: email, password: password);
-    // Mirrors AuthContext.tsx's logAdminAction("Admin Logged In", ...) —
-    // only log for admins so member sign-ins don't flood the admin log.
     final userId = res.user?.id;
     if (userId != null) {
       final profile = await SupabaseService.client.from('profiles').select('role').eq('id', userId).maybeSingle();
@@ -36,23 +34,29 @@ class AuthRepository {
     }
   }
 
-  /// Registration: creates the auth.users row via Supabase Auth, then the
-  /// matching `profiles` row (username/fullName/etc. — the fields the old
-  /// custom `user` model held beyond what auth.users itself stores).
+  /// Registration creates auth.users through Supabase Auth and the matching
+  /// profiles row. Phone is retained in profiles for parity with the old
+  /// Node registration flow.
   Future<void> signUp({
     required String email,
     required String password,
     required String fullName,
     required String username,
+    String? phone,
   }) async {
-    final res = await SupabaseService.auth.signUp(email: email, password: password);
+    final res = await SupabaseService.auth.signUp(
+      email: email,
+      password: password,
+      data: {'username': username, 'full_name': fullName, if (phone != null && phone.isNotEmpty) 'phone': phone},
+    );
     final userId = res.user?.id;
     if (userId == null) throw Exception('Sign up did not return a user id.');
-    await SupabaseService.client.from('profiles').insert({
+    await SupabaseService.client.from('profiles').upsert({
       'id': userId,
       'username': username,
       'full_name': fullName,
       'email': email,
+      'phone': phone == null || phone.isEmpty ? null : phone,
     });
   }
 
