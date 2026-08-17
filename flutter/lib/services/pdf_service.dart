@@ -1,7 +1,9 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import 'supabase_service.dart';
 
 /// Wraps the generate-pdf Edge Function, which is admin-only server-side
@@ -27,9 +29,13 @@ class PdfService {
       'generate-pdf',
       body: {'report_type': reportType, ...body},
     );
-    final bytes = res.data is String ? utf8.encode(res.data as String) : (res.data as List<int>);
+    final bytes = res.data is String
+        ? utf8.encode(res.data as String)
+        : (res.data as List<int>);
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$reportType-${DateTime.now().millisecondsSinceEpoch}.pdf');
+    final file = File(
+      '${dir.path}/$reportType-${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
     await file.writeAsBytes(bytes);
     return file;
   }
@@ -46,10 +52,33 @@ class PdfService {
     await Share.shareXFiles([XFile(file.path)]);
   }
 
+  /// Generates the combined administrative PDF produced by the dedicated
+  /// Supabase `generate-jumbo-report` Edge Function.
+  static Future<void> generateAndShareJumboReport() async {
+    final res = await SupabaseService.client.functions.invoke(
+      'generate-jumbo-report',
+      body: <String, dynamic>{},
+    );
+    final bytes = res.data is String
+        ? utf8.encode(res.data as String)
+        : (res.data as List<int>);
+    final dir = await getTemporaryDirectory();
+    final file = File(
+      '${dir.path}/jumbo-administrative-report-${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
+    await file.writeAsBytes(bytes);
+    await Share.shareXFiles([XFile(file.path)]);
+  }
+
   /// donor-list-report is a separate Edge Function (not part of generate-pdf)
   /// that returns JSON or XML rather than a PDF — see donor-list-report/index.ts.
-  static Future<Map<String, dynamic>> fetchDonorListReport({String format = 'json'}) async {
-    final res = await SupabaseService.client.functions.invoke('donor-list-report', body: {'format': format});
+  static Future<Map<String, dynamic>> fetchDonorListReport({
+    String format = 'json',
+  }) async {
+    final res = await SupabaseService.client.functions.invoke(
+      'donor-list-report',
+      body: {'format': format},
+    );
     final data = res.data is String ? jsonDecode(res.data as String) : res.data;
     return Map<String, dynamic>.from(data as Map);
   }
