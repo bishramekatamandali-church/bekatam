@@ -17,6 +17,7 @@ import 'admin_activity_log_screen.dart';
 import 'admin_donate_content_screen.dart';
 import 'admin_history_screen.dart';
 import 'admin_seo_tools_screen.dart';
+import 'admin_jumbo_report_final_screen.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -32,28 +33,30 @@ class AdminDashboardScreen extends StatelessWidget {
     bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
     body: ListView(padding: const EdgeInsets.all(16), children: [
       const _OverviewCard(), const SizedBox(height: 16),
-      _AdminTile(icon: Icons.picture_as_pdf, title: 'Reports', subtitle: 'Financial, calendar, donor list, and single-record PDF reports', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminReportsScreen()))),
-      _AdminTile(icon: Icons.manage_accounts, title: 'Manage Users', subtitle: 'Block/delete requests with multi-admin approval', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminUsersScreen()))),
-      _AdminTile(icon: Icons.church, title: 'Sermons', subtitle: 'Add, edit, and remove sermons', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminContentCrudScreen(config: AdminContentConfig(table: 'sermon', displayName: 'Sermons', categories: ['Sermon_Series', 'Guest_Speaker', 'Topical_Sermon', 'Special_Event_Sermon', 'Bible_Study'], hasSermonFields: true))))),
-      _AdminTile(icon: Icons.event, title: 'Events', subtitle: 'Add, edit, and remove events', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminEventsScreen()))),
-      _AdminTile(icon: Icons.article, title: 'Blog Posts', subtitle: 'Add, edit, and remove devotionals and blog posts', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminContentCrudScreen(config: AdminContentConfig(table: 'blogpost', displayName: 'Blog Posts', categories: ['Church_Life', 'Biblical_Study', 'Devotionals', 'Community_News', 'Testimonies']))))),
-      _AdminTile(icon: Icons.campaign, title: 'News', subtitle: 'Add, edit, and remove announcements', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminContentCrudScreen(config: AdminContentConfig(table: 'newsitem', displayName: 'News', categories: ['Church_Announcements', 'Community_Updates', 'Special_Reports', 'Mission_News', 'Youth_Activities', 'Pastoral_Messages']))))),
-      _AdminTile(icon: Icons.history_edu, title: 'Church History', subtitle: 'Manage history chapters and milestones', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminHistoryScreen()))),
-      _AdminTile(icon: Icons.search, title: 'SEO Tools', subtitle: 'Search Console, Analytics, Trends, and SEO research tools', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSeoToolsScreen()))),
-      _AdminTile(icon: Icons.groups_2, title: 'Church Members', subtitle: 'Membership records', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminChurchMembersScreen()))),
-      _AdminTile(icon: Icons.account_balance_wallet, title: 'Finance', subtitle: 'Donations, collections, and financial summary', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminFinanceScreen()))),
-      _AdminTile(icon: Icons.receipt_long, title: 'Expenses', subtitle: 'Track church expenses and approvals', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminExpensesScreen()))),
-      _AdminTile(icon: Icons.forum, title: 'Meetings & Decisions', subtitle: 'Meeting logs, agendas, minutes, and decisions', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminMeetingsScreen()))),
-      _AdminTile(icon: Icons.diversity_3, title: 'Ministries', subtitle: 'Manage ministries and review join requests', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminMinistriesScreen()))),
-      _AdminTile(icon: Icons.shield_moon, title: 'Content Moderation', subtitle: 'Review and hide prayer requests and testimonials', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminModerationScreen()))),
-      _AdminTile(icon: Icons.event_repeat, title: 'Fellowship Rosters & Schedules', subtitle: 'Recurring fellowship rosters and scheduled dates', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminFellowshipScreen()))),
-      _AdminTile(icon: Icons.mail_outline, title: 'Contact Messages', subtitle: 'Inbox from the public contact form', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminContactMessagesScreen()))),
-      _AdminTile(icon: Icons.ads_click, title: 'Advertisements', subtitle: 'Banner ads, with AI-generated name and alt text', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminAdvertisementsScreen()))),
-      _AdminTile(icon: Icons.web, title: 'Site Content', subtitle: 'About sections, branch churches, key persons, media library', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSiteContentScreen()))),
-      _AdminTile(icon: Icons.volunteer_activism, title: 'Donate Page Content', subtitle: 'eSewa/bank details, QR codes, and donation instructions', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDonateContentScreen()))),
-      _AdminTile(icon: Icons.receipt_long_outlined, title: 'Activity Log', subtitle: 'Audit trail of admin actions', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminActivityLogScreen()))),
+      _AdminTile(icon: Icons.picture_as_pdf, title: 'Reports', subtitle: 'Financial, calendar, donor list, and single-record PDF reports', onTap: () => _push(context, const AdminReportsScreen())),
+      _AdminTile(icon: Icons.picture_as_pdf_outlined, title: 'Jumbo Report', subtitle: 'Combined administrative PDF report', onTap: () => _push(context, const AdminJumboReportFinalScreen())),
+      _AdminTile(icon: Icons.manage_accounts, title: 'Manage Users', subtitle: 'Block/delete requests with multi-admin approval', onTap: () => _push(context, const AdminUsersScreen())),
+      _AdminTile(icon: Icons.church, title: 'Sermons', subtitle: 'Add, edit, and remove sermons', onTap: () => _push(context, const AdminContentCrudScreen(config: AdminContentConfig(table: 'sermon', displayName: 'Sermons', categories: ['Sermon_Series', 'Guest_Speaker', 'Topical_Sermon', 'Special_Event_Sermon', 'Bible_Study'], hasSermonFields: true)))),
+      _AdminTile(icon: Icons.event, title: 'Events', subtitle: 'Add, edit, and remove events', onTap: () => _push(context, const AdminEventsScreen())),
+      _AdminTile(icon: Icons.article, title: 'Blog Posts', subtitle: 'Add, edit, and remove devotionals and blog posts', onTap: () => _push(context, const AdminContentCrudScreen(config: AdminContentConfig(table: 'blogpost', displayName: 'Blog Posts', categories: ['Church_Life', 'Biblical_Study', 'Devotionals', 'Community_News', 'Testimonies'])))),
+      _AdminTile(icon: Icons.campaign, title: 'News', subtitle: 'Add, edit, and remove announcements', onTap: () => _push(context, const AdminContentCrudScreen(config: AdminContentConfig(table: 'newsitem', displayName: 'News', categories: ['Church_Announcements', 'Community_Updates', 'Special_Reports', 'Mission_News', 'Youth_Activities', 'Pastoral_Messages'])))),
+      _AdminTile(icon: Icons.history_edu, title: 'Church History', subtitle: 'Manage history chapters and milestones', onTap: () => _push(context, const AdminHistoryScreen())),
+      _AdminTile(icon: Icons.search, title: 'SEO Tools', subtitle: 'Search Console, Analytics, Trends, and SEO research tools', onTap: () => _push(context, const AdminSeoToolsScreen())),
+      _AdminTile(icon: Icons.groups_2, title: 'Church Members', subtitle: 'Membership records', onTap: () => _push(context, const AdminChurchMembersScreen())),
+      _AdminTile(icon: Icons.account_balance_wallet, title: 'Finance', subtitle: 'Donations, collections, and financial summary', onTap: () => _push(context, const AdminFinanceScreen())),
+      _AdminTile(icon: Icons.receipt_long, title: 'Expenses', subtitle: 'Track church expenses and approvals', onTap: () => _push(context, const AdminExpensesScreen())),
+      _AdminTile(icon: Icons.forum, title: 'Meetings & Decisions', subtitle: 'Meeting logs, agendas, minutes, and decisions', onTap: () => _push(context, const AdminMeetingsScreen())),
+      _AdminTile(icon: Icons.diversity_3, title: 'Ministries', subtitle: 'Manage ministries and review join requests', onTap: () => _push(context, const AdminMinistriesScreen())),
+      _AdminTile(icon: Icons.shield_moon, title: 'Content Moderation', subtitle: 'Review and hide prayer requests and testimonials', onTap: () => _push(context, const AdminModerationScreen())),
+      _AdminTile(icon: Icons.event_repeat, title: 'Fellowship Rosters & Schedules', subtitle: 'Recurring fellowship rosters and scheduled dates', onTap: () => _push(context, const AdminFellowshipScreen())),
+      _AdminTile(icon: Icons.mail_outline, title: 'Contact Messages', subtitle: 'Inbox from the public contact form', onTap: () => _push(context, const AdminContactMessagesScreen())),
+      _AdminTile(icon: Icons.ads_click, title: 'Advertisements', subtitle: 'Banner ads, with AI-generated name and alt text', onTap: () => _push(context, const AdminAdvertisementsScreen())),
+      _AdminTile(icon: Icons.web, title: 'Site Content', subtitle: 'About sections, branch churches, key persons, media library', onTap: () => _push(context, const AdminSiteContentScreen())),
+      _AdminTile(icon: Icons.volunteer_activism, title: 'Donate Page Content', subtitle: 'eSewa/bank details, QR codes, and donation instructions', onTap: () => _push(context, const AdminDonateContentScreen())),
+      _AdminTile(icon: Icons.receipt_long_outlined, title: 'Activity Log', subtitle: 'Audit trail of admin actions', onTap: () => _push(context, const AdminActivityLogScreen())),
     ]),
   );
+  static void _push(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 }
 
 class _OverviewCard extends StatefulWidget { const _OverviewCard(); @override State<_OverviewCard> createState() => _OverviewCardState(); }
