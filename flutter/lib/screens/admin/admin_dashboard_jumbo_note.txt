@@ -1,1 +1,0 @@
-Jumbo report is implemented by admin_jumbo_report_final_screen.dart and generate-jumbo-report Edge Function.
