@@ -1,89 +1,54 @@
-# Bishram Ekata Mandali - Church Web Application (Full-Stack)
+# Bishram Ekata Mandali (Bekatam)
 
-## 1. Application Overview
+Official application repository for the Bishram Ekata Mandali church community.
 
-This project is a full-stack web application designed for the **Bishram Ekata Mandali (BEM)** church community. It serves as a central hub for members and visitors, providing information, community engagement features, and administrative tools.
+## Current architecture
 
-The application is structured as a monorepo with two primary packages:
--   `/frontend`: A React-based single-page application.
--   `/backend`: A Node.js/Express API server with a MySQL database via Prisma.
+The **primary application is now Flutter + Supabase**:
 
-## 2. Local Development Setup
-
-### 2.1 Prerequisites
--   Node.js and npm (or a compatible package manager).
--   A running MySQL server instance.
--   `serve` and `concurrently` npm packages installed globally (`npm install -g serve concurrently`), or use `npx`.
-
-### 2.2 First-Time Setup
-
-**1. Install Dependencies**
-From the **root directory** of the project, run:
-```bash
-npm install
-```
-This command will install root-level dependencies (like `concurrently`) and then automatically run `npm install` inside the `/backend` directory as well.
-
-**2. Configure Backend Environment**
--   Create a `.env` file in the `/backend` directory.
--   Open the new `.env` file and add your MySQL connection string, Google Gemini API Key, frontend URL, and email credentials. **All variables are required for the server to start.**
-    ```env
-    # backend/.env
-    DATABASE_URL="mysql://USER:PASSWORD@HOST:PORT/DATABASE"
-    API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"
-    FRONTEND_URL="http://localhost:5000"
-    JWT_SECRET="YOUR_JWT_SECRET"
-
-    # Email service (SMTP)
-    ADMIN_EMAIL="bishramekatamandali@gmail.com"
-    EMAIL_FROM="bishramekatamandali@gmail.com"
-    EMAIL_FROM_NAME="Bishram Ekata Mandali"
-    SMTP_HOST="smtp.gmail.com"
-    SMTP_PORT=465
-    SMTP_SECURE=true
-    SMTP_USER="bishramekatamandali@gmail.com"
-    SMTP_PASS="YOUR_EMAIL_APP_PASSWORD"
-    OTP_TTL_MINUTES=10
-    OTP_MAX_ATTEMPTS=5
-    ```
-    Replace the placeholders with your actual MySQL details. The database must already exist. For production, change `FRONTEND_URL` to your live domain.
-   For stronger deliverability, consider using a custom domain email (e.g. `info@bishramekatamandali.org`) with a provider like Zoho Mail
-**3. Set Up the Database**
-This is a **critical step**. It syncs the Prisma schema with your database, creating all tables and generating the Prisma Client.
--   From the `/backend` directory, run:
-    ```bash
-    npm run prisma:setup
-    ```
--   Navigate back to the root directory: `cd ..`
-
-### 2.3 Running the Application
-
-1.  **Start Both Servers**: From the **root directory**, run the development script:
-    ```bash
-    npm run dev
-    ```
-    This command uses `concurrently` to start the frontend server (on `http://localhost:5000`) and the backend API server (on `http://localhost:3001`).
-
-2.  **Access the Application**: Open your web browser and navigate to **`http://localhost:5000`**.
-
-### 2.4 Running with PM2 (Optional)
-
-If you have [PM2](https://pm2.keymetrics.io/) installed, you can run the application using the provided configuration file. From the **root directory**:
-```bash
-pm2 start ecosystem.config.js --env development
+```text
+Flutter
+  ├─ Web / Android / iOS
+  └─ Riverpod
+        │
+        ▼
+Supabase
+  ├─ PostgreSQL
+  ├─ Auth
+  ├─ Storage
+  └─ Edge Functions
 ```
 
-## 3. Troubleshooting
+The Flutter application lives in `/flutter` and uses the live Supabase project configured by `SUPABASE_URL` and `SUPABASE_ANON_KEY` at build/run time.
 
--   **`FATAL: ... environment variable is not set...`**
-    -   **Solution:** Ensure the `.env` file exists inside the `/backend` directory (not the root) and contains `API_KEY`, `DATABASE_URL`, and `FRONTEND_URL`.
- -   **Solution:** Ensure the `.env` file exists inside the `/backend` directory (not the root) and contains `API_KEY`, `DATABASE_URL`, `FRONTEND_URL`, and `JWT_SECRET`.
-    -   **Solution:** You must run `npm run prisma:setup` from within the `/backend` directory after configuring your `.env` file.
+Supabase database migrations and Edge Functions are tracked under `/supabase`.
 
--   **`Failed to fetch...` or CORS errors in the browser**
-    -   **Cause:** The frontend cannot connect to the backend, likely because the backend server has crashed or the `FRONTEND_URL` in your `.env` file is incorrect.
-    -   **Solution:** Check the terminal window for backend errors (usually API Key or Prisma issues). Verify your `.env` variables and restart with `npm run dev`.
+## Flutter development
 
-## 4. Application Status
+```bash
+cd flutter
+flutter pub get
+flutter run \
+  --dart-define=SUPABASE_URL=https://asnmqrwshsupnlawjjqq.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<anon-key>
+```
 
-This application is a work in progress. Most features are now integrated with the backend and database. Some social features (friends, groups) are still using frontend-simulated data from local storage for demonstration purposes and will be migrated in the future.
+CI runs Flutter formatting checks, static analysis, and tests for changes under `/flutter`.
+
+## Migrated functionality
+
+The Flutter/Supabase application contains the public church experience and the administrative system, including authentication, profiles, sermons, events, blog/news, ministries, branches, media, church history, prayer/testimonial moderation, notifications, donations, finance, expenses, meetings, decisions, fellowship, advertisements, contact messages, user administration, activity logs, and PDF reports.
+
+Supabase Edge Functions provide privileged or server-side operations such as PDF generation, financial summaries, donor reports, social interactions, notifications, ministry transactions, AI advertisement copy, username-based sign-in, and the combined administrative report.
+
+## Legacy React/Node implementation
+
+`/frontend` and `/backend` are the **legacy React + Node/Express + Prisma implementation** being replaced by Flutter + Supabase.
+
+They are intentionally still present while the migration is being verified. **Do not delete or modify the legacy application as part of ordinary Flutter work.** Final removal will happen only after the migration is explicitly approved.
+
+## Supabase
+
+The `/supabase/migrations` directory is the source of truth for database changes, and `/supabase/functions` contains the Edge Function source deployed to the Supabase project.
+
+Never commit secrets, service-role keys, database passwords, SMTP credentials, or other private credentials. Use Supabase secrets/environment configuration and local untracked `.env` files instead.
