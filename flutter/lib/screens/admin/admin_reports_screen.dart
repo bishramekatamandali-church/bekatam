@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../services/supabase_service.dart';
+
 import '../../services/pdf_service.dart';
+import '../../services/supabase_service.dart';
+import '../../theme/app_breakpoints.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
-import '../../widgets/app_bottom_nav.dart';
-import '../../theme/app_breakpoints.dart';
 
-/// This is where the PDF download buttons live — matching the real app,
-/// where all 9 report controllers (pdfController.ts / calendarPdfController.ts)
-/// were only ever reachable from the admin dashboard, never from member-facing
-/// screens. generate-pdf itself enforces admin-only server-side.
+/// PDF report controls matching the legacy admin dashboard. All report
+/// functions enforce admin authorization server-side.
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
 
-  // type -> (source table, id column, row label, order column)
   static final _recordReports = <_RecordReportConfig>[
     _RecordReportConfig('meeting', 'Meeting Log', 'meetinglog', (r) => r['title'] ?? 'Meeting', 'meeting_date'),
     _RecordReportConfig('decision', 'Decision Record', 'decisionlog', (r) => r['title'] ?? 'Decision', 'decision_date'),
@@ -30,7 +28,9 @@ class AdminReportsScreen extends StatelessWidget {
     return Scaffold(
       appBar: const AppHeader(),
       endDrawer: const AppNavDrawer(),
-      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg
+          ? const AppBottomNavBar()
+          : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -63,6 +63,15 @@ class AdminReportsScreen extends StatelessWidget {
               onTap: () => _openDonorListDialog(context),
             ),
           ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.summarize),
+              title: const Text('Jumbo Administrative Report'),
+              subtitle: const Text('Combined members, finance, meetings, decisions, and fellowship data'),
+              trailing: const Icon(Icons.download),
+              onTap: () => _generateJumboReport(context),
+            ),
+          ),
           const SizedBox(height: 24),
           const Text('Single-Record Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 8),
@@ -78,6 +87,18 @@ class AdminReportsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _generateJumboReport(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(content: Text('Generating jumbo administrative report...')));
+    try {
+      await PdfService.generateJumboAndShare();
+    } catch (e) {
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('Failed to generate jumbo report: $e')));
+      }
+    }
   }
 
   Future<void> _openFinancialDialog(BuildContext context) async {
@@ -96,7 +117,11 @@ class AdminReportsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.edit_calendar),
                 onTap: () async {
                   final picked = await showDatePicker(
-                      context: ctx, firstDate: DateTime(2000), lastDate: DateTime(2100), initialDate: DateTime.now());
+                    context: ctx,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDate: DateTime.now(),
+                  );
                   if (picked != null) setState(() => start = picked);
                 },
               ),
@@ -105,7 +130,11 @@ class AdminReportsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.edit_calendar),
                 onTap: () async {
                   final picked = await showDatePicker(
-                      context: ctx, firstDate: DateTime(2000), lastDate: DateTime(2100), initialDate: DateTime.now());
+                    context: ctx,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDate: DateTime.now(),
+                  );
                   if (picked != null) setState(() => end = picked);
                 },
               ),
@@ -130,7 +159,7 @@ class AdminReportsScreen extends StatelessWidget {
   }
 
   Future<void> _openCalendarDialog(BuildContext context) async {
-    final controller = TextEditingController(text: '${DateTime.now().year + 57}'); // rough AD->BS offset
+    final controller = TextEditingController(text: '${DateTime.now().year + 57}');
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -187,7 +216,9 @@ class AdminReportsScreen extends StatelessWidget {
                           width: double.maxFinite,
                           child: SingleChildScrollView(child: Text(data.toString())),
                         ),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                        ],
                       ),
                     );
                   }
@@ -234,7 +265,8 @@ class AdminReportsScreen extends StatelessWidget {
                   await _generateAndShare(context, cfg.type, {'id': r['id']});
                 },
               ),
-            if ((rows).isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No records found.')),
+            if (rows.isEmpty)
+              const Padding(padding: EdgeInsets.all(24), child: Text('No records found.')),
           ],
         ),
       ),
