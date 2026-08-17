@@ -20,7 +20,6 @@ where coalesce(profile_in_search_privacy, true) = true;
 revoke all on public.profiles from anon;
 revoke all on public.profiles from authenticated;
 grant select on public.profiles to authenticated;
-grant select on public.public_profile to anon, authenticated;
 
 drop policy if exists profiles_select_all on public.profiles;
 create policy profiles_select_own
@@ -28,3 +27,6 @@ on public.profiles
 for select
 to authenticated
 using (auth.uid() = id);
+
+revoke all on public.public_profile from anon, authenticated;
+grant select on public.public_profile to anon, authenticated;
