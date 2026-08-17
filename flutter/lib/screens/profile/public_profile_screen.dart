@@ -1,25 +1,28 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../models/profile.dart';
+
 import '../../models/prayer_request.dart';
-import '../../services/supabase_service.dart';
+import '../../models/profile.dart';
 import '../../services/auth_provider.dart';
-import '../../widgets/social_interaction_bar.dart';
+import '../../services/supabase_service.dart';
+import '../../theme/app_breakpoints.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
-import '../../widgets/app_bottom_nav.dart';
-import '../../theme/app_breakpoints.dart';
+import '../../widgets/social_interaction_bar.dart';
 
 /// Public profile view. The source table contains private account fields such
 /// as email, phone, role, and notification preferences, so this screen reads
 /// only from the restricted public_profile view.
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String userId;
+
   const PublicProfileScreen({super.key, required this.userId});
 
   @override
-  ConsumerState<PublicProfileScreen> createState() => _PublicProfileScreenState();
+  ConsumerState<PublicProfileScreen> createState() =>
+      _PublicProfileScreenState();
 }
 
 class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
@@ -58,7 +61,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           .inFilter('visibility', ['public', 'anonymous']);
       setState(() {
         _target = target;
-        _prayers = (prayerRows as List).map((r) => PrayerRequest.fromMap(r as Map<String, dynamic>)).toList();
+        _prayers = (prayerRows as List)
+            .map((r) => PrayerRequest.fromMap(r as Map<String, dynamic>))
+            .toList();
         _loading = false;
       });
     } catch (e) {
@@ -81,13 +86,18 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     return Scaffold(
       appBar: const AppHeader(),
       endDrawer: const AppNavDrawer(),
-      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
+      bottomNavigationBar:
+          MediaQuery.sizeOf(context).width < AppBreakpoints.lg
+              ? const AppBottomNavBar()
+              : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text('Failed to load profile: $_error'))
               : _target == null
-                  ? const Center(child: Text('User not found or profile is private.'))
+                  ? const Center(
+                      child: Text('User not found or profile is private.'),
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView(
@@ -100,33 +110,57 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 44,
-                                    backgroundImage: _target!.profileImageUrl != null
-                                        ? CachedNetworkImageProvider(_target!.profileImageUrl!)
-                                        : null,
+                                    backgroundImage:
+                                        _target!.profileImageUrl != null
+                                            ? CachedNetworkImageProvider(
+                                                _target!.profileImageUrl!,
+                                              )
+                                            : null,
                                     child: _target!.profileImageUrl == null
                                         ? const Icon(Icons.person, size: 44)
                                         : null,
                                   ),
                                   const SizedBox(height: 12),
-                                  Text(_target!.fullName,
-                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                                  Text('@${_target!.username}', style: TextStyle(color: Colors.grey[600])),
-                                  if (_target!.bio != null && _target!.bio!.isNotEmpty) ...[
+                                  Text(
+                                    _target!.fullName,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    '@${_target!.username}',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                  if (_target!.bio != null &&
+                                      _target!.bio!.isNotEmpty) ...[
                                     const SizedBox(height: 12),
-                                    Text(_target!.bio!, textAlign: TextAlign.center),
+                                    Text(
+                                      _target!.bio!,
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ],
                                 ],
                               ),
                             ),
                           ),
                           const SizedBox(height: 20),
-                          Text("${_target!.fullName.split(' ').first}'s Public Prayer Requests",
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          Text(
+                            "${_target!.fullName.split(' ').first}'s Public Prayer Requests",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           if (_prayers.isEmpty)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(child: Text('No public prayer requests available.')),
+                              child: Center(
+                                child: Text(
+                                  'No public prayer requests available.',
+                                ),
+                              ),
                             )
                           else
                             ..._prayers.map(
@@ -135,9 +169,15 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(r.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      Text(
+                                        r.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                       const SizedBox(height: 6),
                                       Text(r.requestText),
                                       const SizedBox(height: 8),
