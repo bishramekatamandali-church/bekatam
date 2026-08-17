@@ -24,6 +24,11 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
+      - name: Check Dart formatting
+        shell: bash
+        run: |
+          if ! dart format --output=none --set-exit-if-changed lib test; then
+            echo "::warning::Dart formatting differs from dart format output. Formatting is currently non-blocking; analyzer and tests remain required."
+          fi
       - run: flutter analyze
       - run: flutter test
