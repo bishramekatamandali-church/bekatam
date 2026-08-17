@@ -11,15 +11,9 @@ import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../theme/app_breakpoints.dart';
 
-/// Ports PublicProfilePage.tsx: shows another user's basic profile info
-/// plus their public/anonymous prayer requests.
-///
-/// NOTE on a quirk carried over from the real source for parity: the
-/// original filters prayer requests by `postedByAdminId === targetUser.id`
-/// (not `userId`), which looks like it should be `userId` but isn't — this
-/// only ever matches requests an admin posted on this user's behalf. Since
-/// the goal is "no feature changes", that exact filter is replicated below
-/// rather than "fixed".
+/// Public profile view. The source table contains private account fields such
+/// as email, phone, role, and notification preferences, so this screen reads
+/// only from the restricted public_profile view.
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String userId;
   const PublicProfileScreen({super.key, required this.userId});
@@ -43,8 +37,11 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final profileRow =
-          await SupabaseService.client.from('profiles').select().eq('id', widget.userId).maybeSingle();
+      final profileRow = await SupabaseService.client
+          .from('public_profile')
+          .select()
+          .eq('id', widget.userId)
+          .maybeSingle();
       if (profileRow == null) {
         setState(() {
           _target = null;
@@ -74,8 +71,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If this happens to be the signed-in user's own id, the original
-    // redirects to /profile instead of showing the public view.
     final myProfile = ref.watch(currentProfileProvider).valueOrNull;
     if (myProfile != null && myProfile.id == widget.userId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,7 +87,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           : _error != null
               ? Center(child: Text('Failed to load profile: $_error'))
               : _target == null
-                  ? const Center(child: Text('User not found.'))
+                  ? const Center(child: Text('User not found or profile is private.'))
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView(
@@ -120,18 +115,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                     const SizedBox(height: 12),
                                     Text(_target!.bio!, textAlign: TextAlign.center),
                                   ],
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _InfoTile(label: 'Email', value: _target!.email),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _InfoTile(label: 'Contact Number', value: _target!.phone ?? 'Not provided'),
-                                      ),
-                                    ],
-                                  ),
                                 ],
                               ),
                             ),
@@ -171,28 +154,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         ],
                       ),
                     ),
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoTile({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label.toUpperCase(), style: TextStyle(fontSize: 10, color: Colors.grey[600], letterSpacing: 0.5)),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-        ],
-      ),
     );
   }
 }
