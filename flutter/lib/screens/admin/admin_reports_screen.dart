@@ -1,28 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../services/supabase_service.dart';
+
 import '../../services/pdf_service.dart';
+import '../../services/supabase_service.dart';
+import '../../theme/app_breakpoints.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
-import '../../widgets/app_bottom_nav.dart';
-import '../../theme/app_breakpoints.dart';
 
-/// This is where the PDF download buttons live — matching the real app,
-/// where all 9 report controllers (pdfController.ts / calendarPdfController.ts)
-/// were only ever reachable from the admin dashboard, never from member-facing
-/// screens. generate-pdf itself enforces admin-only server-side.
+/// PDF report controls matching the legacy admin dashboard. All report
+/// functions enforce admin authorization server-side.
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
 
-  // type -> (source table, id column, row label, order column)
   static final _recordReports = <_RecordReportConfig>[
-    _RecordReportConfig('meeting', 'Meeting Log', 'meetinglog', (r) => r['title'] ?? 'Meeting', 'meeting_date'),
-    _RecordReportConfig('decision', 'Decision Record', 'decisionlog', (r) => r['title'] ?? 'Decision', 'decision_date'),
-    _RecordReportConfig('collection-record', 'Collection Record', 'collectionrecord', (r) => r['purpose'] ?? 'Collection', 'collection_date'),
-    _RecordReportConfig('history-chapter', 'Church History Chapter', 'historychapter', (r) => r['title'] ?? 'Chapter', 'chapter_number'),
-    _RecordReportConfig('church-member', 'Member Profile', 'churchmember', (r) => r['full_name'] ?? 'Member', 'full_name'),
-    _RecordReportConfig('fellowship-schedule', 'Fellowship Schedule', 'generatedscheduleitem', (r) => r['group_name_or_event_title'] ?? 'Schedule', 'scheduled_date'),
-    _RecordReportConfig('donation-receipt', 'Donation Receipt', 'donationrecord', (r) => r['donor_name'] ?? 'Donation', 'donation_date'),
+    _RecordReportConfig(
+      'meeting',
+      'Meeting Log',
+      'meetinglog',
+      (r) => r['title'] ?? 'Meeting',
+      'meeting_date',
+    ),
+    _RecordReportConfig(
+      'decision',
+      'Decision Record',
+      'decisionlog',
+      (r) => r['title'] ?? 'Decision',
+      'decision_date',
+    ),
+    _RecordReportConfig(
+      'collection-record',
+      'Collection Record',
+      'collectionrecord',
+      (r) => r['purpose'] ?? 'Collection',
+      'collection_date',
+    ),
+    _RecordReportConfig(
+      'history-chapter',
+      'Church History Chapter',
+      'historychapter',
+      (r) => r['title'] ?? 'Chapter',
+      'chapter_number',
+    ),
+    _RecordReportConfig(
+      'church-member',
+      'Member Profile',
+      'churchmember',
+      (r) => r['full_name'] ?? 'Member',
+      'full_name',
+    ),
+    _RecordReportConfig(
+      'fellowship-schedule',
+      'Fellowship Schedule',
+      'generatedscheduleitem',
+      (r) => r['group_name_or_event_title'] ?? 'Schedule',
+      'scheduled_date',
+    ),
+    _RecordReportConfig(
+      'donation-receipt',
+      'Donation Receipt',
+      'donationrecord',
+      (r) => r['donor_name'] ?? 'Donation',
+      'donation_date',
+    ),
   ];
 
   @override
@@ -30,17 +70,25 @@ class AdminReportsScreen extends StatelessWidget {
     return Scaffold(
       appBar: const AppHeader(),
       endDrawer: const AppNavDrawer(),
-      bottomNavigationBar: MediaQuery.sizeOf(context).width < AppBreakpoints.lg ? const AppBottomNavBar() : null,
+      bottomNavigationBar:
+          MediaQuery.sizeOf(context).width < AppBreakpoints.lg
+              ? const AppBottomNavBar()
+              : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Summary Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const Text(
+            'Summary Reports',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
           const SizedBox(height: 8),
           Card(
             child: ListTile(
               leading: const Icon(Icons.pie_chart),
               title: const Text('Financial Summary'),
-              subtitle: const Text('Income, expenses, net balance over a date range'),
+              subtitle: const Text(
+                'Income, expenses, net balance over a date range',
+              ),
               trailing: const Icon(Icons.download),
               onTap: () => _openFinancialDialog(context),
             ),
@@ -49,7 +97,9 @@ class AdminReportsScreen extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.calendar_month),
               title: const Text('BS Calendar'),
-              subtitle: const Text('12-page Bikram Sambat calendar with fellowship notices'),
+              subtitle: const Text(
+                '12-page Bikram Sambat calendar with fellowship notices',
+              ),
               trailing: const Icon(Icons.download),
               onTap: () => _openCalendarDialog(context),
             ),
@@ -63,8 +113,22 @@ class AdminReportsScreen extends StatelessWidget {
               onTap: () => _openDonorListDialog(context),
             ),
           ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.summarize),
+              title: const Text('Jumbo Administrative Report'),
+              subtitle: const Text(
+                'Combined members, finance, meetings, decisions, and fellowship data',
+              ),
+              trailing: const Icon(Icons.download),
+              onTap: () => _generateJumboReport(context),
+            ),
+          ),
           const SizedBox(height: 24),
-          const Text('Single-Record Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const Text(
+            'Single-Record Reports',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
           const SizedBox(height: 8),
           for (final cfg in _recordReports)
             Card(
@@ -80,6 +144,22 @@ class AdminReportsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _generateJumboReport(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Generating jumbo administrative report...')),
+    );
+    try {
+      await PdfService.generateAndShareJumboReport();
+    } catch (e) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to generate jumbo report: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _openFinancialDialog(BuildContext context) async {
     DateTime? start;
     DateTime? end;
@@ -92,27 +172,42 @@ class AdminReportsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Text(start == null ? 'Start date' : DateFormat.yMMMd().format(start!)),
+                title: Text(
+                  start == null ? 'Start date' : DateFormat.yMMMd().format(start!),
+                ),
                 trailing: const Icon(Icons.edit_calendar),
                 onTap: () async {
                   final picked = await showDatePicker(
-                      context: ctx, firstDate: DateTime(2000), lastDate: DateTime(2100), initialDate: DateTime.now());
+                    context: ctx,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDate: DateTime.now(),
+                  );
                   if (picked != null) setState(() => start = picked);
                 },
               ),
               ListTile(
-                title: Text(end == null ? 'End date' : DateFormat.yMMMd().format(end!)),
+                title: Text(
+                  end == null ? 'End date' : DateFormat.yMMMd().format(end!),
+                ),
                 trailing: const Icon(Icons.edit_calendar),
                 onTap: () async {
                   final picked = await showDatePicker(
-                      context: ctx, firstDate: DateTime(2000), lastDate: DateTime(2100), initialDate: DateTime.now());
+                    context: ctx,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDate: DateTime.now(),
+                  );
                   if (picked != null) setState(() => end = picked);
                 },
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () async {
                 Navigator.pop(ctx);
@@ -130,7 +225,9 @@ class AdminReportsScreen extends StatelessWidget {
   }
 
   Future<void> _openCalendarDialog(BuildContext context) async {
-    final controller = TextEditingController(text: '${DateTime.now().year + 57}'); // rough AD->BS offset
+    final controller = TextEditingController(
+      text: '${DateTime.now().year + 57}',
+    );
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -141,7 +238,10 @@ class AdminReportsScreen extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Bikram Sambat year'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () async {
               final year = int.tryParse(controller.text.trim());
@@ -172,12 +272,17 @@ class AdminReportsScreen extends StatelessWidget {
             onChanged: (v) => setState(() => format = v ?? 'json'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
-                  final data = await PdfService.fetchDonorListReport(format: format);
+                  final data = await PdfService.fetchDonorListReport(
+                    format: format,
+                  );
                   if (context.mounted) {
                     showDialog(
                       context: context,
@@ -185,15 +290,24 @@ class AdminReportsScreen extends StatelessWidget {
                         title: const Text('Donor List Report'),
                         content: SizedBox(
                           width: double.maxFinite,
-                          child: SingleChildScrollView(child: Text(data.toString())),
+                          child: SingleChildScrollView(
+                            child: Text(data.toString()),
+                          ),
                         ),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
                       ),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed: $e')),
+                    );
                   }
                 }
               },
@@ -205,7 +319,10 @@ class AdminReportsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openRecordPicker(BuildContext context, _RecordReportConfig cfg) async {
+  Future<void> _openRecordPicker(
+    BuildContext context,
+    _RecordReportConfig cfg,
+  ) async {
     final rows = await SupabaseService.client
         .from(cfg.table)
         .select()
@@ -223,7 +340,10 @@ class AdminReportsScreen extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(12),
-              child: Text('Select a ${cfg.displayName.toLowerCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Select a ${cfg.displayName.toLowerCase()}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             for (final r in (rows as List))
               ListTile(
@@ -234,16 +354,26 @@ class AdminReportsScreen extends StatelessWidget {
                   await _generateAndShare(context, cfg.type, {'id': r['id']});
                 },
               ),
-            if ((rows).isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No records found.')),
+            if (rows.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('No records found.'),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _generateAndShare(BuildContext context, String reportType, Map<String, dynamic> body) async {
+  Future<void> _generateAndShare(
+    BuildContext context,
+    String reportType,
+    Map<String, dynamic> body,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('Generating PDF...')));
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Generating PDF...')),
+    );
     try {
       await PdfService.generateAndShare(reportType: reportType, body: body);
     } catch (e) {
@@ -258,5 +388,12 @@ class _RecordReportConfig {
   final String table;
   final dynamic Function(Map<String, dynamic>) labelOf;
   final String orderColumn;
-  _RecordReportConfig(this.type, this.displayName, this.table, this.labelOf, this.orderColumn);
+
+  _RecordReportConfig(
+    this.type,
+    this.displayName,
+    this.table,
+    this.labelOf,
+    this.orderColumn,
+  );
 }
