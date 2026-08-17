@@ -1,0 +1,1 @@
+Jumbo Report migration status: client screen is isolated and not wired into the dashboard until the deployed Supabase generate-pdf Edge Function supports a verified `jumbo` report type. Do not advertise the feature as complete until that server-side contract is implemented and tested.
