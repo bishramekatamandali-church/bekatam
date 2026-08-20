@@ -34,7 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authRepositoryProvider).signInWithIdentifier(identifier: _identifier.text.trim(), password: _password.text);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -50,7 +50,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Text('Bishram Ekata Mandali', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
           const SizedBox(height: 32),
-          TextFormField(controller: _identifier, decoration: const InputDecoration(labelText: 'Email or Username'), keyboardType: TextInputType.emailAddress, validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your email or username' : null),
+          TextFormField(
+            controller: _identifier,
+            decoration: const InputDecoration(labelText: 'Email, Username, or Phone'),
+            keyboardType: TextInputType.emailAddress,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your email, username, or phone' : null,
+          ),
           const SizedBox(height: 12),
           TextFormField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true, validator: (v) => (v == null || v.length < 6) ? 'Password must be at least 6 characters' : null),
           if (_error != null) ...[const SizedBox(height: 12), Text(_error!, style: const TextStyle(color: Colors.red))],
