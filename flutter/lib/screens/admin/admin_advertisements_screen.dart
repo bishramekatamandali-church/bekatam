@@ -182,8 +182,12 @@ class _AdFormSheetState extends State<_AdFormSheet> {
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
         const SizedBox(height: 8), TextField(controller: _altText, decoration: const InputDecoration(labelText: 'Alt Text')),
         const SizedBox(height: 8),
-        if (_adType == 'image_banner') ImageUploadField(controller: _imageUrl, bucket: 'content-media', label: 'Image'),
-        if (_adType == 'video_banner') TextField(controller: _videoUrl, decoration: const InputDecoration(labelText: 'Video URL')),
+        if (_adType == 'image_banner') ...[
+          ImageUploadField(controller: _imageUrl, bucket: 'content-media', label: 'Image'),
+        ],
+        if (_adType == 'video_banner') ...[
+          TextField(controller: _videoUrl, decoration: const InputDecoration(labelText: 'Video URL')),
+        ],
         const SizedBox(height: 8), TextField(controller: _adSizeKey, decoration: const InputDecoration(labelText: 'Ad Size Key (e.g. 300x250)')),
         _dateTile('Start date', _startDate, () => _pickDate(start: true), () => setState(() => _startDate = null)),
         _dateTile('End date', _endDate, () => _pickDate(start: false), () => setState(() => _endDate = null)),
