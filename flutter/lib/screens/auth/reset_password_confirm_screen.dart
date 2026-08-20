@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 
 /// Completes the "click the emailed link, then set a new password" half of
-/// the reset flow — previously only `forgot_password_screen.dart` (the
-/// "send me a reset email" half) existed, with nothing listening for
-/// Supabase's `AuthChangeEvent.passwordRecovery` to catch the resulting
-/// deep link and land the user here. Wired from a listener in main.dart.
-/// Mirrors `frontend/src/pages/ResetPasswordPage.tsx`.
+/// the reset flow. Wired from the auth recovery listener in main.dart.
 class ResetPasswordConfirmScreen extends StatefulWidget {
   const ResetPasswordConfirmScreen({super.key});
 
@@ -22,6 +19,13 @@ class _ResetPasswordConfirmScreenState extends State<ResetPasswordConfirmScreen>
   String? _error;
   bool _done = false;
 
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -32,7 +36,7 @@ class _ResetPasswordConfirmScreenState extends State<ResetPasswordConfirmScreen>
       await SupabaseService.auth.updateUser(UserAttributes(password: _password.text));
       if (mounted) setState(() => _done = true);
     } catch (e) {
-      setState(() => _error = 'Could not update password: $e');
+      if (mounted) setState(() => _error = 'Could not update password: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
