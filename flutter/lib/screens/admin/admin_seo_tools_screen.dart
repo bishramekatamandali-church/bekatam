@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Curated external SEO resources that were available from the legacy admin
 /// SEO tools page. Links are opened by the platform/browser when selected.
@@ -15,9 +16,7 @@ class AdminSeoToolsScreen extends StatelessWidget {
   ];
 
   Future<void> _open(String url) async {
-    // The Flutter project deliberately avoids adding a URL-launching package
-    // solely for this legacy utility page. Copying the URL keeps this screen
-    // useful on every Flutter target without platform-specific dependencies.
+    // Copying the URL keeps this utility useful on every Flutter target.
     await Clipboard.setData(ClipboardData(text: url));
   }
 
