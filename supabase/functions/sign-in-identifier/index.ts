@@ -49,10 +49,28 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await anon.auth.signInWithPassword({ email, password });
     if (error || !data.session) return json({ error: "Invalid credentials." }, 401);
 
-    const profile = await service.from("profiles").select("account_status").eq("id", data.user.id).maybeSingle();
+    const profile = await service
+      .from("profiles")
+      .select("id, full_name, email, account_status")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
     if (profile.data?.account_status === "deleted") {
       await anon.auth.signOut();
       return json({ error: "This account has been deleted." }, 403);
+    }
+
+    // Preserve the legacy security notification without exposing the account
+    // email or other profile data to the Flutter client.
+    try {
+      await service.rpc("queue_email", {
+        p_to: profile.data?.email ?? email,
+        p_subject: "New login to your Bishram Ekata Mandali account",
+        p_text: `Hello ${profile.data?.full_name ?? ""},\n\nWe noticed a login to your account. If this was you, no action is needed.\nIf you did not log in, please reset your password or contact us.\n\n— Bishram Ekata Mandali`,
+        p_html: `<p>Hello ${profile.data?.full_name ?? ""},</p><p>We noticed a login to your account. If this was you, no action is needed.</p><p>If you did not log in, please reset your password or contact us.</p><p>— Bishram Ekata Mandali</p>`,
+      });
+    } catch {
+      // Login must not fail solely because notification delivery is unavailable.
     }
 
     return json({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
