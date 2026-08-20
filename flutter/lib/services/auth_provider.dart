@@ -33,9 +33,6 @@ class AuthRepository {
     await _logAdminIfNeeded(res.user?.id);
   }
 
-  /// Preserves the legacy email/username/phone identifier behavior.
-  /// Resolution happens server-side so an identifier lookup never exposes the
-  /// account email to the Flutter client.
   Future<void> signInWithIdentifier({required String identifier, required String password}) async {
     final value = identifier.trim();
     if (value.contains('@')) {
@@ -78,10 +75,6 @@ class AuthRepository {
         : '${normalizedCountry.isEmpty ? '' : normalizedCountry}$normalizedLocalPhone';
     final requestedUsername = username?.trim().toLowerCase();
 
-    // Username generation, collision handling, phone uniqueness, and profile
-    // creation are performed by the auth.users trigger. This avoids a client
-    // side race and also works when email confirmation means there is no
-    // authenticated session immediately after signUp().
     final res = await SupabaseService.auth.signUp(
       email: normalizedEmail,
       password: password,
@@ -95,13 +88,6 @@ class AuthRepository {
 
     final userId = res.user?.id;
     if (userId == null) throw Exception('Sign up did not return a user id.');
-
-    // The trigger already created the profile. When a session is immediately
-    // available, refresh the provider so the UI sees the new profile. When
-    // confirmation is required, no RLS-protected client write is attempted.
-    if (res.session != null) {
-      ref.invalidate(currentProfileProvider);
-    }
   }
 
   Future<void> updateProfileImage(String imageUrl) async {
