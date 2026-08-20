@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Curated external SEO resources that were available from the legacy admin
-/// SEO tools page. Links are opened by the platform/browser when selected.
+/// SEO tools page. Links are copied so the utility remains platform-neutral.
 class AdminSeoToolsScreen extends StatelessWidget {
   const AdminSeoToolsScreen({super.key});
 
@@ -16,7 +16,6 @@ class AdminSeoToolsScreen extends StatelessWidget {
   ];
 
   Future<void> _open(String url) async {
-    // Copying the URL keeps this utility useful on every Flutter target.
     await Clipboard.setData(ClipboardData(text: url));
   }
 
@@ -40,7 +39,9 @@ class AdminSeoToolsScreen extends StatelessWidget {
                   icon: const Icon(Icons.copy),
                   onPressed: () async {
                     await _open(tool['url']!);
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+                    }
                   },
                 ),
               ),
