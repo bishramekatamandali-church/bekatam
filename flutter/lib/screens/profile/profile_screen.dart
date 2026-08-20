@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/app_header.dart';
@@ -88,48 +89,3 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _fullNameController.text = profile.fullName;
             _bioController.text = profile.bio ?? '';
             _emailController.text = profile.email;
-            _phoneController.text = profile.phone ?? '';
-            _initialized = true;
-          }
-          return ListView(padding: const EdgeInsets.all(16), children: [
-            Center(child: Stack(children: [
-              CircleAvatar(radius: 40, backgroundImage: profile.profileImageUrl != null ? NetworkImage(profile.profileImageUrl!) : null, child: profile.profileImageUrl == null ? Text(profile.fullName.isNotEmpty ? profile.fullName[0] : '?', style: const TextStyle(fontSize: 28)) : null),
-              Positioned(right: -4, bottom: -4, child: IconButton.filled(iconSize: 16, padding: const EdgeInsets.all(6), constraints: const BoxConstraints(), onPressed: _uploadingAvatar ? null : () => _changeAvatar(profile.id), icon: _uploadingAvatar ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.camera_alt))),
-            ])),
-            const SizedBox(height: 8),
-            Center(child: Text('@${profile.username}', style: const TextStyle(color: Colors.grey))),
-            if (profile.isAdmin) const Center(child: Padding(padding: EdgeInsets.only(top: 4), child: Chip(label: Text('Admin')))),
-            const SizedBox(height: 24),
-            TextField(controller: _fullNameController, decoration: const InputDecoration(labelText: 'Full Name')),
-            const SizedBox(height: 12),
-            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 12),
-            TextField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Phone'), keyboardType: TextInputType.phone),
-            const SizedBox(height: 12),
-            TextField(controller: _bioController, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
-            const SizedBox(height: 20),
-            FilledButton(onPressed: _saving ? null : () => _saveProfile(profile.id, profile.email), child: _saving ? const CircularProgressIndicator() : const Text('Save Changes')),
-            const SizedBox(height: 28),
-            const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _recentActivity(profile.id),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()));
-                if (snapshot.hasError) return Text('Could not load recent activity: ${snapshot.error}');
-                final items = snapshot.data ?? const <Map<String, dynamic>>[];
-                if (items.isEmpty) return const Text('No recent activity.');
-                return Card(child: Column(children: [for (final item in items) ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.history),
-                  title: Text(item['description']?.toString().isNotEmpty == true ? item['description'].toString() : (item['type']?.toString() ?? 'Activity')),
-                  subtitle: Text('${item['item_type'] ?? ''} · ${item['timestamp'] ?? ''}'),
-                )]));
-              },
-            ),
-          ]);
-        },
-      ),
-    );
-  }
-}
