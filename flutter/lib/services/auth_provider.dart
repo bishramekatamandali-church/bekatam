@@ -53,16 +53,12 @@ class AuthRepository {
     final normalized = _normalizedPhone(value);
     final res = await SupabaseService.client.functions.invoke(
       'sign-in-identifier',
-      body: {
-        'identifier': value,
-        'normalized_phone': normalized,
-        'password': password,
-      },
+      body: {'identifier': value, 'normalized_phone': normalized, 'password': password},
     );
     final data = Map<String, dynamic>.from(res.data as Map);
     final refreshToken = data['refresh_token'] as String?;
     if (refreshToken == null || refreshToken.isEmpty) {
-      throw AuthException(data['error'] as String? ?? 'Invalid credentials.');
+      throw Exception(data['error'] as String? ?? 'Invalid credentials.');
     }
     final auth = await SupabaseService.auth.setSession(refreshToken);
     await _logAdminIfNeeded(auth.user?.id);
@@ -72,13 +68,8 @@ class AuthRepository {
     final base = _usernameBase(email: email, fullName: fullName);
     var candidate = base;
     var suffix = 1;
-
     while (true) {
-      final row = await SupabaseService.client
-          .from('profiles')
-          .select('id')
-          .ilike('username', candidate)
-          .maybeSingle();
+      final row = await SupabaseService.client.from('profiles').select('id').ilike('username', candidate).maybeSingle();
       if (row == null) return candidate;
       candidate = '$base${suffix++}';
     }
@@ -94,11 +85,9 @@ class AuthRepository {
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     if (normalizedEmail.isEmpty || !normalizedEmail.contains('@')) {
-      throw const AuthException('Enter a valid email address.');
+      throw Exception('Enter a valid email address.');
     }
-    if (password.length < 6) {
-      throw const AuthException('Password must be at least 6 characters.');
-    }
+    if (password.length < 6) throw Exception('Password must be at least 6 characters.');
 
     final normalizedCountry = (countryCode ?? '').trim();
     final normalizedLocalPhone = _normalizedPhone(phone ?? '');
@@ -122,7 +111,7 @@ class AuthRepository {
     );
 
     final userId = res.user?.id;
-    if (userId == null) throw const AuthException('Sign up did not return a user id.');
+    if (userId == null) throw Exception('Sign up did not return a user id.');
 
     await SupabaseService.client.from('profiles').upsert({
       'id': userId,
@@ -136,12 +125,11 @@ class AuthRepository {
 
   Future<void> updateProfileImage(String imageUrl) async {
     final userId = SupabaseService.currentUser?.id;
-    if (userId == null) throw const AuthException('You must be signed in to update your profile image.');
+    if (userId == null) throw Exception('You must be signed in to update your profile image.');
     await SupabaseService.client.from('profiles').update({'profile_image_url': imageUrl}).eq('id', userId);
   }
 
   Future<void> signOut() => SupabaseService.auth.signOut();
-
   Future<void> sendPasswordResetOtp(String email) => SupabaseService.auth.resetPasswordForEmail(email.trim().toLowerCase());
 }
 
