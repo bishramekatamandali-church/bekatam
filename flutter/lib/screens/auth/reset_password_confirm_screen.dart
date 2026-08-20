@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 
 /// Completes the "click the emailed link, then set a new password" half of
@@ -32,7 +33,7 @@ class _ResetPasswordConfirmScreenState extends State<ResetPasswordConfirmScreen>
       await SupabaseService.auth.updateUser(UserAttributes(password: _password.text));
       if (mounted) setState(() => _done = true);
     } catch (e) {
-      setState(() => _error = 'Could not update password: $e');
+      if (mounted) setState(() => _error = 'Could not update password: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -86,9 +87,7 @@ class _ResetPasswordConfirmScreenState extends State<ResetPasswordConfirmScreen>
                         const SizedBox(height: 20),
                         FilledButton(
                           onPressed: _saving ? null : _submit,
-                          child: _saving
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Update Password'),
+                          child: _saving ? const CircularProgressIndicator() : const Text('Update Password'),
                         ),
                       ],
                     ),
@@ -97,5 +96,12 @@ class _ResetPasswordConfirmScreenState extends State<ResetPasswordConfirmScreen>
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
   }
 }
