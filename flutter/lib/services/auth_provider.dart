@@ -17,13 +17,6 @@ final currentProfileProvider = FutureProvider<Profile?>((ref) async {
 
 String _normalizedPhone(String value) => value.replaceAll(RegExp(r'[\s().-]'), '');
 
-String _usernameBase({required String email, required String fullName}) {
-  final emailBase = email.split('@').first.toLowerCase();
-  final source = emailBase.isNotEmpty ? emailBase : fullName;
-  final sanitized = source.replaceAll(RegExp(r'[^a-z0-9]'), '');
-  return sanitized.isNotEmpty ? sanitized : 'user';
-}
-
 class AuthRepository {
   const AuthRepository();
 
@@ -64,17 +57,6 @@ class AuthRepository {
     await _logAdminIfNeeded(auth.user?.id);
   }
 
-  Future<String> generateUniqueUsername({required String email, required String fullName}) async {
-    final base = _usernameBase(email: email, fullName: fullName);
-    var candidate = base;
-    var suffix = 1;
-    while (true) {
-      final row = await SupabaseService.client.from('profiles').select('id').ilike('username', candidate).maybeSingle();
-      if (row == null) return candidate;
-      candidate = '$base${suffix++}';
-    }
-  }
-
   Future<void> signUp({
     required String email,
     required String password,
@@ -94,16 +76,17 @@ class AuthRepository {
     final fullPhone = normalizedLocalPhone.isEmpty
         ? null
         : '${normalizedCountry.isEmpty ? '' : normalizedCountry}$normalizedLocalPhone';
+    final requestedUsername = username?.trim().toLowerCase();
 
-    final resolvedUsername = (username == null || username.trim().isEmpty)
-        ? await generateUniqueUsername(email: normalizedEmail, fullName: fullName)
-        : username.trim().toLowerCase();
-
+    // Username generation, collision handling, phone uniqueness, and profile
+    // creation are performed by the auth.users trigger. This avoids a client
+    // side race and also works when email confirmation means there is no
+    // authenticated session immediately after signUp().
     final res = await SupabaseService.auth.signUp(
       email: normalizedEmail,
       password: password,
       data: {
-        'username': resolvedUsername,
+        if (requestedUsername != null && requestedUsername.isNotEmpty) 'username': requestedUsername,
         'full_name': fullName.trim(),
         if (fullPhone != null) 'phone': fullPhone,
         if (normalizedCountry.isNotEmpty) 'country_code': normalizedCountry,
@@ -113,14 +96,12 @@ class AuthRepository {
     final userId = res.user?.id;
     if (userId == null) throw Exception('Sign up did not return a user id.');
 
-    await SupabaseService.client.from('profiles').upsert({
-      'id': userId,
-      'username': resolvedUsername,
-      'full_name': fullName.trim(),
-      'email': normalizedEmail,
-      'phone': fullPhone,
-      'country_code': normalizedCountry.isEmpty ? null : normalizedCountry,
-    });
+    // The trigger already created the profile. When a session is immediately
+    // available, refresh the provider so the UI sees the new profile. When
+    // confirmation is required, no RLS-protected client write is attempted.
+    if (res.session != null) {
+      ref.invalidate(currentProfileProvider);
+    }
   }
 
   Future<void> updateProfileImage(String imageUrl) async {
