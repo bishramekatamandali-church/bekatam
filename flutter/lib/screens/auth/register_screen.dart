@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_provider.dart';
 import '../../services/storage_service.dart';
+import '../../services/supabase_service.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/app_nav_drawer.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -58,10 +59,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
       );
 
-      // If email confirmation is disabled, the signup response has an active
-      // session and the image can be uploaded immediately. If confirmation is
-      // required, the image is intentionally deferred until the first signed-in
-      // profile edit; this avoids introducing an anonymous public upload path.
+      // When Supabase returns an authenticated session immediately, preserve
+      // the legacy profile-image-at-registration behavior. When email
+      // confirmation is required, we intentionally defer the upload until the
+      // user is authenticated rather than introducing an anonymous upload path.
       if (_profileImage != null && SupabaseService.currentUser != null) {
         final imageUrl = await StorageService.uploadProfileImage(_profileImage!, SupabaseService.currentUser!.id);
         await auth.updateProfileImage(imageUrl);
